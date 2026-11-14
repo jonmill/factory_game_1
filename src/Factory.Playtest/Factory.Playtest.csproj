@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Headless playtesting: bot players (goal-driven + chaos), telemetry, invariant checks and
+    experiments (static balance, dynamic balance, speedrun search, softlock fuzzing).
+    Bots act ONLY through Commands, exactly like a human player (or a future network peer).
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Factory.Playtest</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Factory.Sim\Factory.Sim.csproj" />
+  </ItemGroup>
+</Project>

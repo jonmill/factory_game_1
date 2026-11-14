@@ -1,0 +1,53 @@
+# .NET build output
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Aa]rm64/
+*.nupkg
+*.snupkg
+TestResults/
+coverage*.json
+coverage*.xml
+*.trx
+
+# IDEs / editors
+.vs/
+.vscode/*
+!.vscode/settings.json
+!.vscode/launch.json
+!.vscode/tasks.json
+.idea/
+*.suo
+*.user
+*.userprefs
+*.DotSettings.user
+*.swp
+
+# Godot 4
+.godot/
+.import/
+export.cfg
+export_credentials.cfg
+*.translation
+mono_crash.*.json
+/builds/
+/exports/
+
+# Steamworks: native redistributables and local app id are added per machine
+steam_appid.txt
+**/steam_api*.dll
+**/libsteam_api.*
+**/steam_api64.lib
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local saves / replays from playtests
+*.replay.json
+
+# Headless playtest output
+playtest-results/

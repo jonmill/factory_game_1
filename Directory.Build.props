@@ -1,0 +1,19 @@
+<Project>
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+
+    <!-- Generate XML documentation files for IntelliSense and documentation tools -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+
+    <!-- Enforce .editorconfig code style rules (IDExxxx) during build, not just in IDE -->
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+
+    <!-- Enable recommended set of built-in CA code quality analyzers -->
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+
+    <!-- Treat all warnings as errors to enforce clean code in both local dev and CI -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+</Project>

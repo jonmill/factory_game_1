@@ -1,0 +1,22 @@
+<Project Sdk="Godot.NET.Sdk/4.7.2">
+  <!-- Godot client: rendering, input and UI only. All game rules live in Factory.Sim. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <RootNamespace>Factory.Game</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Factory.Sim/Factory.Sim.csproj" />
+  </ItemGroup>
+  <!--
+    Steam is opt-in: dotnet build -p:EnableSteam=true (x64 Windows/Linux Steam builds).
+    Steamworks.NET 2024.8.0 ships x64-only, so it can't load on Apple Silicon dev machines.
+    The native steam_api library comes from the Steamworks SDK (see README).
+  -->
+  <PropertyGroup Condition="'$(EnableSteam)' == 'true'">
+    <DefineConstants>$(DefineConstants);STEAM</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(EnableSteam)' == 'true'">
+    <PackageReference Include="Steamworks.NET" Version="2024.8.0" />
+  </ItemGroup>
+</Project>
