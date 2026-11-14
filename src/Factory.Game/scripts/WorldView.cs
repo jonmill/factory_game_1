@@ -5,7 +5,7 @@ using SimDir = Factory.Sim.Dir;
 namespace Factory.Game;
 
 /// <summary>
-/// Draws the planet: painted ground, ore and trees, rails and wires, buildings, trains, units and the
+/// Draws everything on the planet that moves or changes often: rails and wires, buildings, trains, units and the
 /// interaction overlays. The art direction follows the technology: the ground, people and the steam
 /// and coal era are drawn grounded and weathered, while ore crystals and electric or ship technology
 /// are clean and luminous. Only colours brighter than 1.0 bloom (see the glow set up in
@@ -17,9 +17,6 @@ public partial class WorldView : Node2D
     /// <summary>The game root that owns the camera, tools and the simulation being drawn.</summary>
     public GameRoot Root { get; set; } = null!;
 
-    private ImageTexture? _groundTex;
-    private ulong _groundSignature;
-    private int _groundVersion = -1;
     private Font _font = null!;
 
     private Planet P => Root.Planet;
@@ -59,15 +56,10 @@ public partial class WorldView : Node2D
     /// <inheritdoc />
     public override void _Draw()
     {
-        Vector2 size = GetViewportRect().Size;
-        DrawRect(new Rect2(Vector2.Zero, size), new Color(0.2f, 0.17f, 0.12f));
-        DrawGround(size);
-
-        (int x0, int y0, int x1, int y1) = VisibleTiles(size);
-        DrawTileBeds(x0, y0, x1, y1);
+        // Ground, ore and trees come from TerrainLayer, drawn just before this node.
+        (int x0, int y0, int x1, int y1) = VisibleTiles(GetViewportRect().Size);
         DrawGrid(x0, y0, x1, y1);
         DrawRails(x0, y0, x1, y1);
-        DrawOre(x0, y0, x1, y1);
         foreach (ConstructionSite s in P.Sites)
         {
             DrawSite(s);
@@ -78,7 +70,6 @@ public partial class WorldView : Node2D
             DrawBuilding(b);
         }
 
-        DrawTrees(x0, y0, x1, y1);
         DrawPowerWires();
         DrawRoutes();
         foreach (Train t in P.Trains)

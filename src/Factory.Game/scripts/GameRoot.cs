@@ -60,6 +60,7 @@ public partial class GameRoot : Node2D
     /// <summary>Real time elapsed since start, in seconds, used for animation and message fading.</summary>
     public double Clock { get; set; }
 
+    private TerrainLayer _terrain = null!;
     private WorldView _view = null!;
     private Hud _hud = null!;
     private double _acc;
@@ -97,6 +98,8 @@ public partial class GameRoot : Node2D
         env.Environment.SetGlowLevel(3, 0f);
         AddChild(env);
 
+        _terrain = new TerrainLayer { Root = this };
+        AddChild(_terrain);
         _view = new WorldView { Root = this };
         AddChild(_view);
         _hud = new Hud { Root = this };
@@ -251,6 +254,7 @@ public partial class GameRoot : Node2D
             DragRail(last, HoverTile);
         }
 
+        _terrain.Refresh(delta);
         _view.QueueRedraw();
     }
 
