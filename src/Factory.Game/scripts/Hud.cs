@@ -73,6 +73,8 @@ public partial class Hud : CanvasLayer
         hv.AddChild(_hint);
         hv.AddChild(_hotbar);
 
+        BuildPockets();
+
         _messages = new Label { VerticalAlignment = VerticalAlignment.Bottom, MouseFilter = Control.MouseFilterEnum.Ignore };
         _messages.AddThemeColorOverride("font_outline_color", Colors.Black);
         _messages.AddThemeConstantOverride("outline_size", 4);
@@ -97,7 +99,7 @@ public partial class Hud : CanvasLayer
         """
         COLONY PLAYTEST  —  H to toggle this help
 
-        You are the Commander (white diamond). WASD to walk. The planet wraps in every direction.
+        You are the Commander (orange suit). WASD to walk. The planet wraps in every direction.
         Goal: research the Colony Beacon, build it, and call your first new follower.
 
         FOLLOWERS (left panel): give each a job — Build, Gather a resource, Haul between two
@@ -106,8 +108,10 @@ public partial class Hud : CanvasLayer
 
         BUILD: pick from the hotbar (1-0) and click. R rotates, Q/Esc/right-click cancels.
         Drag to lay rail. X = dismantle tool. Arrows on drills/stops/sorters show their front.
-        Right-click ore or trees to hand-mine them yourself. Select buildings to see contents
-        and (when nearby) deposit/take items.
+        MINING: right-click ore or trees and you walk over and mine them, moving on through the
+        deposit until your pockets fill. Hold and sweep to pick tiles; WASD or right-clicking
+        bare ground stops. While you're nearby, your pockets supply construction sites and the
+        lander's crafts. F unloads your pockets into the nearest lander or crate.
 
         POWER: Steam engines must touch water and burn wood/coal. Copper poles carry power.
         TRAINS: place track, a Rail Stop pointing at it, then a train. Select the train to set
@@ -194,6 +198,7 @@ public partial class Hud : CanvasLayer
         _hotbar.CustomMinimumSize = new Vector2(Mathf.Min(natural, vs.X - 60), 0);
         _hotbarPanel.Size = Vector2.Zero;
         Put(_hotbarPanel, new Vector2(Mathf.Max(10, (vs.X - Min(_hotbarPanel).X) / 2), vs.Y - 10 - Min(_hotbarPanel).Y));
+        Put(_pocketPanel, new Vector2(vs.X - 10 - Min(_pocketPanel).X, _hotbarPanel.Position.Y - 8 - Min(_pocketPanel).Y));
         Put(_research, (vs - Min(_research)) / 2);
         Put(_help, (vs - Min(_help)) / 2);
         Vector2 mm = Min(_messages);
@@ -253,6 +258,7 @@ public partial class Hud : CanvasLayer
         UpdateInspector();
         UpdateResearch();
         UpdateMessages();
+        UpdatePockets();
         _hint.Text = ToolHint();
         Layout();
     }
@@ -345,7 +351,7 @@ public partial class Hud : CanvasLayer
         ToolKind.PickHaulTo => "Haul: click the building to deliver items TO",
         ToolKind.PickTrain => "Click the train this follower should operate",
         ToolKind.PickStop => "Click rail stops to add them to the schedule   [Q when done]",
-        _ => "Left-click select  •  Right-click ore/trees to mine  •  H help",
+        _ => "Left-click select  •  Right-click ore/trees to mine  •  F unload pockets  •  H help",
     };
 
     // ------------------------------------------------------------------ followers

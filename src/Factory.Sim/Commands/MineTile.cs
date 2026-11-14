@@ -2,7 +2,10 @@ using System.Text.Json.Serialization;
 
 namespace Factory.Sim;
 
-/// <summary>Leader starts (Tile set) or stops (Tile null) hand-mining.</summary>
+/// <summary>
+/// Leader starts (Tile set) or stops (Tile null) hand-mining. The tile can be anywhere: the leader walks
+/// over to it, and moves on to the next tile of the same deposit when one runs out.
+/// </summary>
 /// <param name="UnitId">Entity id of the issuing player's leader.</param>
 /// <param name="Tile">Resource tile to mine, or null to stop.</param>
 public sealed record MineTile(int UnitId, Int2? Tile) : Command
@@ -23,11 +26,13 @@ public sealed record MineTile(int UnitId, Int2? Tile) : Command
 
         return null;
     }
+
     /// <summary>Sets (or clears) the leader's mining target and resets mining progress.</summary>
     public override void Apply(World w)
     {
         Unit u = Leader(w, UnitId)!;
         u.MiningTile = Tile is { } t ? u.Planet.Torus.Wrap(t) : null;
+        u.MiningResource = u.MiningTile is { } mt ? u.Planet.ResourceAt(mt)?.Id : null;
         u.MiningProgress = 0;
     }
 }

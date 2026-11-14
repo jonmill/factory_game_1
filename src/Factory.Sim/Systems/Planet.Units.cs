@@ -3,8 +3,14 @@ namespace Factory.Sim;
 /// <summary>Leader movement/hand-mining and follower job AI (gather, build, haul, operate train).</summary>
 public sealed partial class Planet
 {
-    /// <summary>How far, in tiles, the leader can reach to build, mine or interact.</summary>
+    /// <summary>How far, in tiles, the leader can reach to build or interact.</summary>
     public const int LeaderReachTiles = 10;
+    /// <summary>How close, in tiles, the leader has to stand to a tile to hand-mine it.</summary>
+    public const int LeaderMineReachTiles = 1;
+    /// <summary>Stack slots in the leader's pockets.</summary>
+    public const int LeaderPocketSlots = 20;
+    /// <summary>How far, in tiles, mining looks for the next tile of the same deposit when one runs out.</summary>
+    private const int NextTileSearch = 4;
     private const int GatherBatch = 25;
     private const int TileReach = 700;
 
@@ -21,6 +27,7 @@ public sealed partial class Planet
         u.WaitTicks = 0;
         u.Boarded = false;
         u.MiningTile = null;
+        u.MiningResource = null;
         u.Status = job.Kind == JobKind.Idle ? "Idle" : "Starting job";
     }
 
@@ -100,6 +107,7 @@ public sealed partial class Planet
             u.Pos = SubTorus.Wrap(u.Pos + new Int2(dx * s, dy * s));
         }
 
+        SupplyFromPockets(u);
         if (u.MiningTile is not { } t)
         {
             u.Status = u.MoveIntent == Int2.Zero ? "Standing by" : "Walking";
@@ -110,22 +118,34 @@ public sealed partial class Planet
         ResourceDef? res = ResourceAt(t);
         if (res is null)
         {
-            u.MiningTile = null;
+            // The tile ran out: carry on with the nearest tile of the same deposit.
             u.MiningProgress = 0;
+            if (NextTileOf(u.MiningResource, t) is not { } next)
+            {
+                u.MiningTile = null;
+                u.MiningResource = null;
+                u.Status = "Deposit exhausted";
 
-            return;
-        }
+                return;
+            }
 
-        if (SubTorus.DistSq(u.Pos, Fixed.TileCenter(t)) > 3L * Fixed.One * 3L * Fixed.One)
-        {
-            u.Status = "Too far to mine";
-
-            return;
+            u.MiningTile = next;
+            t = next;
+            res = ResourceAt(t)!;
         }
 
         if (u.Carry.SpaceFor(res.Item) <= 0)
         {
             u.Status = "Pockets full";
+
+            return;
+        }
+
+        long reach = (long)LeaderMineReachTiles * Fixed.One;
+        if (SubTorus.DistSq(u.Pos, Fixed.TileCenter(t)) > reach * reach)
+        {
+            u.Status = $"Walking to {res.Name}";
+            MoveTowards(u, Fixed.TileCenter(t), (int)reach - Fixed.Half);
 
             return;
         }
@@ -141,6 +161,75 @@ public sealed partial class Planet
         if (item is not null)
         {
             u.Carry.Add(item, 1);
+        }
+    }
+
+    /// <summary>The nearest tile of the given resource around a tile, scanning rows then columns to break ties.</summary>
+    private Int2? NextTileOf(string? resourceId, Int2 from)
+    {
+        if (resourceId is null)
+        {
+            return null;
+        }
+
+        Int2? best = null;
+        int bestDist = int.MaxValue;
+        for (int dy = -NextTileSearch; dy <= NextTileSearch; dy++)
+        {
+            for (int dx = -NextTileSearch; dx <= NextTileSearch; dx++)
+            {
+                Int2 t = Torus.Wrap(from + new Int2(dx, dy));
+                int d = (dx * dx) + (dy * dy);
+                if ((d < bestDist) && (ResourceAt(t)?.Id == resourceId))
+                {
+                    best = t;
+                    bestDist = d;
+                }
+            }
+        }
+
+        return best;
+    }
+
+    /// <summary>
+    /// The leader's pockets act as a supply while in reach, as a player inventory does: they fill in
+    /// missing materials for construction sites and top up the lander's queued crafts.
+    /// </summary>
+    private void SupplyFromPockets(Unit u)
+    {
+        if (u.Carry.IsEmpty)
+        {
+            return;
+        }
+
+        foreach (ConstructionSite site in Sites)
+        {
+            if ((site.Kind == SiteKind.Deconstruct) || (InLeaderReach(u, site.Origin) == false))
+            {
+                continue;
+            }
+
+            foreach (ItemAmount m in site.Missing().ToList())
+            {
+                u.Carry.MoveTo(site.Delivered, m.Item, m.Count);
+            }
+        }
+
+        if ((World.Get<Building>(LanderId) is not { } lander) || (lander.CraftQueue.Count == 0) || (InLeaderReach(u, lander.Origin) == false))
+        {
+            return;
+        }
+
+        foreach (string recipeId in lander.CraftQueue.Distinct().ToList())
+        {
+            foreach (ItemAmount input in World.Content.Recipes[recipeId].Inputs)
+            {
+                int need = input.Count - lander.Inv.Count(input.Item);
+                if (need > 0)
+                {
+                    u.Carry.MoveTo(lander.Inv, input.Item, need);
+                }
+            }
         }
     }
 

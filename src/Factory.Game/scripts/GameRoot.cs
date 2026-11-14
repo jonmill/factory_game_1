@@ -67,6 +67,7 @@ public partial class GameRoot : Node2D
     private Int2 _lastIntent;
     private Int2? _lastDragTile;
     private bool _mining;
+    private Int2? _sweepSent;
 
     /// <inheritdoc />
     public override void _Ready()
@@ -209,6 +210,7 @@ public partial class GameRoot : Node2D
         HoverTile = ScreenToTile(GetViewport().GetMousePosition());
         SendLeaderIntent();
         HandleCameraKeys();
+        SweepMining();
 
         if (Paused == false)
         {
@@ -255,6 +257,7 @@ public partial class GameRoot : Node2D
         }
 
         _terrain.Refresh(delta);
+
         _view.QueueRedraw();
     }
 
@@ -378,9 +381,9 @@ public partial class GameRoot : Node2D
                 return;
             }
 
-            if ((mb.ButtonIndex == MouseButton.Right) && (mb.Pressed == false) && _mining)
+            // Releasing the button keeps mining the last tile; it only ends the sweep.
+            if ((mb.ButtonIndex == MouseButton.Right) && (mb.Pressed == false))
             {
-                Send(new MineTile(Leader.Id, null));
                 _mining = false;
             }
 
@@ -406,6 +409,10 @@ public partial class GameRoot : Node2D
             {
                 SelectedId = 0;
             }
+        }
+        else if (k.IsAction("unload"))
+        {
+            UnloadPockets();
         }
         else if (k.IsAction("deconstruct"))
         {
@@ -563,11 +570,63 @@ public partial class GameRoot : Node2D
         }
 
         Int2 tile = HoverTile;
-        if ((Planet.ResourceAt(tile) is not null) && (Planet.OccupantAt(tile) == 0))
+        if (Mineable(tile))
         {
             Send(new MineTile(Leader.Id, tile));
             _mining = true;
+            _sweepSent = tile;
         }
+        else if (Leader.MiningTile is not null)
+        {
+            Send(new MineTile(Leader.Id, null));
+        }
+    }
+
+    private bool Mineable(Int2 tile) => (Planet.ResourceAt(tile) is not null) && (Planet.OccupantAt(tile) == 0);
+
+    /// <summary>Holding right-click and sweeping over ore retargets mining to the tile under the cursor.</summary>
+    private void SweepMining()
+    {
+        if ((_mining == false) || (Input.IsMouseButtonPressed(MouseButton.Right) == false))
+        {
+            _mining = false;
+
+            return;
+        }
+
+        Int2 tile = HoverTile;
+        if ((_sweepSent != tile) && (Leader.MiningTile != tile) && Mineable(tile))
+        {
+            Send(new MineTile(Leader.Id, tile));
+            _sweepSent = tile;
+        }
+    }
+
+    /// <summary>Empties the leader's pockets into the nearest lander or crate within reach.</summary>
+    private void UnloadPockets()
+    {
+        Unit leader = Leader;
+        if (leader.Carry.IsEmpty)
+        {
+            Notify("Your pockets are empty", Colors.Khaki);
+
+            return;
+        }
+
+        Building? store = Planet.Buildings
+            .Where(b => (b.Def.Kind is BuildingKind.Lander or BuildingKind.Chest) && Planet.InLeaderReach(leader, b.Origin))
+            .OrderBy(b => Planet.SubTorus.DistSq(leader.Pos, b.CenterSub))
+            .ThenBy(b => b.Id)
+            .FirstOrDefault();
+        if (store is null)
+        {
+            Notify("No lander or crate within reach to unload into", Colors.OrangeRed);
+
+            return;
+        }
+
+        Send(new DepositToBuilding(leader.Id, store.Id));
+        Notify($"Unloaded pockets into {store.Name}", Colors.Khaki);
     }
 
     /// <summary>Whether a construction site's footprint (or planned train tiles) includes the given tile.</summary>
@@ -663,6 +722,29 @@ public partial class GameRoot : Node2D
             Send(new PlaceTrain(new Int2(l.X + 2, l.Y + 6), SimDir.East, ["hand-cart", "mine-cart"]));
             Send(new QueueCraft(Planet.LanderId, "iron-gear", 10));
             World.Run(60 * 60);
+            // Show the commander hand-mining the nearest ore.
+            Int2 me = Leader.Tile;
+            Int2? ore = null;
+            for (int r = 1; (r < 30) && (ore is null); r++)
+            {
+                for (int d = -r; (d <= r) && (ore is null); d++)
+                {
+                    foreach (Int2 t in new[] { me + new Int2(d, -r), me + new Int2(d, r), me + new Int2(-r, d), me + new Int2(r, d) })
+                    {
+                        if ((ore is null) && (Planet.ResourceAt(Planet.Torus.Wrap(t)) is { IsTree: false }) && (Planet.OccupantAt(Planet.Torus.Wrap(t)) == 0))
+                        {
+                            ore = Planet.Torus.Wrap(t);
+                        }
+                    }
+                }
+            }
+
+            if (ore is { } target)
+            {
+                Send(new MineTile(Leader.Id, target));
+                World.Run(60 * 15);
+            }
+
             SelectedId = Planet.Trains.FirstOrDefault()?.Id ?? Planet.LanderId;
             _hud.ToggleHelp();
             Zoom = 1.4f;
@@ -734,6 +816,7 @@ public partial class GameRoot : Node2D
         Bind("rotate", Key.R);
         Bind("cancel", Key.Escape, Key.Q);
         Bind("deconstruct", Key.X);
+        Bind("unload", Key.F);
         Bind("pause", Key.Space);
         Bind("speed_up", Key.Equal, Key.KpAdd);
         Bind("speed_down", Key.Minus, Key.KpSubtract);

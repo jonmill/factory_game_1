@@ -119,6 +119,28 @@ public partial class WorldView
         }
     }
 
+    /// <summary>The tile the commander is hand-mining: warm corner brackets and a ring filling toward the next item.</summary>
+    private void DrawMiningTarget()
+    {
+        Unit leader = Root.Leader;
+        if ((leader.MiningTile is not { } t) || (P.ResourceAt(t) is not { } res))
+        {
+            return;
+        }
+
+        Color warm = new Color(1f, 0.78f, 0.35f);
+        Rect2 r = new Rect2(S(t), new Vector2(T, T));
+        Brackets(r, A(warm, 0.9f));
+        int need = System.Math.Max(1, res.HandTicks * 2 / 3);
+        float f = Mathf.Clamp(leader.MiningProgress / (float)need, 0, 1);
+        if (f > 0)
+        {
+            Vector2 c = r.GetCenter();
+            DrawArc(c, T * 0.42f, 0, Mathf.Tau, 24, new Color(0, 0, 0, 0.35f), Mathf.Max(2, T * 0.07f));
+            DrawArc(c, T * 0.42f, -Mathf.Pi / 2, (-Mathf.Pi / 2) + (Mathf.Tau * f), 24, warm, Mathf.Max(2, T * 0.07f));
+        }
+    }
+
     /// <summary>Corner brackets around the selection.</summary>
     private void Brackets(Rect2 r, Color c)
     {

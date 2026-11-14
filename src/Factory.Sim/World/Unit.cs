@@ -43,6 +43,8 @@ public sealed class Unit : Entity
     public Int2 MoveIntent { get; internal set; }
     /// <summary>Leader: tile being hand-mined, or null when not mining.</summary>
     public Int2? MiningTile { get; internal set; }
+    /// <summary>Leader: resource being hand-mined, so mining can move on to the next tile of the same deposit.</summary>
+    public string? MiningResource { get; internal set; }
     /// <summary>Leader: ticks of progress toward the next hand-mined item.</summary>
     public int MiningProgress { get; internal set; }
 

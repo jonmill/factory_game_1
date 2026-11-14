@@ -10,6 +10,17 @@ public sealed record SetMoveIntent(int UnitId, int Dx, int Dy) : Command
 {
     /// <summary>Checks the unit is the player's leader.</summary>
     public override string? Validate(World w) => Leader(w, UnitId) is null ? "Not your leader" : null;
-    /// <summary>Sets the leader's movement direction, clamped to -1..1 on each axis.</summary>
-    public override void Apply(World w) => Leader(w, UnitId)!.MoveIntent = new Int2(System.Math.Sign(Dx), System.Math.Sign(Dy));
+
+    /// <summary>Sets the leader's movement direction, clamped to -1..1 on each axis. Walking away stops hand-mining.</summary>
+    public override void Apply(World w)
+    {
+        Unit u = Leader(w, UnitId)!;
+        u.MoveIntent = new Int2(System.Math.Sign(Dx), System.Math.Sign(Dy));
+        if (u.MoveIntent != Int2.Zero)
+        {
+            u.MiningTile = null;
+            u.MiningResource = null;
+            u.MiningProgress = 0;
+        }
+    }
 }

@@ -81,7 +81,16 @@ public partial class WorldView
         DrawArc(head, s * 0.36f, facing - 0.9f, facing + 0.9f, 10, new Color(0.16f, 0.2f, 0.24f), s * 0.22f);
         DrawCircle(head - (face * s * 0.18f) - (side * s * 0.14f), s * 0.09f, A(Colors.White, 0.45f));
 
-        Vector2? workTile = u.IsLeader ? (u.MiningTile is { } mt ? new Vector2(mt.X + 0.5f, mt.Y + 0.5f) : null) : null;
+        Vector2? workTile = null;
+        if (u.IsLeader && (u.MiningTile is { } mt))
+        {
+            Vector2 mc = new Vector2(mt.X + 0.5f, mt.Y + 0.5f);
+            if (Root.WrapDelta(tilePos, mc).Length() <= Planet.LeaderMineReachTiles)
+            {
+                workTile = mc;
+            }
+        }
+
         if ((workTile is null) && (u.Phase == UnitPhase.Work))
         {
             workTile = tilePos + face;

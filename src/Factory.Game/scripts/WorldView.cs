@@ -87,6 +87,7 @@ public partial class WorldView : Node2D
             DrawStatus(b);
         }
 
+        DrawMiningTarget();
         DrawSelection();
         DrawPreview();
     }

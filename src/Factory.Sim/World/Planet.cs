@@ -212,7 +212,7 @@ public sealed partial class Planet
             OwnerPlayer = owner,
             Pos = SubTorus.Wrap(pos),
             Speed = isLeader ? 130 : 90,
-            Carry = new Inventory(World.Content, isLeader ? 10 : 4),
+            Carry = new Inventory(World.Content, isLeader ? LeaderPocketSlots : 4),
         };
         Units.Add(u);
         World.Register(u);
@@ -391,6 +391,9 @@ public sealed partial class Planet
             h.Add(u.Pos);
             h.Add((int)u.Phase);
             h.Add(u.WorkTicks);
+            h.Add(u.MoveIntent);
+            h.Add(u.MiningTile ?? new Int2(-1, -1));
+            h.Add(u.MiningProgress);
             u.Carry.Hash(h);
         }
 
