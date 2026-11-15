@@ -153,7 +153,7 @@ public partial class GameRoot : Node2D
         SelectedId = 0;
         SetTool(ToolKind.Select);
         Messages.Clear();
-        Notify("Landing complete. Your three followers await orders.", Colors.Cyan);
+        Notify("Landing complete. Your helper bots await orders.", Colors.Cyan);
     }
 
     /// <inheritdoc />
@@ -749,7 +749,7 @@ public partial class GameRoot : Node2D
         Vector2 mouse = ScreenToTileF(GetViewport().GetMousePosition());
         foreach (Unit u in Planet.Units.OrderByDescending(unit => unit.Pos.Y))
         {
-            if (WorldView.FigureBounds.HasPoint(WrapDelta(SubToTile(u.Pos), mouse)))
+            if (WorldView.BoundsFor(u).HasPoint(WrapDelta(SubToTile(u.Pos), mouse)))
             {
                 return u.Id;
             }
@@ -799,14 +799,15 @@ public partial class GameRoot : Node2D
             _hud.ToggleHelp();
         }
 
-        if ((_demoDone == false) && (System.Environment.GetEnvironmentVariable("FACTORY_DEMO") == "1"))
+        string? demo = System.Environment.GetEnvironmentVariable("FACTORY_DEMO");
+        if ((_demoDone == false) && (demo is "1" or "2"))
         {
             _demoDone = true;
             Int2 l = World.Get<Building>(Planet.LanderId)!.Origin;
             List<Unit> f = Planet.Units.Where(u => u.IsLeader == false).ToList();
-            Send(new AssignJob(f[0].Id, new Job(JobKind.Build)));
-            Send(new AssignJob(f[1].Id, new Job(JobKind.Build)));
-            Send(new AssignJob(f[2].Id, new Job(JobKind.Gather, Resource: "tree")));
+            // The helpers gather; the commander builds everything near the lander by itself.
+            Send(new AssignJob(f[0].Id, new Job(JobKind.Gather, Resource: "tree")));
+            Send(new AssignJob(f[1].Id, new Job(JobKind.Gather, Resource: "stone")));
             Send(new PlaceBuilding("stone-furnace", new Int2(l.X + 5, l.Y), SimDir.North));
             Send(new PlaceBuilding("stone-furnace", new Int2(l.X + 5, l.Y + 3), SimDir.North));
             Send(new PlaceBuilding("chest", new Int2(l.X - 3, l.Y), SimDir.North));
@@ -818,6 +819,29 @@ public partial class GameRoot : Node2D
             }
 
             Send(new PlaceBuilding("rail-stop", new Int2(l.X + 7, l.Y + 5), SimDir.South));
+            if (demo == "2")
+            {
+                // Dev only: skip ahead to the late game (unlock everything, stock the lander) to show the
+                // robot bay, terraformers and uplink. Not a replayable game.
+                foreach (TechDef tech in Content.TechList)
+                {
+                    World.Research.Unlocked.UnionWith(tech.Unlocks);
+                }
+
+                Building lander = World.Get<Building>(Planet.LanderId)!;
+                foreach (string item in new[] { "basic-circuit", "iron-plate", "iron-gear", "stone-brick", "copper-plate", "lead-plate", "battery-cell" })
+                {
+                    lander.Inv.AddUnchecked(item, 200);
+                }
+
+                lander.Inv.AddUnchecked("servo-module", 1);
+                Send(new PlaceBuilding("atmo-processor", new Int2(l.X - 4, l.Y - 5), SimDir.North));
+                Send(new PlaceBuilding("hydro-seeder", new Int2(l.X, l.Y - 5), SimDir.North));
+                Send(new PlaceBuilding("bio-incubator", new Int2(l.X + 4, l.Y - 5), SimDir.North));
+                Send(new PlaceBuilding("settler-uplink", new Int2(l.X + 9, l.Y - 2), SimDir.North));
+                Send(new PlaceBuilding("robot-bay", new Int2(l.X - 9, l.Y - 3), SimDir.North));
+            }
+
             World.Run(60 * 60);
             Send(new PlaceTrain(new Int2(l.X + 2, l.Y + 6), SimDir.East, ["hand-cart", "mine-cart"]));
             Send(new QueueCraft(Planet.LanderId, "iron-gear", 10));
@@ -850,13 +874,17 @@ public partial class GameRoot : Node2D
             Zoom = 1.4f;
         }
 
-        // FACTORY_WINDOW=inventory|replicator|tech|help and FACTORY_CATEGORY=<1-6> open HUD panels for screenshots;
-        // FACTORY_SELECT=<building id> selects the nearest building of that type to the commander.
+        // FACTORY_WINDOW=inventory|replicator|tech|help|victory and FACTORY_CATEGORY=<1-7> open HUD panels for screenshots;
+        // FACTORY_SELECT=<building id> selects the nearest building of that type to the commander; "helper" selects a helper bot.
         if ((_uiHooksDone == false) && (Clock > 0.5))
         {
             _uiHooksDone = true;
             string? selectDef = System.Environment.GetEnvironmentVariable("FACTORY_SELECT");
-            if (Planet.Buildings.Where(b => b.Def.Id == selectDef).OrderBy(b => Planet.SubTorus.DistSq(Leader.Pos, b.CenterSub)).FirstOrDefault() is { } pick)
+            if ((selectDef == "helper") && (Planet.Units.FirstOrDefault(u => u.IsLeader == false) is { } helper))
+            {
+                SelectedId = helper.Id;
+            }
+            else if (Planet.Buildings.Where(b => b.Def.Id == selectDef).OrderBy(b => Planet.SubTorus.DistSq(Leader.Pos, b.CenterSub)).FirstOrDefault() is { } pick)
             {
                 SelectedId = pick.Id;
             }

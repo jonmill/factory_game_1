@@ -24,8 +24,20 @@ public sealed partial class World
     public ResearchState Research { get; } = new();
     /// <summary>Log of events reported to the player, oldest first.</summary>
     public List<SimEvent> Events { get; } = [];
-    /// <summary>Number of followers summoned by the colony beacon so far.</summary>
-    public int FollowersSummoned { get; internal set; }
+    /// <summary>Number of helper bots assembled so far (not counting those that landed with the commander).</summary>
+    public int HelpersBuilt { get; internal set; }
+
+    /// <summary>True once the settlers have been called: the game is won.</summary>
+    public bool SettlersCalled { get; internal set; }
+
+    /// <summary>The system-wide readiness meter: the average readiness of every planet, 0 to 100.</summary>
+    public int SystemReadiness => Planets.Count == 0 ? 0 : Planets.Sum(p => p.Readiness) / Planets.Count;
+
+    /// <summary>True once every planet has reached the readiness bar.</summary>
+    public bool AllPlanetsReady => Planets.All(p => p.IsReady);
+
+    /// <summary>Extra module slots the commander has gained from research.</summary>
+    public int CommanderBonusSlots => Research.Completed.Sum(id => Content.Techs.TryGetValue(id, out TechDef? t) ? t.CommanderSlots : 0);
     /// <summary>Cumulative item production and consumption counters.</summary>
     public ProductionStats Stats { get; } = new();
 
@@ -52,6 +64,7 @@ public sealed partial class World
 
         Planet planet = new Planet(this, 0, "Kepler's Rest", settings.PlanetWidth, settings.PlanetHeight);
         Planets.Add(planet);
+        planet.InitStats();
         WorldGen.Generate(planet, Rng, settings);
         SetupStart(planet);
     }
@@ -143,6 +156,7 @@ public sealed partial class World
             h.Add(u);
         }
 
+        h.Add(SettlersCalled);
         foreach (Planet p in Planets)
         {
             p.Hash(h);
@@ -168,26 +182,32 @@ public sealed partial class World
 
         for (int p = 0; p < Settings.Players; p++)
         {
-            Unit leader = planet.CreateUnit(p == 0 ? "Commander" : $"Commander {p + 1}", isLeader: true, owner: p,
+            Unit leader = planet.CreateUnit(p == 0 ? "Commander" : $"Commander {p + 1}", Content.Robots[Content.Start.CommanderRobot], isLeader: true, owner: p,
                 Fixed.TileCenter(new Int2(center.X + p, center.Y + 3)));
             leader.Job = Job.Manual;
         }
 
         for (int i = 0; i < Content.Start.StartingFollowers; i++)
         {
-            SpawnFollower(planet, owner: 0);
+            SpawnHelper(planet, owner: 0, Content.Robots[Content.Start.HelperRobot]);
         }
     }
 
-    internal Unit SpawnFollower(Planet planet, int owner)
+    /// <summary>Creates a helper bot near the lander, or next to <paramref name="at"/> when given.</summary>
+    internal Unit SpawnHelper(Planet planet, int owner, RobotDef robot, Building? at = null)
     {
         string[] names = Content.Start.FollowerNames;
         int index = planet.Units.Count(u => u.IsLeader == false);
-        string name = index < names.Length ? names[index] : $"Colonist {index + 1}";
+        string name = index < names.Length ? names[index] : $"HB-{index + 1:00}";
         Building? lander = Get<Building>(planet.LanderId);
         Int2 basePos = lander is not null ? lander.CenterSub : Fixed.TileCenter(new Int2(planet.Width / 2, planet.Height / 2));
         Int2 pos = basePos + new Int2(((index % 3) - 1) * Fixed.One * 2, Fixed.One * 3);
+        if (at is not null)
+        {
+            // Roll out of the bay's front, just past its bottom edge.
+            pos = at.CenterSub + new Int2(0, (at.H * Fixed.Half) + Fixed.Half);
+        }
 
-        return planet.CreateUnit(name, isLeader: false, owner, planet.SubTorus.Wrap(pos));
+        return planet.CreateUnit(name, robot, isLeader: false, owner, planet.SubTorus.Wrap(pos));
     }
 }

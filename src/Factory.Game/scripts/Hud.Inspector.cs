@@ -94,7 +94,13 @@ public partial class Hud
                 {
                     title = u.IsLeader ? $"{u.Name} (you)" : u.Name;
                     sb.AppendLine(u.Status);
-                    sb.AppendLine($"Job: {u.Job.Kind}" + (u.Job.Resource is { } res ? $" ({C.Resources[res].Name})" : ""));
+                    sb.AppendLine(u.Robot.Name);
+                    if (u.IsLeader == false)
+                    {
+                        sb.AppendLine($"Job: {u.Job.Kind}" + (u.Job.Resource is { } res ? $" ({C.Resources[res].Name})" : ""));
+                    }
+
+                    sb.AppendLine($"Modules: {(u.Modules.Count == 0 ? "none" : string.Join(", ", u.Modules.Select(ItemName)))}  ({u.Modules.Count}/{P.ModuleSlots(u)})");
                     grids.Add(($"Carrying  {u.Carry.UsedSlots}/{u.Carry.Slots}", u.Carry));
                     if (sig != _inspSig)
                     {
@@ -118,7 +124,7 @@ public partial class Hud
 
                         if (loco.Def.Kind == VehicleKind.HandCart)
                         {
-                            sb.AppendLine(P.HasOperator(t) ? "Operator aboard" : "Needs a follower to operate (left panel → Operate train)");
+                            sb.AppendLine(P.HasOperator(t) ? "Operator aboard" : "Needs a helper bot to operate it (left panel → Operate train)");
                         }
                     }
 
@@ -149,7 +155,7 @@ public partial class Hud
                     sb.AppendLine(missing.Count == 0 ? "All materials delivered" : "Still needs: " + Costs(missing));
                     sb.AppendLine($"Work: {s.WorkDone * 100 / System.Math.Max(1, s.WorkNeeded)}%");
                     Unit? builder = W.Get<Unit>(s.ClaimedBy);
-                    sb.AppendLine(builder is null ? "No builder assigned (set a follower to Build)" : $"Builder: {builder.Name}");
+                    sb.AppendLine(builder is null ? "No builder assigned (set a helper bot to Build)" : $"Builder: {builder.Name}");
                     if (sig != _inspSig)
                     {
                         ClearActions();
@@ -273,7 +279,7 @@ public partial class Hud
             into.AddChild(HudStyle.Button("Open replicator  [C]", () => Toggle(HudWindow.Replicator)));
         }
 
-        if (b.Def.Kind == BuildingKind.Assembler)
+        if (b.Def.Kind is BuildingKind.Assembler or BuildingKind.RobotBay)
         {
             OptionButton opt = new OptionButton { FocusMode = Control.FocusModeEnum.None };
             List<RecipeDef> recipes = C.RecipeList.Where(r => b.Def.Categories.Contains(r.Category) && W.Research.Unlocked.Contains(r.Id)).ToList();

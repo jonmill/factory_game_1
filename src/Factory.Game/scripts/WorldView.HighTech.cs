@@ -24,8 +24,8 @@ public partial class WorldView
             case BuildingKind.Assembler:
                 DrawFabricator(b, r, accent, working);
                 break;
-            case BuildingKind.Beacon:
-                DrawBeacon(r, accent, working);
+            case BuildingKind.RobotBay:
+                DrawRobotBay(b, r, accent, working);
                 break;
             case BuildingKind.Lab:
                 DrawLab(b, r, accent, working);
@@ -35,6 +35,12 @@ public partial class WorldView
                 break;
             case BuildingKind.Sorter:
                 DrawSorterArm(b, r, accent);
+                break;
+            case BuildingKind.Terraformer:
+                DrawTerraformer(b, r, accent, working);
+                break;
+            case BuildingKind.Uplink:
+                DrawUplink(b, r, accent, working);
                 break;
             default:
                 Hull(r.Grow(-T * 0.06f), accent, working);
@@ -120,26 +126,141 @@ public partial class WorldView
         }
     }
 
-    private void DrawBeacon(Rect2 r, Color accent, bool working)
+    /// <summary>
+    /// The robot assembly bay: an assembly pad under a gantry, two arms working over it, and the bot
+    /// being built taking shape on the pad as the job progresses.
+    /// </summary>
+    private void DrawRobotBay(Building b, Rect2 r, Color accent, bool working)
+    {
+        Hull(r.Grow(-T * 0.06f), accent, working);
+        Vector2 c = r.GetCenter() + new Vector2(0, T * 0.15f);
+        GlassDisc(c, T * 0.85f);
+        float progress = b.Crafting && (b.Recipe is { } rec) ? Mathf.Clamp(b.Progress / (float)(rec.Ticks * 100), 0, 1) : 0;
+        if (progress > 0)
+        {
+            // The bot on the pad: tracks first, then the deck, then its head.
+            float k = T * 0.12f;
+            DrawRect(new Rect2(c + new Vector2(-k * 2.2f, -k * 0.2f), new Vector2(k * 1.2f, k * 2.6f)), new Color(0.15f, 0.15f, 0.16f));
+            DrawRect(new Rect2(c + new Vector2(k * 1.0f, -k * 0.2f), new Vector2(k * 1.2f, k * 2.6f)), new Color(0.15f, 0.15f, 0.16f));
+            if (progress > 0.35f)
+            {
+                DrawRect(new Rect2(c + new Vector2(-k * 1.6f, -k * 0.6f), new Vector2(k * 3.2f, k * 2.4f)), new Color(0.52f, 0.6f, 0.58f));
+            }
+
+            if (progress > 0.7f)
+            {
+                DrawCircle(c + new Vector2(0, -k * 0.8f), k * 0.9f, new Color(0.7f, 0.76f, 0.74f));
+                DrawCircle(c + new Vector2(0, -k * 0.6f), k * 0.35f, Hdr(accent, 1.2f));
+            }
+        }
+
+        // The gantry across the top, with two arms swinging down over the pad.
+        Vector2 left = r.Position + new Vector2(T * 0.55f, T * 0.5f), right = r.Position + new Vector2(r.Size.X - (T * 0.55f), T * 0.5f);
+        DrawLine(left, right, _hullShade, T * 0.18f);
+        float swing = working ? Mathf.Sin(Time * 3f) * 0.35f : 0.2f;
+        foreach ((Vector2 root, float side) in new[] { (left, 1f), (right, -1f) })
+        {
+            Vector2 elbow = root + new Vector2(side * T * 0.45f, T * 0.45f);
+            Vector2 tip = elbow + (new Vector2(side * Mathf.Cos(swing), Mathf.Sin(swing) + 0.8f).Normalized() * T * 0.5f);
+            DrawLine(root, elbow, _hullLight, Mathf.Max(1.5f, T * 0.09f));
+            DrawLine(elbow, tip, _hullLight, Mathf.Max(1.5f, T * 0.07f));
+            DrawCircle(root, T * 0.1f, Trim(accent, working));
+            DrawCircle(elbow, T * 0.07f, _hullShade);
+            if (working && (Mathf.Sin((Time * 19f) + side) > 0.3f))
+            {
+                DrawCircle(tip, T * 0.05f, Hdr(new Color(1f, 0.9f, 0.6f), 1.5f));
+            }
+        }
+
+        DrawProgressRing(b, c, T * 0.95f, accent);
+    }
+
+    /// <summary>
+    /// A terraformer, by what it raises: the atmosphere processor vents catalyst clouds from two stacks,
+    /// the hydrosphere seeder churns a basin of water, and the bio incubator grows plants under a dome.
+    /// </summary>
+    private void DrawTerraformer(Building b, Rect2 r, Color accent, bool working)
     {
         Hull(r.Grow(-T * 0.06f), accent, working);
         Vector2 c = r.GetCenter();
-        GlassDisc(c, T * 0.8f);
-        for (int i = 0; i < 3; i++)
+        string effect = b.Recipe?.Effect ?? "";
+        if (effect.Contains("atmosphere", System.StringComparison.Ordinal))
         {
-            float a = (i * Mathf.Tau / 3) - (Mathf.Pi / 2);
-            DrawLine(c, c + (new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * T * 0.7f), _hullLight, Mathf.Max(1, T * 0.06f));
+            // A row of three vent stacks over a wide intake grille.
+            Rect2 grille = new Rect2(c + new Vector2(-T * 1.05f, T * 0.15f), new Vector2(T * 2.1f, T * 0.75f));
+            DrawRect(grille, _glass);
+            for (int i = 0; i < 4; i++)
+            {
+                float y = grille.Position.Y + (T * 0.12f) + (i * T * 0.17f);
+                DrawLine(new Vector2(grille.Position.X + (T * 0.1f), y), new Vector2(grille.End.X - (T * 0.1f), y), Trim(accent, working, 0.9f), Mathf.Max(1, T * 0.05f));
+            }
+
+            for (int i = -1; i <= 1; i++)
+            {
+                Vector2 stack = c + new Vector2(T * 0.75f * i, -T * 0.5f);
+                DrawCircle(stack, T * 0.3f, _hullShade);
+                DrawCircle(stack, T * 0.2f, _glass);
+                DrawCircle(stack, T * 0.08f, Trim(accent, working));
+                if (working)
+                {
+                    Puffs(stack, A(accent.Lightened(0.4f), 0.85f), 1.2f, b.Id + i);
+                }
+            }
+        }
+        else if (effect.Contains("hydrosphere", System.StringComparison.Ordinal))
+        {
+            GlassDisc(c, T * 1.0f);
+            DrawCircle(c, T * 0.85f, accent.Darkened(0.45f));
+            for (int i = 0; i < 3; i++)
+            {
+                float ph = Mathf.PosMod((Time * (working ? 0.6f : 0.1f)) + (i / 3f), 1f);
+                DrawArc(c, T * (0.15f + (ph * 0.65f)), 0, Mathf.Tau, 32, A(accent.Lightened(0.5f), (1 - ph) * 0.8f), Mathf.Max(1, T * 0.04f));
+            }
+
+            DrawCircle(c, T * 0.12f, Trim(accent, working, 1.2f));
+        }
+        else
+        {
+            GlassDisc(c, T * 1.0f);
+            DrawCircle(c, T * 0.88f, new Color(0.2f, 0.32f, 0.2f));
+            // Little plants on a grid that sway while it works.
+            for (int i = 0; i < 9; i++)
+            {
+                Vector2 at = c + new Vector2(((i % 3) - 1) * T * 0.45f, ((i / 3) - 1) * T * 0.45f);
+                float sway = working ? Mathf.Sin((Time * 2f) + i) * T * 0.04f : 0;
+                DrawCircle(at + new Vector2(sway, 0), T * 0.13f, accent.Darkened(0.15f));
+                DrawCircle(at + new Vector2(sway - (T * 0.04f), -T * 0.04f), T * 0.07f, accent.Lightened(0.25f));
+            }
+
+            DrawArc(c, T * 0.95f, -2.6f, -1.2f, 16, A(Colors.White, 0.5f), Mathf.Max(1, T * 0.05f));
         }
 
-        DrawCircle(c, T * 0.22f, Trim(accent, working, 1.2f));
+        DrawProgressRing(b, c + new Vector2(T * 1.05f, T * 1.05f), T * 0.22f, accent);
+    }
+
+    /// <summary>The Settler Uplink: a big dish on a turntable, which beams a signal home once it is calling.</summary>
+    private void DrawUplink(Building b, Rect2 r, Color accent, bool working)
+    {
+        Hull(r.Grow(-T * 0.06f), accent, working);
+        Vector2 c = r.GetCenter();
+        float turn = working ? Time * 0.4f : 0.6f;
+        Vector2 dir = new Vector2(Mathf.Cos(turn), Mathf.Sin(turn) * 0.5f);
+        DrawCircle(c, T * 0.95f, _hullShade);
+        DrawCircle(c, T * 0.85f, _hullLight.Darkened(0.05f));
+        DrawArc(c, T * 0.6f, 0, Mathf.Tau, 48, _hullShade, Mathf.Max(1, T * 0.04f));
+        DrawLine(c, c + (dir * T * 0.7f), _hullShade, T * 0.1f);
+        DrawCircle(c + (dir * T * 0.7f), T * 0.14f, Trim(accent, working, 1.3f));
+        DrawCircle(c, T * 0.2f, _glass);
         if (working)
         {
             for (int i = 0; i < 3; i++)
             {
-                float ph = Mathf.PosMod((Time * 0.5f) + (i / 3f), 1f);
-                DrawArc(c, T * (1.3f + (ph * 3.5f)), 0, Mathf.Tau, 64, Hdr(A(accent, 1 - ph), 1.25f), T * 0.05f);
+                float ph = Mathf.PosMod((Time * 0.8f) + (i / 3f), 1f);
+                DrawArc(c - new Vector2(0, ph * T * 2.5f), T * (0.3f + (ph * 0.8f)), -2.6f, -0.54f, 24, Hdr(A(accent, 1 - ph), 1.3f), T * 0.06f);
             }
         }
+
+        DrawProgressRing(b, c, T * 1.0f, accent);
     }
 
     private void DrawLab(Building b, Rect2 r, Color accent, bool working)

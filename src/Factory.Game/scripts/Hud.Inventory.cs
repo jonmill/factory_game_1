@@ -16,7 +16,8 @@ public partial class Hud
     private const float InventorySlot = 50;
 
     private GridContainer _pocketGrid = null!, _storageGrid = null!;
-    private Label _pocketTitle = null!, _storageTitle = null!, _reachNote = null!;
+    private Label _pocketTitle = null!, _storageTitle = null!, _reachNote = null!, _modulesTitle = null!;
+    private HBoxContainer _commanderModules = null!;
     private Control _replicatorTab = null!, _storageTab = null!;
     private Button _replicatorTabButton = null!, _storageTabButton = null!;
     private string? _inventorySig;
@@ -51,6 +52,11 @@ public partial class Hud
         _pocketGrid.AddThemeConstantOverride("v_separation", 4);
         left.AddChild(_pocketTitle);
         left.AddChild(_pocketGrid);
+        _modulesTitle = HudStyle.Title("Modules");
+        _commanderModules = new HBoxContainer();
+        _commanderModules.AddThemeConstantOverride("separation", 4);
+        left.AddChild(_modulesTitle);
+        left.AddChild(_commanderModules);
         left.AddChild(new Control { SizeFlagsVertical = Control.SizeFlags.ExpandFill });
         left.AddChild(HudStyle.Button("Unload all  [F]", () => Root.UnloadPockets(), "Put everything into the nearest lander or crate"));
         cols.AddChild(left);
@@ -131,7 +137,8 @@ public partial class Hud
 
         // Rebuilding mid-drag would free the slot being dragged, so the grids wait until it's dropped.
         string sig = string.Join(",", carry.Items.Select(kv => $"{kv.Key}:{kv.Value}")) + "|" +
-                     string.Join(",", totals.Select(kv => $"{kv.Key}:{kv.Value}")) + "|" + (near?.Id ?? 0);
+                     string.Join(",", totals.Select(kv => $"{kv.Key}:{kv.Value}")) + "|" + (near?.Id ?? 0) +
+                     $"|{string.Join(",", leader.Modules)}|{P.ModuleSlots(leader)}";
         if ((sig == _inventorySig) || (Slot.Dragging is not null))
         {
             return;
@@ -140,6 +147,8 @@ public partial class Hud
         _inventorySig = sig;
         bool reach = near is not null;
         _pocketTitle.Text = $"POCKETS   {carry.UsedSlots} / {carry.Slots}";
+        _modulesTitle.Text = $"MODULES   {leader.Modules.Count} / {P.ModuleSlots(leader)}";
+        FillModuleSlots(_commanderModules, leader, reach: true);
         _storageTitle.Text = $"COLONY STORAGE   {stores.Count} building{(stores.Count == 1 ? "" : "s")}";
 
         Clear(_pocketGrid);
@@ -151,8 +160,8 @@ public partial class Hud
             Slot slot = ItemSlot(item, n, InventorySlot);
             slot.TooltipText = $"{ItemName(item)} ×{carry.Count(item)}";
             slot.DragSource = () => new ItemDrag(it, n, true);
-            slot.CanDrop = d => reach && (d.FromPockets == false);
-            slot.Dropped += d => TakeFromStorage(d.Item, d.Count);
+            slot.CanDrop = d => d.IsInstalledModule || (reach && (d.FromPockets == false));
+            slot.Dropped += d => DropOnPockets(d);
             slot.Clicked += (button, _) => StoreFromPockets(it, ClickAmount(button, n, carry.Count(it)));
             _pocketGrid.AddChild(slot);
             used++;
@@ -160,8 +169,8 @@ public partial class Hud
 
         for (; used < carry.Slots; used++)
         {
-            Slot empty = new Slot(InventorySlot) { CanDrop = d => reach && (d.FromPockets == false) };
-            empty.Dropped += d => TakeFromStorage(d.Item, d.Count);
+            Slot empty = new Slot(InventorySlot) { CanDrop = d => d.IsInstalledModule || (reach && (d.FromPockets == false)) };
+            empty.Dropped += d => DropOnPockets(d);
             _pocketGrid.AddChild(empty);
         }
 
@@ -187,6 +196,19 @@ public partial class Hud
             empty.Dropped += d => StoreFromPockets(d.Item, d.Count);
             _storageGrid.AddChild(empty);
         }
+    }
+
+    /// <summary>A stack dropped on the pockets: a module taken out of the commander, or items from storage.</summary>
+    private void DropOnPockets(ItemDrag d)
+    {
+        if (d.IsInstalledModule)
+        {
+            Root.Send(new RemoveModule(Root.Leader.Id, d.UnitId, d.ModuleSlot));
+
+            return;
+        }
+
+        TakeFromStorage(d.Item, d.Count);
     }
 
     private void StoreFromPockets(string item, int count)

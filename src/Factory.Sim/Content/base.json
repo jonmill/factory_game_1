@@ -15,7 +15,22 @@
     { "id": "iron-gear",    "name": "Iron Gear",     "stack": 100, "mass": 1, "color": "#9fb4c8" },
     { "id": "copper-wire",  "name": "Copper Wire",   "stack": 200, "mass": 0, "color": "#ffb070" },
     { "id": "basic-circuit","name": "Basic Circuit", "stack": 200, "mass": 0, "color": "#4cff9a" },
-    { "id": "battery-cell", "name": "Lead-Acid Cell","stack": 100, "mass": 2, "color": "#c0ff40" }
+    { "id": "battery-cell", "name": "Lead-Acid Cell","stack": 100, "mass": 2, "color": "#c0ff40" },
+
+    { "id": "construction-module", "name": "Construction Module", "stack": 10, "mass": 5, "color": "#ffc040",
+      "module": { "fits": "Helper", "jobs": ["Build"], "description": "Lets a helper bot take the Build job: fetch materials and construct ghosts anywhere." } },
+    { "id": "servo-module", "name": "Servo Module", "stack": 10, "mass": 5, "color": "#60d0ff",
+      "module": { "fits": "Any", "speedPct": 30, "description": "+30% walking speed." } },
+    { "id": "cargo-module", "name": "Cargo Rack Module", "stack": 10, "mass": 8, "color": "#b0a080",
+      "module": { "fits": "Any", "carrySlots": 4, "description": "+4 cargo stacks (pocket slots on the commander)." } },
+    { "id": "rail-module", "name": "Rail Operator Module", "stack": 10, "mass": 5, "color": "#ff7060",
+      "module": { "fits": "Helper", "jobs": ["OperateTrain"], "description": "Lets a helper bot take the Operate train job." } },
+    { "id": "mining-module", "name": "Mining Laser Module", "stack": 10, "mass": 5, "color": "#ff60a0",
+      "module": { "fits": "Any", "miningPct": 60, "description": "+60% hand-mining and gathering speed." } },
+
+    { "id": "catalyst-pack", "name": "Atmospheric Catalyst", "stack": 50, "mass": 2, "color": "#9fd8ff" },
+    { "id": "hydro-cartridge", "name": "Hydro Cartridge",    "stack": 50, "mass": 3, "color": "#4a90ff" },
+    { "id": "seed-pod",        "name": "Biosphere Seed Pod", "stack": 50, "mass": 1, "color": "#60d070" }
   ],
 
   "resources": [
@@ -38,8 +53,37 @@
     { "id": "basic-circuit", "name": "Basic Circuit",  "category": "crafting", "in": { "iron-plate": 1, "copper-wire": 3 }, "out": { "basic-circuit": 1 }, "ticks": 60 },
     { "id": "battery-cell",  "name": "Lead-Acid Cell", "category": "crafting", "in": { "lead-plate": 1, "copper-plate": 1 }, "out": { "battery-cell": 1 }, "ticks": 120 },
 
-    { "id": "summon-colonist", "name": "Call for Colonist", "category": "beacon",
-      "in": { "basic-circuit": 20, "battery-cell": 10, "iron-gear": 20 }, "out": {}, "ticks": 1800, "effect": "summon-colonist" }
+    { "id": "construction-module", "name": "Construction Module", "category": "crafting",
+      "in": { "basic-circuit": 3, "iron-gear": 5, "iron-plate": 5 }, "out": { "construction-module": 1 }, "ticks": 300 },
+    { "id": "servo-module", "name": "Servo Module", "category": "crafting",
+      "in": { "basic-circuit": 2, "iron-gear": 8, "copper-wire": 6 }, "out": { "servo-module": 1 }, "ticks": 300 },
+    { "id": "cargo-module", "name": "Cargo Rack Module", "category": "crafting",
+      "in": { "iron-plate": 10, "iron-gear": 4, "basic-circuit": 1 }, "out": { "cargo-module": 1 }, "ticks": 300 },
+    { "id": "rail-module", "name": "Rail Operator Module", "category": "crafting",
+      "in": { "basic-circuit": 4, "iron-gear": 4, "copper-plate": 4 }, "out": { "rail-module": 1 }, "ticks": 300 },
+    { "id": "mining-module", "name": "Mining Laser Module", "category": "crafting",
+      "in": { "basic-circuit": 5, "copper-plate": 6, "battery-cell": 2 }, "out": { "mining-module": 1 }, "ticks": 300 },
+
+    { "id": "catalyst-pack", "name": "Atmospheric Catalyst", "category": "crafting",
+      "in": { "coal": 3, "copper-wire": 2, "iron-plate": 1 }, "out": { "catalyst-pack": 1 }, "ticks": 120 },
+    { "id": "hydro-cartridge", "name": "Hydro Cartridge", "category": "crafting",
+      "in": { "stone": 3, "iron-plate": 1, "lead-plate": 1 }, "out": { "hydro-cartridge": 1 }, "ticks": 120 },
+    { "id": "seed-pod", "name": "Biosphere Seed Pod", "category": "crafting",
+      "in": { "wood": 4, "stone-brick": 1, "basic-circuit": 1 }, "out": { "seed-pod": 1 }, "ticks": 180 },
+
+    { "id": "release-catalyst", "name": "Release Catalyst", "category": "atmosphere",
+      "in": { "catalyst-pack": 1 }, "out": {}, "ticks": 600, "effect": "terraform:atmosphere:2" },
+    { "id": "seed-hydrosphere", "name": "Seed Hydrosphere", "category": "hydrosphere",
+      "in": { "hydro-cartridge": 1 }, "out": {}, "ticks": 600, "effect": "terraform:hydrosphere:2" },
+    { "id": "seed-biosphere", "name": "Seed Biosphere", "category": "biosphere",
+      "in": { "seed-pod": 1 }, "out": {}, "ticks": 600, "effect": "terraform:biosphere:2" },
+    { "id": "call-settlers", "name": "Call the Settlers", "category": "uplink",
+      "in": { "basic-circuit": 40, "battery-cell": 20, "copper-wire": 40 }, "out": {}, "ticks": 1800, "effect": "call-settlers" },
+
+    { "id": "helper-mk1", "name": "Helper Bot Mk1", "category": "robotics",
+      "in": { "iron-plate": 20, "iron-gear": 15, "basic-circuit": 10, "battery-cell": 4 }, "out": {}, "ticks": 1200, "effect": "helper:helper-mk1" },
+    { "id": "helper-mk2", "name": "Helper Bot Mk2", "category": "robotics",
+      "in": { "iron-plate": 20, "iron-gear": 10, "basic-circuit": 20, "battery-cell": 8, "copper-wire": 20 }, "out": {}, "ticks": 1800, "effect": "helper:helper-mk2" }
   ],
 
   "buildings": [
@@ -48,7 +92,7 @@
       "description": "Your ship. Stores supplies and has a slow fabricator for crafting." },
 
     { "id": "chest", "name": "Supply Crate", "kind": "Chest", "cost": { "wood": 4 }, "buildTicks": 30,
-      "slots": 16, "color": "#c09050", "description": "Simple storage. Followers deliver gathered goods to the nearest storage." },
+      "slots": 16, "color": "#c09050", "description": "Simple storage. Helper bots deliver gathered goods to the nearest storage." },
 
     { "id": "burner-drill", "name": "Burner Drill", "kind": "Drill", "w": 2, "h": 2,
       "cost": { "iron-gear": 3, "iron-plate": 3, "stone-brick": 5 }, "buildTicks": 90,
@@ -105,10 +149,30 @@
       "energy": "Electric", "powerKw": 90, "outSlots": 1, "miningTicks": 60, "color": "#40e0ff",
       "description": "Faster, fuel-free mining. Needs power." },
 
-    { "id": "colony-beacon", "name": "Colony Beacon", "kind": "Beacon", "look": "HighTech", "w": 3, "h": 3,
-      "cost": { "basic-circuit": 20, "stone-brick": 20, "copper-plate": 10, "battery-cell": 5 }, "buildTicks": 300,
-      "energy": "Electric", "powerKw": 300, "slots": 6, "recipe": "summon-colonist", "color": "#ff60ff",
-      "description": "Broadcasts a call to the colony fleet. Each completed call brings a new follower." }
+    { "id": "robot-bay", "name": "Robot Assembly Bay", "kind": "RobotBay", "look": "HighTech", "w": 3, "h": 3,
+      "cost": { "basic-circuit": 15, "stone-brick": 10, "iron-plate": 20, "iron-gear": 10 }, "buildTicks": 300,
+      "energy": "Electric", "powerKw": 200, "slots": 6, "speed": 100, "categories": ["robotics"], "color": "#ff60ff",
+      "description": "Assembles new helper bots. Pick a model, then supply the parts. Needs power." },
+
+    { "id": "atmo-processor", "name": "Atmosphere Processor", "kind": "Terraformer", "look": "HighTech", "w": 3, "h": 3,
+      "cost": { "iron-plate": 20, "iron-gear": 10, "basic-circuit": 10, "stone-brick": 10 }, "buildTicks": 240,
+      "energy": "Electric", "powerKw": 120, "slots": 4, "speed": 100, "recipe": "release-catalyst", "categories": ["atmosphere"], "color": "#9fd8ff",
+      "description": "Releases atmospheric catalysts into the sky, thickening the air. Raises Atmosphere. Needs power." },
+
+    { "id": "hydro-seeder", "name": "Hydrosphere Seeder", "kind": "Terraformer", "look": "HighTech", "w": 3, "h": 3,
+      "cost": { "iron-plate": 20, "lead-plate": 10, "basic-circuit": 10, "stone-brick": 10 }, "buildTicks": 240,
+      "energy": "Electric", "powerKw": 120, "slots": 4, "speed": 100, "recipe": "seed-hydrosphere", "categories": ["hydrosphere"], "color": "#4a90ff",
+      "description": "Melts hydro cartridges into lakes and clouds. Raises Hydrosphere. Needs power." },
+
+    { "id": "bio-incubator", "name": "Bio Incubator", "kind": "Terraformer", "look": "HighTech", "w": 3, "h": 3,
+      "cost": { "iron-plate": 15, "copper-plate": 15, "basic-circuit": 15, "stone-brick": 10 }, "buildTicks": 240,
+      "energy": "Electric", "powerKw": 120, "slots": 4, "speed": 100, "recipe": "seed-biosphere", "categories": ["biosphere"], "color": "#60d070",
+      "description": "Grows and scatters seed pods of hardy plants and microbes. Raises Biosphere. Needs power." },
+
+    { "id": "settler-uplink", "name": "Settler Uplink", "kind": "Uplink", "look": "HighTech", "w": 3, "h": 3,
+      "cost": { "basic-circuit": 30, "battery-cell": 10, "copper-plate": 20, "stone-brick": 20 }, "buildTicks": 360,
+      "energy": "Electric", "powerKw": 200, "slots": 6, "speed": 100, "recipe": "call-settlers", "categories": ["uplink"], "color": "#ffd860",
+      "description": "A long-range transmitter home. Once every planet is ready, it calls the settlers." }
   ],
 
   "vehicles": [
@@ -133,17 +197,65 @@
     { "id": "electric-mining", "name": "Electric Mining", "prereqs": ["automation"],
       "description": "Fuel-free drills powered by the grid.",
       "unitCost": { "basic-circuit": 1, "iron-plate": 2 }, "units": 15, "unitTicks": 600, "unlocks": ["electric-drill"] },
-    { "id": "colony-call", "name": "Colony Beacon", "prereqs": ["mechanical-arms"],
-      "description": "Call the colony fleet for more followers.",
-      "unitCost": { "basic-circuit": 2, "battery-cell": 1 }, "units": 25, "unitTicks": 600, "unlocks": ["colony-beacon", "summon-colonist"] },
+    { "id": "robot-modules", "name": "Robot Modules",
+      "description": "Plug-in modules for your robots: construction for helper bots, servos for everyone.",
+      "unitCost": { "iron-gear": 1, "copper-plate": 1 }, "units": 8, "unitTicks": 600, "unlocks": ["construction-module", "servo-module"] },
+    { "id": "chassis-expansion", "name": "Chassis Expansion", "prereqs": ["robot-modules"],
+      "description": "Two more module slots in the commander, and cargo racks for anyone.",
+      "unitCost": { "basic-circuit": 1, "iron-gear": 1 }, "units": 15, "unitTicks": 600, "commanderSlots": 2, "unlocks": ["cargo-module"] },
+    { "id": "freight-protocols", "name": "Freight Protocols", "prereqs": ["robot-modules"],
+      "description": "Teach helper bots to drive trains.",
+      "unitCost": { "basic-circuit": 1, "iron-plate": 1 }, "units": 12, "unitTicks": 600, "unlocks": ["rail-module"] },
+    { "id": "mining-lasers", "name": "Mining Lasers", "prereqs": ["electric-mining"],
+      "description": "Faster hand-mining and gathering.",
+      "unitCost": { "basic-circuit": 1, "battery-cell": 1 }, "units": 15, "unitTicks": 600, "unlocks": ["mining-module"] },
+    { "id": "robotics", "name": "Robot Assembly", "prereqs": ["mechanical-arms", "robot-modules"],
+      "description": "Build new helper bots in a Robot Assembly Bay.",
+      "unitCost": { "basic-circuit": 2, "battery-cell": 1 }, "units": 25, "unitTicks": 600, "unlocks": ["robot-bay", "helper-mk1"] },
+    { "id": "advanced-helpers", "name": "Helper Bot Mk2", "prereqs": ["robotics"],
+      "description": "A faster helper bot with three module slots.",
+      "unitCost": { "basic-circuit": 3, "battery-cell": 2 }, "units": 30, "unitTicks": 600, "unlocks": ["helper-mk2"] },
+    { "id": "atmospheric-processing", "name": "Atmospheric Processing", "prereqs": ["automation"],
+      "description": "Start terraforming: thicken the air with atmospheric catalysts.",
+      "unitCost": { "basic-circuit": 1, "iron-gear": 1 }, "units": 15, "unitTicks": 600, "unlocks": ["atmo-processor", "catalyst-pack", "release-catalyst"] },
+    { "id": "hydro-seeding", "name": "Hydro Seeding", "prereqs": ["atmospheric-processing"],
+      "description": "Fill the basins: melt hydro cartridges into lakes and clouds.",
+      "unitCost": { "basic-circuit": 1, "battery-cell": 1 }, "units": 20, "unitTicks": 600, "unlocks": ["hydro-seeder", "hydro-cartridge", "seed-hydrosphere"] },
+    { "id": "bio-engineering", "name": "Bio-Engineering", "prereqs": ["hydro-seeding"],
+      "description": "Seed the planet with hardy plants and microbes.",
+      "unitCost": { "basic-circuit": 2, "battery-cell": 1 }, "units": 25, "unitTicks": 600, "unlocks": ["bio-incubator", "seed-pod", "seed-biosphere"] },
+    { "id": "settler-uplink", "name": "Settler Uplink", "prereqs": ["bio-engineering"],
+      "description": "A transmitter to tell the settlers the system is ready for them.",
+      "unitCost": { "basic-circuit": 2, "battery-cell": 2 }, "units": 30, "unitTicks": 600, "unlocks": ["settler-uplink", "call-settlers"] },
     { "id": "conveyor-belts", "name": "Conveyor Belts", "prereqs": ["mechanical-arms"], "comingSoon": true,
       "description": "Continuous item transport. (Not in this playtest.)",
       "unitCost": { "basic-circuit": 2, "iron-gear": 2 }, "units": 30, "unitTicks": 600, "unlocks": [] }
   ],
 
+  "terraform": {
+    "readyBar": 100,
+    "stats": [
+      { "id": "atmosphere", "name": "Atmosphere", "target": 100, "initial": 8, "color": "#9fd8ff",
+        "description": "How thick and breathable the air is." },
+      { "id": "hydrosphere", "name": "Hydrosphere", "target": 100, "initial": 15, "color": "#4a90ff",
+        "description": "Surface water, rain and clouds." },
+      { "id": "biosphere", "name": "Biosphere", "target": 100, "initial": 0, "color": "#60d070",
+        "description": "Soil life and plants that can feed the settlers." }
+    ]
+  },
+
+  "robots": [
+    { "id": "commander", "name": "Commander", "moduleSlots": 2, "speed": 130, "carrySlots": 20, "buildReach": 8,
+      "description": "Sent ahead by the settlers. Builds ghosts within reach by itself and supplies them from its pockets." },
+    { "id": "helper-mk1", "name": "Helper Bot Mk1", "moduleSlots": 1, "speed": 90, "carrySlots": 4,
+      "description": "A simple tracked worker. Gathers and hauls; modules teach it more." },
+    { "id": "helper-mk2", "name": "Helper Bot Mk2", "moduleSlots": 3, "speed": 110, "carrySlots": 6,
+      "description": "A faster helper bot with three module slots." }
+  ],
+
   "start": {
-    "startingFollowers": 3,
-    "followerNames": ["Ada", "Bram", "Cyra", "Dane", "Esme", "Fenn", "Galen", "Hollis", "Isa", "Juno", "Kael", "Lio"],
+    "startingFollowers": 2,
+    "followerNames": ["Rivet", "Servo", "Pip", "Cog", "Flux", "Ohm", "Tinker", "Gyro", "Sprocket", "Volt", "Widget", "Dynamo"],
     "unlocked": [
       "chest", "burner-drill", "stone-furnace", "steam-engine", "power-pole", "lead-acid-battery", "lab",
       "rail", "rail-stop", "water-tower", "hand-cart", "steam-locomotive", "mine-cart",

@@ -51,7 +51,9 @@ public partial class Hud : CanvasLayer
         _windows[HudWindow.Tech] = BuildTechTree();
         _windows[HudWindow.Help] = BuildHelp();
         _windows[HudWindow.Machine] = BuildMachine();
+        _windows[HudWindow.Robot] = BuildRobot();
         _windows[HudWindow.Menu] = BuildMenu();
+        _windows[HudWindow.Victory] = BuildVictory();
         ShowOnly(_open);
     }
 
@@ -96,10 +98,25 @@ public partial class Hud : CanvasLayer
     private void ShowOnly(HudWindow which)
     {
         // Closing a machine window lets go of the building it showed, as closing a machine's panel does.
+        // (Unless the selection has already moved on to something else.)
         if ((_open == HudWindow.Machine) && (which != HudWindow.Machine))
         {
+            if (Root.SelectedId == _machineId)
+            {
+                Root.SelectedId = 0;
+            }
+
             _machineId = 0;
-            Root.SelectedId = 0;
+        }
+
+        if ((_open == HudWindow.Robot) && (which != HudWindow.Robot))
+        {
+            if (Root.SelectedId == _robotId)
+            {
+                Root.SelectedId = 0;
+            }
+
+            _robotId = 0;
         }
 
         bool wasMenu = _open == HudWindow.Menu;
@@ -185,6 +202,9 @@ public partial class Hud : CanvasLayer
                 break;
             case HudWindow.Machine:
                 UpdateMachine();
+                break;
+            case HudWindow.Robot:
+                UpdateRobot();
                 break;
         }
 

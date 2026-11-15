@@ -23,4 +23,8 @@ public enum MachineStatus
     NoWater,
     /// <summary>A lab has no active research to work on.</summary>
     NoResearch,
+    /// <summary>A terraformer's stat has reached its target, so there is nothing left for it to do.</summary>
+    Complete,
+    /// <summary>A Settler Uplink is waiting for every planet to be ready.</summary>
+    NotReady,
 }

@@ -37,7 +37,7 @@ public sealed class Telemetry
             TechCompletedTick.TryAdd(t, w.Tick);
         }
 
-        while (_summoned < w.FollowersSummoned)
+        while (_summoned < w.HelpersBuilt)
         {
             _summoned++;
             FollowerSummonTicks.Add(w.Tick);

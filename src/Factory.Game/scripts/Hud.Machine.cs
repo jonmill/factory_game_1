@@ -25,7 +25,8 @@ public partial class Hud
 
     /// <summary>Buildings that hold items get the machine window; the rest keep the plain inspector.</summary>
     private static bool HasMachineWindow(Building b) =>
-        b.Def.IsStorage || (b.Def.Energy == EnergyKind.Burner) || (b.Def.Kind is BuildingKind.Furnace or BuildingKind.Assembler or BuildingKind.Lab or BuildingKind.Drill or BuildingKind.Beacon);
+        b.Def.IsStorage || (b.Def.Energy == EnergyKind.Burner) ||
+        (b.Def.Kind is BuildingKind.Furnace or BuildingKind.Assembler or BuildingKind.Lab or BuildingKind.Drill or BuildingKind.RobotBay or BuildingKind.Terraformer or BuildingKind.Uplink);
 
     private PanelContainer BuildMachine()
     {
@@ -71,21 +72,36 @@ public partial class Hud
     private void WatchSelection()
     {
         int id = Root.SelectedId;
-        if (id == _machineId)
+        bool same = (id != 0) && ((id == _machineId) || (id == _robotId));
+        if (same || ((id == 0) && (_machineId == 0) && (_robotId == 0)))
         {
             return;
         }
 
-        _machineId = id;
         if ((W.Get<Building>(id) is { } b) && HasMachineWindow(b))
         {
+            ShowOnly(HudWindow.Machine);
+            _machineId = id;
+            _robotId = 0;
             _machineSig = null;
             _machinePocketSig = null;
-            ShowOnly(HudWindow.Machine);
         }
-        else if (_open == HudWindow.Machine)
+        else if (W.Get<Unit>(id) is { IsLeader: false })
         {
-            ShowOnly(HudWindow.None);
+            ShowOnly(HudWindow.Robot);
+            _robotId = id;
+            _machineId = 0;
+            _robotSig = null;
+        }
+        else
+        {
+            if (_open is HudWindow.Machine or HudWindow.Robot)
+            {
+                ShowOnly(HudWindow.None);
+            }
+
+            _machineId = 0;
+            _robotId = 0;
         }
     }
 
@@ -238,7 +254,7 @@ public partial class Hud
                 .DefaultIfEmpty(EmptyMachineSlot(b, reach, null))));
         }
 
-        if (b.Def.Kind is BuildingKind.Furnace or BuildingKind.Assembler or BuildingKind.Lab or BuildingKind.Beacon)
+        if (b.Def.Kind is BuildingKind.Furnace or BuildingKind.Assembler or BuildingKind.Lab or BuildingKind.RobotBay or BuildingKind.Terraformer or BuildingKind.Uplink)
         {
             List<Control> inputs = Stacks(b.Inv).Where(s => (burner == false) || (C.IsFuel(s.Item) == false))
                 .Select(s => (Control)MachineItemSlot(b, s.Item, s.Count, InventoryPart.Input, reach, acceptsDrops: true)).ToList();

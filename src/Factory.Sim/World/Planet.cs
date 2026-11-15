@@ -201,7 +201,7 @@ public sealed partial class Planet
         PowerDirty = true;
     }
 
-    internal Unit CreateUnit(string name, bool isLeader, int owner, Int2 pos)
+    internal Unit CreateUnit(string name, RobotDef robot, bool isLeader, int owner, Int2 pos)
     {
         Unit u = new Unit
         {
@@ -211,8 +211,9 @@ public sealed partial class Planet
             IsLeader = isLeader,
             OwnerPlayer = owner,
             Pos = SubTorus.Wrap(pos),
-            Speed = isLeader ? 130 : 90,
-            Carry = new Inventory(World.Content, isLeader ? LeaderPocketSlots : 4),
+            Robot = robot,
+            Speed = robot.Speed,
+            Carry = new Inventory(World.Content, robot.CarrySlots),
         };
         Units.Add(u);
         World.Register(u);
@@ -353,6 +354,12 @@ public sealed partial class Planet
     internal void Hash(StateHasher h)
     {
         h.Add(Id);
+        foreach ((string stat, int points) in Stats)
+        {
+            h.Add(stat);
+            h.Add(points);
+        }
+
         for (int i = 0; i < _amount.Length; i++)
         {
             h.Add(_amount[i]);
@@ -394,6 +401,9 @@ public sealed partial class Planet
             h.Add(u.MoveIntent);
             h.Add(u.MiningTile ?? new Int2(-1, -1));
             h.Add(u.MiningProgress);
+            h.Add(string.Join(",", u.Modules));
+            h.Add(u.BuildingSiteId);
+            h.Add(u.WalkTarget ?? new Int2(-1, -1));
             u.Carry.Hash(h);
         }
 

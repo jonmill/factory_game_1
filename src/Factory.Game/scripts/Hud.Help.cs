@@ -18,7 +18,7 @@ public partial class Hud
         ]),
         ("Building",
         [
-            ("1 – 6", "Open a build category, then 1 – 0 to pick a building."),
+            ("1 – 7", "Open a build category, then 1 – 0 to pick a building."),
             ("LMB", "Place. Drag to lay rail."),
             ("R", "Rotate. Arrows on drills, stops and sorters show their front."),
             ("X", "Dismantle tool."),
@@ -27,9 +27,9 @@ public partial class Hud
         ]),
         ("Windows",
         [
-            ("E / I / Tab", "Pockets, with the replicator and colony storage beside them."),
+            ("E / I / Tab", "Pockets and module slots, with the replicator and colony storage beside them."),
             ("C", "Replicator tab: queue crafts on the lander."),
-            ("LMB", "Click a machine or crate to open it beside your pockets. Hover for quick info."),
+            ("LMB", "Click a machine, crate or helper bot to open it beside your pockets. Hover for quick info."),
             ("Drag", "Move stacks.  Shift-click: a stack.  Ctrl/Cmd-click: all.  RMB: half."),
             ("T", "Technology tree."),
             ("H", "This help."),
@@ -39,11 +39,13 @@ public partial class Hud
 
     private static readonly (string Title, string Text)[] _helpRight =
     [
-        ("Goal", "Research the Colony Beacon, build it, and call your first new follower."),
-        ("Followers", "Give each follower a job in the left panel: Build, Gather a resource, Haul between two buildings, or Operate a train. Builders construct every ghost you place, fetching materials from the lander and crates."),
+        ("Goal", "You are a robot sent ahead of human settlers. Terraform the system: raise every planet's Atmosphere, Hydrosphere and Biosphere until it is ready, then call the settlers from a Settler Uplink."),
+        ("Building", "You build every ghost within reach by yourself, using materials from your pockets or a lander or crate nearby. Helper bots with a Construction Module build anywhere."),
+        ("Helper bots", "Give each helper bot a job in the left panel: Gather a resource or Haul between two buildings. Modules teach them more: Build, Operate train. Click a bot to fit modules."),
+        ("Upgrades", "Research unlocks modules. Craft them, then drag them into your own slots (E) or a helper bot's. Later, a Robot Assembly Bay builds new helper bots."),
         ("Your pockets", "While you're nearby, whatever you carry supplies construction sites and the lander's queued crafts, so you can build straight from what you mined."),
         ("Power", "Steam engines must touch water and burn wood or coal. Copper poles carry power to machines around them; batteries store the surplus."),
-        ("Trains", "Lay track, place a Rail Stop facing it, then a train. Select the train to set its schedule. Hand carts need a follower to pump them; steam locomotives need water (a Water Tower near a stop) and fuel (coal in the stop)."),
+        ("Trains", "Lay track, place a Rail Stop facing it, then a train. Select the train to set its schedule. Hand carts need a helper bot to pump them; steam locomotives need water (a Water Tower near a stop) and fuel (coal in the stop)."),
     ];
 
     private PanelContainer BuildHelp()

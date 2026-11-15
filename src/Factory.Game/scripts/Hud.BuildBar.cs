@@ -16,8 +16,9 @@ public partial class Hud
         ("Logistics", [BuildingKind.Chest, BuildingKind.Sorter]),
         ("Production", [BuildingKind.Drill, BuildingKind.Furnace, BuildingKind.Assembler]),
         ("Power", [BuildingKind.SteamEngine, BuildingKind.Pole, BuildingKind.Battery]),
-        ("Science", [BuildingKind.Lab, BuildingKind.Beacon]),
+        ("Science", [BuildingKind.Lab, BuildingKind.RobotBay]),
         ("Transport", [BuildingKind.Rail, BuildingKind.RailStop, BuildingKind.WaterTower]),
+        ("Terraform", [BuildingKind.Terraformer, BuildingKind.Uplink]),
         ("Tools", []),
     ];
 
@@ -232,7 +233,7 @@ public partial class Hud
         ToolKind.Deconstruct => "Dismantle: click a building, track, train or ghost  ·  Q cancels",
         ToolKind.PickHaulFrom => "Haul: click the building to take items FROM",
         ToolKind.PickHaulTo => "Haul: click the building to deliver items TO",
-        ToolKind.PickTrain => "Click the train this follower should operate",
+        ToolKind.PickTrain => "Click the train this helper bot should operate",
         ToolKind.PickStop => "Click rail stops to add them to the schedule  ·  Q when done",
         _ => "Left-click select  ·  Right-click ore or trees to mine  ·  F unload pockets",
     };

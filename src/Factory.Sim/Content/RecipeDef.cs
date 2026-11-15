@@ -18,7 +18,7 @@ public sealed class RecipeDef
     public Dictionary<string, int> Out { get; init; } = new();
     /// <summary>Craft time in ticks at 100% speed (60 ticks = 1 second).</summary>
     public int Ticks { get; init; } = 60;
-    /// <summary>Special effect on completion (e.g. "summon-colonist") instead of/as well as item output.</summary>
+    /// <summary>Special effect on completion (e.g. "helper:helper-mk1" assembles a helper bot of that model) instead of/as well as item output.</summary>
     public string? Effect { get; init; }
     /// <summary><see cref="In"/> as an id-sorted list, for deterministic iteration.</summary>
     [JsonIgnore] public ItemAmount[] Inputs { get; internal set; } = [];

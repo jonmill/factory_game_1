@@ -7,13 +7,13 @@ namespace Factory.Sim;
 /// <param name="RecipeId">Recipe to craft, or null to clear.</param>
 public sealed record SetRecipe(int BuildingId, string? RecipeId) : Command
 {
-    /// <summary>Checks the target is a fabricator and the recipe exists, is researched and matches its categories.</summary>
+    /// <summary>Checks the target is a fabricator or robot bay and the recipe exists, is researched and matches its categories.</summary>
     public override string? Validate(World w)
     {
         Building? b = w.Get<Building>(BuildingId);
-        if ((b is null) || (b.Def.Kind != BuildingKind.Assembler))
+        if ((b is null) || ((b.Def.Kind is BuildingKind.Assembler or BuildingKind.RobotBay) == false))
         {
-            return "Only fabricators take a recipe";
+            return "Only fabricators and robot bays take a recipe";
         }
 
         if (RecipeId is null)

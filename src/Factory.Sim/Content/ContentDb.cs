@@ -18,8 +18,12 @@ public sealed class ContentDb
     public List<VehicleDef> VehicleList { get; init; } = [];
     /// <summary>Technology definitions in file order.</summary>
     public List<TechDef> TechList { get; init; } = [];
+    /// <summary>Robot models in file order.</summary>
+    public List<RobotDef> RobotList { get; init; } = [];
     /// <summary>Starting conditions for a new game.</summary>
     public StartDef Start { get; init; } = new();
+    /// <summary>Planet stats and the readiness bar.</summary>
+    public TerraformDef Terraform { get; init; } = new();
 
     /// <summary>Items indexed by id.</summary>
     [JsonIgnore] public Dictionary<string, ItemDef> Items { get; private set; } = new();
@@ -33,6 +37,8 @@ public sealed class ContentDb
     [JsonIgnore] public Dictionary<string, VehicleDef> Vehicles { get; private set; } = new();
     /// <summary>Technologies indexed by id.</summary>
     [JsonIgnore] public Dictionary<string, TechDef> Techs { get; private set; } = new();
+    /// <summary>Robot models indexed by id.</summary>
+    [JsonIgnore] public Dictionary<string, RobotDef> Robots { get; private set; } = new();
 
     /// <summary>Looks up an item by id, throwing <see cref="KeyNotFoundException"/> if it does not exist.</summary>
     public ItemDef Item(string id) => Items.TryGetValue(id, out ItemDef? d) ? d : throw new KeyNotFoundException($"Unknown item '{id}'");
@@ -40,6 +46,12 @@ public sealed class ContentDb
     public int Stack(string id) => Item(id).Stack;
     /// <summary>True if the item id exists and has a fuel value.</summary>
     public bool IsFuel(string id) => Items.TryGetValue(id, out ItemDef? d) && (d.FuelKj > 0);
+
+    /// <summary>The robot model a recipe effect assembles ("helper:&lt;robot id&gt;"), or null.</summary>
+    /// <param name="effect">The recipe's effect.</param>
+    /// <returns>The robot id, if the effect builds one.</returns>
+    public static string? RobotForEffect(string? effect) =>
+        (effect is not null) && effect.StartsWith("helper:", StringComparison.Ordinal) ? effect["helper:".Length..] : null;
 
     private static readonly JsonSerializerOptions _options = new()
     {
@@ -57,7 +69,9 @@ public sealed class ContentDb
         public List<BuildingDef> Buildings { get; init; } = [];
         public List<VehicleDef> Vehicles { get; init; } = [];
         public List<TechDef> Techs { get; init; } = [];
+        public List<RobotDef> Robots { get; init; } = [];
         public StartDef Start { get; init; } = new();
+        public TerraformDef Terraform { get; init; } = new();
     }
 
     /// <summary>Parses content JSON, builds the lookup indexes and validates cross-references, throwing <see cref="InvalidDataException"/> listing every problem found.</summary>
@@ -72,7 +86,9 @@ public sealed class ContentDb
             BuildingList = raw.Buildings,
             VehicleList = raw.Vehicles,
             TechList = raw.Techs,
+            RobotList = raw.Robots,
             Start = raw.Start,
+            Terraform = raw.Terraform,
         };
         db.Index();
         db.Validate();
@@ -102,6 +118,7 @@ public sealed class ContentDb
         Buildings = BuildingList.ToDictionary(i => i.Id);
         Vehicles = VehicleList.ToDictionary(i => i.Id);
         Techs = TechList.ToDictionary(i => i.Id);
+        Robots = RobotList.ToDictionary(i => i.Id);
         foreach (RecipeDef r in RecipeList)
         {
             r.Inputs = Sorted(r.In);
@@ -147,6 +164,15 @@ public sealed class ContentDb
         {
             CheckItems($"recipe {r.Id}", r.In.Keys);
             CheckItems($"recipe {r.Id}", r.Out.Keys);
+            if ((RobotForEffect(r.Effect) is { } robot) && (Robots.ContainsKey(robot) == false))
+            {
+                errors.Add($"recipe {r.Id}: unknown robot {robot}");
+            }
+
+            if ((Planet.TerraformEffect(r.Effect) is { } t) && (Terraform.Stats.Any(s => s.Id == t.Stat) == false))
+            {
+                errors.Add($"recipe {r.Id}: unknown planet stat {t.Stat}");
+            }
         }
 
         foreach (BuildingDef b in BuildingList)
@@ -193,6 +219,14 @@ public sealed class ContentDb
         }
 
         CheckItems("start lander", Start.Lander.Keys);
+        foreach (string robot in new[] { Start.CommanderRobot, Start.HelperRobot })
+        {
+            if (Robots.ContainsKey(robot) == false)
+            {
+                errors.Add($"start: unknown robot {robot}");
+            }
+        }
+
         List<string> dupes = Recipes.Keys.Intersect(Buildings.Keys).Concat(Recipes.Keys.Intersect(Vehicles.Keys)).Concat(Buildings.Keys.Intersect(Vehicles.Keys)).ToList();
         foreach (string? d in dupes)
         {
@@ -217,6 +251,8 @@ public sealed class ContentDb
             BuildingList,
             VehicleList,
             TechList,
+            RobotList,
+            Terraform,
             Start
         }));
 

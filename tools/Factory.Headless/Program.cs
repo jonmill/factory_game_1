@@ -18,7 +18,7 @@ using Factory.Sim;
 // Options:
 //   --seeds 1-8 | 1,4,9          map seeds (default 1-4)
 //   --minutes N                  game-minutes budget per run (default 60)
-//   --goal tech:<id> | followers:<n> | item:<id>:<count>   (default tech:automation)
+//   --goal tech:<id> | helpers:<n> | settlers | item:<id>:<count>   (default tech:automation)
 //   --iterations N               speedrun candidates / softlock runs (default 12)
 //   --chaos-minutes N            softlock: minutes of chaos before recovery (default 15)
 //   --out DIR                    output directory (default playtest-results/<timestamp>)
@@ -97,6 +97,16 @@ if (command == "trace")
 
         Building landerB = s.World.Get<Building>(p.LanderId)!;
         Console.WriteLine($"    lander {landerB.Status} queue=[{string.Join(",", landerB.CraftQueue)}] crafting={landerB.RecipeId} inv=[{string.Join(",", landerB.Inv.Items.Select(kv => kv.Key + "=" + kv.Value))}]");
+        foreach (ConstructionSite site in p.Sites.Take(6))
+        {
+            Console.WriteLine($"    site {site.Kind} {site.DefId} @{site.Origin.X},{site.Origin.Y} missing=[{string.Join(",", site.Missing().Select(m => m.Item + "=" + m.Count))}]");
+        }
+
+        foreach (Unit leader in p.Units.Where(u => u.IsLeader))
+        {
+            Console.WriteLine($"    {leader.Name} {leader.Status} @{leader.Pos.X / Fixed.One},{leader.Pos.Y / Fixed.One} walkTo={leader.WalkTarget?.ToString() ?? "-"} intent={leader.MoveIntent} modules=[{string.Join(",", leader.Modules)}] carry=[{string.Join(",", leader.Carry.Items.Select(kv => kv.Key + "=" + kv.Value))}]");
+        }
+
         foreach (Unit? u in p.Units.Where(u => u.IsLeader == false))
         {
             Console.WriteLine($"    {u.Name,-6} {u.Job.Kind,-8} {u.Status} @{u.Pos.X / Fixed.One},{u.Pos.Y / Fixed.One} phase={u.Phase} job={u.Job} carry=[{string.Join(",", u.Carry.Items.Select(kv => kv.Key + "=" + kv.Value))}]{((u.Job.Kind == JobKind.Haul) && (s.World.Get<Building>(u.Job.FromId) is { } fb) ? $" from@{fb.Origin.X},{fb.Origin.Y} {fb.Def.Id}" : "")}");
@@ -206,6 +216,6 @@ static List<ulong> ParseSeeds(string spec)
 static void PrintHelp()
 {
     Console.WriteLine("usage: Factory.Headless <list|static|balance|speedrun|softlock|suite|verify> [options]");
-    Console.WriteLine("  --seeds 1-8  --minutes 60  --goal tech:automation|followers:1|item:iron-plate:200");
+    Console.WriteLine("  --seeds 1-8  --minutes 60  --goal tech:automation|helpers:1|settlers|item:iron-plate:200");
     Console.WriteLine("  --iterations 12  --chaos-minutes 15  --out DIR  --parallel N  --fail-on high");
 }

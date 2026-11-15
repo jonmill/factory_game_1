@@ -50,11 +50,9 @@ public class LeaderTests
     {
         TestWorld tw = new TestWorld();
         Int2 at = tw.Leader.Tile + new Int2(3, 3);
+        tw.Leader.Carry.Add("wood", 10);
         tw.Do(new PlaceBuilding("chest", at, Dir.North));
         ConstructionSite site = tw.P.Sites.Single();
-        tw.Leader.Carry.Add("wood", 10);
-
-        tw.Run(1);
 
         await Assert.That(site.MaterialsComplete).IsTrue();
         await Assert.That(tw.Leader.Carry.Count("wood")).IsEqualTo(6);

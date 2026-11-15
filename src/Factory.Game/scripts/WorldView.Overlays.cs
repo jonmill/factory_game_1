@@ -59,7 +59,7 @@ public partial class WorldView
         Color? c = b.Status switch
         {
             MachineStatus.NoPower or MachineStatus.NoFuel or MachineStatus.NoWater => _alarm,
-            MachineStatus.NoInput or MachineStatus.OutputFull or MachineStatus.NoRecipe or MachineStatus.NoResearch or MachineStatus.NoResource => _warning,
+            MachineStatus.NoInput or MachineStatus.OutputFull or MachineStatus.NoRecipe or MachineStatus.NoResearch or MachineStatus.NoResource or MachineStatus.NotReady => _warning,
             _ => null,
         };
         if ((c is null) || (b.Def.Kind == BuildingKind.Lander))
@@ -169,7 +169,7 @@ public partial class WorldView
         }
         else if (w.Get<Unit>(Root.SelectedId) is { } u)
         {
-            Brackets(new Rect2(S(GameRoot.SubToTile(u.Pos)) + (FigureBounds.Position * T), FigureBounds.Size * T), _highlight);
+            Brackets(new Rect2(S(GameRoot.SubToTile(u.Pos)) + (BoundsFor(u).Position * T), BoundsFor(u).Size * T), _highlight);
         }
         else if (w.Get<Train>(Root.SelectedId) is { } t)
         {

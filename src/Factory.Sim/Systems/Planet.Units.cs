@@ -7,8 +7,6 @@ public sealed partial class Planet
     public const int LeaderReachTiles = 10;
     /// <summary>How close, in tiles, the leader has to stand to a tile to hand-mine it.</summary>
     public const int LeaderMineReachTiles = 1;
-    /// <summary>Stack slots in the leader's pockets.</summary>
-    public const int LeaderPocketSlots = 20;
     /// <summary>How far, in tiles, mining looks for the next tile of the same deposit when one runs out.</summary>
     private const int NextTileSearch = 4;
     private const int GatherBatch = 25;
@@ -97,11 +95,24 @@ public sealed partial class Planet
             int s = (dx != 0) && (dy != 0) ? u.Speed * 181 / 256 : u.Speed;
             MoveWithCollision(u, new Int2(dx * s, dy * s));
         }
+        else if (u.WalkTarget is { } goal)
+        {
+            u.Status = "Walking";
+            if (MoveTowards(u, Fixed.TileCenter(goal), Fixed.Half))
+            {
+                u.WalkTarget = null;
+            }
+        }
 
         SupplyFromPockets(u);
+        CommanderBuild(u);
         if (u.MiningTile is not { } t)
         {
-            u.Status = u.MoveIntent == Int2.Zero ? "Standing by" : "Walking";
+            u.Status = (u.MoveIntent != Int2.Zero) || (u.WalkTarget is not null) ? "Walking" : "Standing by";
+            if ((u.BuildingSiteId != 0) && (World.Get<ConstructionSite>(u.BuildingSiteId) is { } site))
+            {
+                u.Status = site.Kind == SiteKind.Deconstruct ? $"Dismantling {SiteLabel(site)}" : $"Building {SiteLabel(site)}";
+            }
 
             return;
         }
@@ -142,7 +153,7 @@ public sealed partial class Planet
         }
 
         u.Status = $"Mining {res.Name}";
-        if (++u.MiningProgress < res.HandTicks * 2 / 3)
+        if (++u.MiningProgress < MiningTicks(u, res.HandTicks * 2 / 3))
         {
             return;
         }
@@ -355,7 +366,7 @@ public sealed partial class Planet
                 }
 
                 u.Status = $"Gathering {res.Name}";
-                if (++u.WorkTicks < res.HandTicks)
+                if (++u.WorkTicks < MiningTicks(u, res.HandTicks))
                 {
                     return;
                 }

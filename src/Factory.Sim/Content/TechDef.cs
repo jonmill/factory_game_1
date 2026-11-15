@@ -22,6 +22,8 @@ public sealed class TechDef
     public int UnitTicks { get; init; } = 600;
     /// <summary>Recipe, building and vehicle ids unlocked on completion.</summary>
     public string[] Unlocks { get; init; } = [];
+    /// <summary>Extra module slots the commander gains on completion.</summary>
+    public int CommanderSlots { get; init; }
     /// <summary>Shown in the tree but not yet researchable (placeholder for future content).</summary>
     public bool ComingSoon { get; init; }
     /// <summary><see cref="UnitCost"/> as an id-sorted list, for deterministic iteration.</summary>

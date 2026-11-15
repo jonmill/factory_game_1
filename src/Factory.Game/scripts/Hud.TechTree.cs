@@ -31,14 +31,22 @@ public partial class Hud
             _techSig = null;
         };
         _techView.Layout();
-        canvas.AddChild(_techView);
+        // The tree is wider than the screen now, so it scrolls sideways (drag the bar or Shift-scroll).
+        ScrollContainer scroll = new ScrollContainer
+        {
+            CustomMinimumSize = new Vector2(900, System.Math.Min(_techView.CustomMinimumSize.Y + 14, 470)),
+            VerticalScrollMode = ScrollContainer.ScrollMode.Auto,
+            HorizontalScrollMode = ScrollContainer.ScrollMode.Auto,
+        };
+        scroll.AddChild(_techView);
+        canvas.AddChild(scroll);
         cols.AddChild(canvas);
 
         _techDetail = new VBoxContainer { CustomMinimumSize = new Vector2(320, 0) };
         _techDetail.AddThemeConstantOverride("separation", 6);
         cols.AddChild(_techDetail);
 
-        body.AddChild(HudStyle.Caption("Labs consume the unit materials and need power. Followers can haul materials in, or deposit them by hand.", HudStyle.TextDim, 11));
+        body.AddChild(HudStyle.Caption("Labs consume the unit materials and need power. Helper bots can haul materials in, or deposit them by hand.", HudStyle.TextDim, 11));
 
         return win;
     }

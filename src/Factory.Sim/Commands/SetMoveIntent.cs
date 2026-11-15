@@ -18,6 +18,7 @@ public sealed record SetMoveIntent(int UnitId, int Dx, int Dy) : Command
         u.MoveIntent = new Int2(System.Math.Sign(Dx), System.Math.Sign(Dy));
         if (u.MoveIntent != Int2.Zero)
         {
+            u.WalkTarget = null;
             u.MiningTile = null;
             u.MiningResource = null;
             u.MiningProgress = 0;

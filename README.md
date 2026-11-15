@@ -1,7 +1,9 @@
 # Factory 1 (working title)
 
-2D factory/colony automation game: Factorio-style depth, DSP-style shine. You lead a small landing party
-on a constrained, wrap-around planet, give orders to followers, and build up to full automation.
+2D factory automation game: Factorio-style depth, DSP-style shine. You are a robot commander sent ahead
+of human settlers. With a few simple helper bots you build up a base on a wrap-around planet, upgrade
+yourself and your bots with modules, build more bots, and terraform the system (atmosphere, hydrosphere,
+biosphere) until every planet is ready. Then you call the settlers.
 
 ## Layout
 
@@ -10,7 +12,7 @@ on a constrained, wrap-around planet, give orders to followers, and build up to 
 | `src/Factory.Sim` | **Deterministic simulation.** Pure C#, no engine/Steam references. All rules live here. |
 | `src/Factory.Game` | Godot 4.7 .NET client (`project.godot` lives here): rendering, input, UI. Never mutates the sim directly. |
 | `src/Factory.Sim/Content/base.json` | All balance data (items, recipes, buildings, vehicles, techs, start kit). |
-| `tests/Factory.Sim.Tests` | TUnit tests: determinism/replay, machines, power, followers, trains, progression, bots, playtest framework. |
+| `tests/Factory.Sim.Tests` | TUnit tests: determinism/replay, machines, power, helper bots, modules, terraforming, trains, progression, bots, playtest framework. |
 | `src/Factory.Playtest` | Headless playtesting: bots that play through commands, telemetry, invariant checks, experiments. |
 | `tools/Factory.Headless` | CLI for the playtest experiments, bot traces and replay verification. |
 
@@ -39,10 +41,11 @@ dotnet run --project tests/Factory.Sim.Tests    # tests (TUnit runs as an execut
 `play.sh` expects Godot 4.7 .NET at `/Applications/Godot_mono.app`; set `GODOT=/path/to/Godot` otherwise.
 
 Debug/automation env vars for the client: `FACTORY_DEMO=1` (queues a sample base and fast-forwards
-via normal commands), `FACTORY_SCREENSHOT=/path.png` (saves a frame after 3 s and quits),
-`FACTORY_SEED=<n>` (pins the map seed), `FACTORY_WINDOW=inventory|replicator|tech|help` and
-`FACTORY_CATEGORY=<1-6>` (open a HUD window or build category), `FACTORY_SELECT=<building id>` (selects the
-nearest building of that type, e.g. `stone-furnace`), `FACTORY_REPLAY=/path.replay.json`
+via normal commands; `FACTORY_DEMO=2` also unlocks everything and stocks the lander to show the late-game
+buildings, so it is not a replayable game), `FACTORY_SCREENSHOT=/path.png` (saves a frame after 3 s and quits),
+`FACTORY_SEED=<n>` (pins the map seed), `FACTORY_WINDOW=inventory|replicator|tech|help|victory` and
+`FACTORY_CATEGORY=<1-7>` (open a HUD window or build category), `FACTORY_SELECT=<building id>` (selects the
+nearest building of that type, e.g. `stone-furnace`, or `helper` for a helper bot), `FACTORY_REPLAY=/path.replay.json`
 (loads a headless replay and centres on the lander) and `FACTORY_ZOOM=<f>` (initial camera zoom,
 used with the replay).
 
@@ -52,11 +55,11 @@ used with the replay).
 |---|---|
 | WASD | Walk |
 | Right-click (drag) | Mine ore or trees; the commander walks over and works through the deposit |
-| 1 – 6, then 1 – 0 | Open a build category, then pick a building; left-click places, R rotates |
+| 1 – 7, then 1 – 0 | Open a build category, then pick a building; left-click places, R rotates. The commander builds ghosts within 8 tiles by itself |
 | X · Q | Dismantle tool · pipette (pick the building under the cursor to place another) |
 | Esc | Step back out of the tool, category, window or selection; then the game menu |
-| E, I or Tab · C · T · H | Inventory (pockets + replicator + colony storage) · Replicator tab · Tech tree · Help |
-| Left-click a machine or crate | Opens it beside your pockets; hover anything for quick info |
+| E, I or Tab · C · T · H | Inventory (pockets + module slots + replicator + colony storage) · Replicator tab · Tech tree · Help |
+| Left-click a machine, crate or helper bot | Opens it beside your pockets (a bot shows its module slots); hover anything for quick info |
 | Drag · Shift-click · Ctrl/Cmd-click · right-click | Move a stack between pockets and a machine or storage · one stack · all of that item · half |
 | F | Unload pockets into the nearest lander or crate |
 | Space · + / − · F5 / F9 | Pause · game speed · quicksave / quickload |
@@ -70,19 +73,21 @@ than real time, and write a markdown + JSON report plus a replay for every findi
 H="dotnet run -c Release --project tools/Factory.Headless --"
 $H list                                                   # experiments
 $H static                                                 # balance maths straight from base.json (no simulation)
-$H balance  --seeds 1-8 --goal followers:1                # reference bot plays each seed; gather rates, starvation, surpluses
+$H balance  --seeds 1-8 --goal helpers:1                # reference bot plays each seed; gather rates, starvation, surpluses
 $H speedrun --goal tech:mechanical-arms --iterations 24   # search bot strategies for the fastest route to a goal
-$H softlock --seeds 1-4 --iterations 24 --chaos-minutes 15 --goal followers:1   # chaos play, then can the bot recover?
+$H softlock --seeds 1-4 --iterations 24 --chaos-minutes 15 --goal helpers:1   # chaos play, then can the bot recover?
 $H suite --fail-on high                                   # static + balance + softlock; exit code 1 on bad findings (CI)
-$H trace --seeds 1 --goal followers:1 --every 60          # timeline of what the bot and each follower is doing
+$H balance  --seeds 1-4 --minutes 240 --goal settlers   # the whole game: terraform and call the settlers
+$H trace --seeds 1 --goal helpers:1 --every 60          # timeline of what the bot and each helper bot is doing
 $H trace --seeds 3 --run 22 --chaos-minutes 15            # replay softlock run 22's chaos, then trace the recovery
 $H verify playtest-results/<run>/replays/<name>.replay.json   # re-simulate a replay and check its checksum
 ```
 
-Goals: `tech:<id>`, `followers:<n>`, `item:<id>:<count>`. Reports go to `playtest-results/<timestamp>/`
+Goals: `tech:<id>`, `helpers:<n>` (assemble n helper bots), `settlers` (win the game), `item:<id>:<count>`. Reports go to `playtest-results/<timestamp>/`
 (gitignored) unless `--out` is given. The `GoalBot` is a state-driven planner (research path → structures →
-demand → crafting → follower jobs) that recovers from a messy base; the `ChaosBot` issues random, often
-wasteful commands to shake out softlocks, item dupes/losses and stuck followers.
+demand → crafting → helper jobs, plus walking the commander to its builds and fitting modules) that
+recovers from a messy base; the `ChaosBot` issues random, often wasteful commands to shake out softlocks,
+item dupes/losses and stuck helper bots.
 
 ## Code standards
 
@@ -103,11 +108,16 @@ the native `steam_api` library from the Steamworks SDK next to the executable, a
 
 ## Playtest scope
 
-Included: one 128×128 wrap-around planet, 5 ores + trees + water, 3 followers (Build / Gather / Haul /
-Operate train), leader hand-mining, lander fabricator, burner drills, furnaces, steam engines, poles,
-lead-acid batteries, labs, rails, rail stops, water towers, hand-pump carts (need an operator, 1200 kg
-pull limit), steam locomotives (water + fuel, 12 t pull), mine carts, 5 techs, Colony Beacon → new follower.
+Included: one 128×128 wrap-around planet, 5 ores + trees + water, the commander (hand-mining, builds
+ghosts in reach, 2 module slots, +2 from research) and 2 Helper Bot Mk1s (1 slot; Gather / Haul, with
+Build and Operate train taught by modules), 5 modules (construction, servo, cargo, rail operator, mining
+laser), a Robot Assembly Bay for Mk1 and Mk2 (3 slots) helper bots, lander fabricator, burner drills,
+furnaces, steam engines, poles, lead-acid batteries, labs, rails, rail stops, water towers, hand-pump carts
+(need an operator, 1200 kg pull limit), steam locomotives (water + fuel, 12 t pull), mine carts,
+terraformers (Atmosphere Processor, Hydrosphere Seeder, Bio Incubator), a system readiness meter and the
+Settler Uplink to win, 14 techs.
 
-Not yet: belts (shown as "coming soon" tech), other planets / interplanetary travel, rail signals
+Not yet: belts (shown as "coming soon" tech), other planets / interplanetary travel (the readiness meter
+already averages every planet and needs each one ready), rail signals
 (trains just block each other), train collision avoidance on single track, snapshot saves, audio,
 sprite art, multiplayer transport.

@@ -9,7 +9,8 @@ public class PlaytestTests
 {
     [Test]
     [Arguments("tech:automation", typeof(TechGoal))]
-    [Arguments("followers:2", typeof(FollowersGoal))]
+    [Arguments("helpers:2", typeof(HelpersGoal))]
+    [Arguments("settlers", typeof(SettlersGoal))]
     [Arguments("item:iron-plate:200", typeof(ItemGoal))]
     public async Task GoalParse_AcceptsEachGoalForm(string spec, Type expected)
     {
@@ -22,7 +23,7 @@ public class PlaytestTests
     public async Task GoalParse_KeepsTheParsedValues()
     {
         await Assert.That(Goal.Parse("tech:automation")).IsEqualTo(new TechGoal("automation"));
-        await Assert.That(Goal.Parse("followers:3")).IsEqualTo(new FollowersGoal(3));
+        await Assert.That(Goal.Parse("helpers:3")).IsEqualTo(new HelpersGoal(3));
         await Assert.That(Goal.Parse("item:iron-gear:25")).IsEqualTo(new ItemGoal("iron-gear", 25));
     }
 
@@ -40,7 +41,7 @@ public class PlaytestTests
     [Test]
     public async Task GoalParse_RejectsNonNumericCounts()
     {
-        await Assert.That(() => Goal.Parse("followers:many")).Throws<FormatException>();
+        await Assert.That(() => Goal.Parse("helpers:many")).Throws<FormatException>();
     }
 
     [Test]

@@ -20,6 +20,7 @@ public class TrainTests
         tw.Do(new SetSchedule(t.Id, [new ScheduleStop(b.Id, StopAction.Unload), new ScheduleStop(a.Id, StopAction.Load)]));
         tw.Run(30);
         await Assert.That(t.State).IsEqualTo(TrainState.NoOperator);
+        tw.Equip(tw.Followers[0], "rail-module");
         tw.Do(new AssignJob(tw.Followers[0].Id, new Job(JobKind.OperateTrain, TrainId: t.Id)));
         tw.RunUntil(() => t.State == TrainState.Moving, 60 * 60, "train moving with operator");
     }
@@ -30,6 +31,7 @@ public class TrainTests
         (TestWorld? tw, Building? a, Building? b) = Line();
         a.Inv.Add("iron-ore", 200);
         Train t = tw.P.CreateTrain(["hand-cart", "mine-cart"], [new Int2(12, 20), new Int2(11, 20)]);
+        tw.Equip(tw.Followers[0], "rail-module");
         tw.Do(new AssignJob(tw.Followers[0].Id, new Job(JobKind.OperateTrain, TrainId: t.Id)));
         tw.Do(new SetSchedule(t.Id, [new ScheduleStop(a.Id, StopAction.Load), new ScheduleStop(b.Id, StopAction.Unload)]));
         tw.RunUntil(() => b.Inv.Count("iron-ore") > 0, 60 * 120, "first delivery");
@@ -43,6 +45,7 @@ public class TrainTests
         Train t = tw.P.CreateTrain(["hand-cart", "mine-cart", "mine-cart"], [new Int2(13, 20), new Int2(12, 20), new Int2(11, 20)]);
         t.Vehicles[1].Cargo.Add("lead-ore", 400);
         t.Vehicles[2].Cargo.Add("lead-ore", 400);
+        tw.Equip(tw.Followers[0], "rail-module");
         tw.Do(new AssignJob(tw.Followers[0].Id, new Job(JobKind.OperateTrain, TrainId: t.Id)));
         tw.Do(new SetSchedule(t.Id, [new ScheduleStop(b.Id, StopAction.Unload)]));
         tw.Run(60 * 20);
@@ -100,6 +103,7 @@ public class TrainTests
         tw.Do(new PlaceTrain(new Int2(l.X, l.Y + 6), Dir.East, ["hand-cart", "mine-cart"]));
         foreach (Unit f in tw.Followers)
         {
+            tw.Equip(f, "construction-module");
             tw.Do(new AssignJob(f.Id, new Job(JobKind.Build)));
         }
 

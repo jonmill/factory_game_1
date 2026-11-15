@@ -83,7 +83,7 @@ public class CoreTests
         Int2? lead = p.FindNearestResource(center, TestWorld.Content.Resources["lead"]);
         await Assert.That(lead).IsNotNull();
         await Assert.That(p.Torus.Chebyshev(center, lead.Value) >= 20).IsTrue().Because("lead should need a railway");
-        await Assert.That(p.Units.Count(u => u.IsLeader == false)).IsEqualTo(3);
+        await Assert.That(p.Units.Count(u => u.IsLeader == false)).IsEqualTo(2);
     }
 
     [Test]
@@ -92,7 +92,7 @@ public class CoreTests
         TestWorld tw = new TestWorld(empty: false, seed: 99);
         Unit follower = tw.Followers[0];
         tw.W.Submit(new AssignJob(follower.Id, new Job(JobKind.Gather, Resource: "iron")));
-        tw.W.Submit(new AssignJob(tw.Followers[1].Id, new Job(JobKind.Build)));
+        tw.W.Submit(new AssignJob(tw.Followers[1].Id, new Job(JobKind.Gather, Resource: "stone")));
         tw.W.Submit(new SetMoveIntent(tw.Leader.Id, 1, 0));
         tw.Run(30);
         tw.W.Submit(new PlaceBuilding("chest", new Int2(tw.Lander.Origin.X + 5, tw.Lander.Origin.Y), Dir.North));
@@ -126,7 +126,7 @@ public class CoreTests
     [Test]
     public async Task Content_DrawsShipAndElectricTechAsHighTechAndEverythingElseAsIndustrial()
     {
-        string[] highTech = ["assembler", "colony-beacon", "electric-drill", "lab", "lander", "sorter"];
+        string[] highTech = ["assembler", "atmo-processor", "bio-incubator", "electric-drill", "hydro-seeder", "lab", "lander", "robot-bay", "settler-uplink", "sorter"];
 
         string[] actual = TestWorld.Content.BuildingList.Where(b => b.Look == VisualStyle.HighTech).Select(b => b.Id).Order(StringComparer.Ordinal).ToArray();
 

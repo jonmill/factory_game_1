@@ -34,5 +34,9 @@ public sealed record MineTile(int UnitId, Int2? Tile) : Command
         u.MiningTile = Tile is { } t ? u.Planet.Torus.Wrap(t) : null;
         u.MiningResource = u.MiningTile is { } mt ? u.Planet.ResourceAt(mt)?.Id : null;
         u.MiningProgress = 0;
+        if (u.MiningTile is not null)
+        {
+            u.WalkTarget = null;
+        }
     }
 }

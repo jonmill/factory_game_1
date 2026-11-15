@@ -94,6 +94,13 @@ public sealed class TestWorld
         Assert.Fail($"Timed out after {maxTicks} ticks waiting for: {what}");
     }
 
+    /// <summary>Installs a module straight into a robot (skips crafting it and the commander's reach).</summary>
+    public void Equip(Unit u, string module)
+    {
+        u.Modules.Add(module);
+        P.RefreshRobot(u);
+    }
+
     public void Unlock(params string[] ids)
     {
         foreach (string id in ids)

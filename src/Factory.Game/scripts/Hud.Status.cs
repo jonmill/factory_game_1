@@ -4,7 +4,7 @@ using Godot;
 
 namespace Factory.Game;
 
-/// <summary>Status cards: the planet and clock top-left, research and power top-right.</summary>
+/// <summary>Status cards: the planet, clock and terraforming top-left, research and power top-right.</summary>
 public partial class Hud
 {
     private PanelContainer _planetCard = null!, _researchCard = null!, _powerCard = null!;
@@ -25,6 +25,7 @@ public partial class Hud
         _clock = HudStyle.Caption("", HudStyle.TextDim, 12);
         pv.AddChild(_planetName);
         pv.AddChild(_clock);
+        BuildTerraform(pv);
 
         _researchCard = new PanelContainer { MouseFilter = Control.MouseFilterEnum.Stop, TooltipText = "Open the tech tree (T)" };
         _ui.AddChild(_researchCard);
@@ -73,8 +74,9 @@ public partial class Hud
         long secs = W.Tick / World.TicksPerSecond;
         int followers = P.Units.Count(u => u.IsLeader == false);
         _planetName.Text = P.Name.ToUpperInvariant();
-        _clock.Text = $"{secs / 3600}:{secs / 60 % 60:00}:{secs % 60:00}   {(Root.Paused ? "PAUSED" : $"×{Root.Speed}")}   ·   {followers} followers" +
-                      (W.FollowersSummoned > 0 ? $" (+{W.FollowersSummoned} called)" : "");
+        UpdateTerraform();
+        _clock.Text = $"{secs / 3600}:{secs / 60 % 60:00}:{secs % 60:00}   {(Root.Paused ? "PAUSED" : $"×{Root.Speed}")}   ·   {followers} helper bot{(followers == 1 ? "" : "s")}" +
+                      (W.HelpersBuilt > 0 ? $" (+{W.HelpersBuilt} built)" : "");
 
         if (W.Research.Current is { } id)
         {

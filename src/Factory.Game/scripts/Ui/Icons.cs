@@ -28,6 +28,45 @@ public static class Icons
         Vector2 m = r.GetCenter();
         float s = Mathf.Min(r.Size.X, r.Size.Y);
         string id = item.Id;
+        if (item.Module is not null)
+        {
+            // A plug-in module: a dark board with gold pins and a core in the module's colour.
+            Rect2 board = new Rect2(m - new Vector2(s * 0.3f, s * 0.24f), new Vector2(s * 0.6f, s * 0.48f));
+            for (int i = 0; i < 4; i++)
+            {
+                float x = board.Position.X + (s * 0.09f) + (i * s * 0.14f);
+                ci.DrawLine(new Vector2(x, board.End.Y), new Vector2(x, board.End.Y + (s * 0.08f)), new Color(0.9f, 0.75f, 0.35f), Mathf.Max(1, s * 0.04f));
+            }
+
+            ci.DrawRect(board, new Color(0.14f, 0.17f, 0.22f));
+            ci.DrawRect(board, c.Darkened(0.2f), false, Mathf.Max(1, s * 0.03f));
+            ci.DrawCircle(m, s * 0.14f, c.Darkened(0.25f));
+            ci.DrawCircle(m - new Vector2(s * 0.03f, s * 0.03f), s * 0.08f, c.Lightened(0.3f));
+
+            return;
+        }
+
+        if (id == "catalyst-pack" || id == "hydro-cartridge")
+        {
+            // A canister with a coloured band.
+            Rect2 body = new Rect2(m - new Vector2(s * 0.17f, s * 0.3f), new Vector2(s * 0.34f, s * 0.6f));
+            ci.DrawRect(body, new Color(0.78f, 0.82f, 0.86f));
+            ci.DrawRect(new Rect2(body.Position + new Vector2(0, s * 0.2f), new Vector2(body.Size.X, s * 0.2f)), c);
+            ci.DrawRect(new Rect2(m - new Vector2(s * 0.08f, s * 0.38f), new Vector2(s * 0.16f, s * 0.08f)), new Color(0.4f, 0.44f, 0.5f));
+            ci.DrawRect(body, new Color(0.25f, 0.28f, 0.32f), false, 1);
+
+            return;
+        }
+
+        if (id == "seed-pod")
+        {
+            ci.DrawCircle(m + new Vector2(0, s * 0.06f), s * 0.24f, c.Darkened(0.35f));
+            ci.DrawCircle(m + new Vector2(-s * 0.05f, s * 0.01f), s * 0.17f, c);
+            ci.DrawLine(m - new Vector2(0, s * 0.16f), m - new Vector2(-s * 0.08f, s * 0.34f), c.Lightened(0.2f), Mathf.Max(1.5f, s * 0.05f));
+
+            return;
+        }
+
         if (id == "wood")
         {
             Log(ci, m + new Vector2(-s * 0.05f, s * 0.12f), s, c);
@@ -143,11 +182,23 @@ public static class Icons
                 ci.DrawCircle(m, s * 0.2f, _glass);
                 ci.DrawCircle(m, s * 0.1f, accent);
                 break;
-            case BuildingKind.Beacon:
+            case BuildingKind.RobotBay:
                 ci.DrawCircle(m, s * 0.2f, _glass);
                 ci.DrawArc(m, s * 0.28f, -2.4f, -0.7f, 12, accent, Mathf.Max(1.5f, s * 0.04f), true);
                 ci.DrawArc(m, s * 0.38f, -2.4f, -0.7f, 12, A(accent, 0.6f), Mathf.Max(1.5f, s * 0.04f), true);
                 ci.DrawCircle(m, s * 0.07f, accent);
+                break;
+            case BuildingKind.Terraformer:
+                ci.DrawCircle(m, s * 0.22f, _glass);
+                ci.DrawCircle(m, s * 0.15f, accent.Darkened(0.2f));
+                ci.DrawCircle(m - new Vector2(s * 0.04f, s * 0.04f), s * 0.07f, accent.Lightened(0.35f));
+                break;
+            case BuildingKind.Uplink:
+                ci.DrawCircle(m, s * 0.2f, _hullShade);
+                ci.DrawArc(m, s * 0.14f, 0, Mathf.Tau, 16, _glass, Mathf.Max(1.5f, s * 0.04f), true);
+                ci.DrawLine(m, m + new Vector2(s * 0.14f, -s * 0.14f), _glass, Mathf.Max(1.5f, s * 0.04f), true);
+                ci.DrawCircle(m + new Vector2(s * 0.14f, -s * 0.14f), s * 0.06f, accent);
+                ci.DrawArc(m, s * 0.32f, -2.4f, -0.7f, 12, accent, Mathf.Max(1.5f, s * 0.04f), true);
                 break;
             case BuildingKind.Sorter:
                 ci.DrawCircle(m + new Vector2(-s * 0.15f, s * 0.15f), s * 0.12f, _hullShade);

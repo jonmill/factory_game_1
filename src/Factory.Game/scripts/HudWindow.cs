@@ -15,6 +15,10 @@ public enum HudWindow
     Help,
     /// <summary>The selected building's slots beside the commander's pockets.</summary>
     Machine,
+    /// <summary>The selected helper bot's module slots and cargo beside the commander's pockets.</summary>
+    Robot,
+    /// <summary>The win screen, shown once the settlers have been called.</summary>
+    Victory,
     /// <summary>The game menu: resume, save, load, controls, quit. Pauses the game while open.</summary>
     Menu,
 }

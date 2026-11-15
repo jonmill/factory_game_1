@@ -10,8 +10,12 @@ public sealed class StartDef
     public Dictionary<string, int> Lander { get; init; } = new();
     /// <summary>Recipe, building and vehicle ids available from the start without research.</summary>
     public string[] Unlocked { get; init; } = [];
-    /// <summary>Names assigned to followers in order as they join the colony.</summary>
+    /// <summary>Names given to helper bots in the order they are built.</summary>
     public string[] FollowerNames { get; init; } = [];
-    /// <summary>Number of followers that arrive with the leader.</summary>
-    public int StartingFollowers { get; init; } = 3;
+    /// <summary>Number of helper bots that land with the commander.</summary>
+    public int StartingFollowers { get; init; } = 2;
+    /// <summary>Robot model of the commander.</summary>
+    public string CommanderRobot { get; init; } = "commander";
+    /// <summary>Robot model of the helper bots that land with the commander.</summary>
+    public string HelperRobot { get; init; } = "helper-mk1";
 }

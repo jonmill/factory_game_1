@@ -18,4 +18,6 @@ public sealed class ItemDef
     public int FuelKj { get; init; }
     /// <summary>Placeholder render colour as a hex string.</summary>
     public string Color { get; init; } = "#ffffff";
+    /// <summary>Set if the item is a robot module that can be installed in a module slot.</summary>
+    public ModuleDef? Module { get; init; }
 }

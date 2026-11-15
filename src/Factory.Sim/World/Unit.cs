@@ -1,12 +1,16 @@
 namespace Factory.Sim;
 
-/// <summary>The leader (player-controlled) and followers (AI-driven from their Job) are both Units.</summary>
+/// <summary>The commander (player-controlled) and helper bots (AI-driven from their Job) are both Units.</summary>
 public sealed class Unit : Entity
 {
     /// <summary>Display name shown to the player.</summary>
     public string Name { get; internal set; } = "";
-    /// <summary>True for the player's own character; false for AI followers.</summary>
+    /// <summary>True for the player's own character, the commander; false for helper bots.</summary>
     public bool IsLeader { get; internal set; }
+    /// <summary>The robot model, which sets base speed, cargo and module slots.</summary>
+    public RobotDef Robot { get; internal set; } = null!;
+    /// <summary>Item ids of the modules installed, in slot order.</summary>
+    public List<string> Modules { get; } = [];
     /// <summary>Player who owns/commands this unit. Multiplayer-ready: commands are validated against this.</summary>
     public int OwnerPlayer { get; internal set; }
     /// <summary>Position in sub-units (1024 per tile), wrapped onto the planet.</summary>
@@ -47,6 +51,10 @@ public sealed class Unit : Entity
     public string? MiningResource { get; internal set; }
     /// <summary>Leader: ticks of progress toward the next hand-mined item.</summary>
     public int MiningProgress { get; internal set; }
+    /// <summary>Leader: tile it is walking to by itself, or null.</summary>
+    public Int2? WalkTarget { get; internal set; }
+    /// <summary>Leader: the construction site it built a step of this tick, or 0.</summary>
+    public int BuildingSiteId { get; internal set; }
 
     // Walking
     /// <summary>Waypoints (sub-unit positions) of the path being walked, next one first; empty when walking straight.</summary>

@@ -4,7 +4,7 @@ using Godot;
 
 namespace Factory.Game;
 
-/// <summary>The followers panel, top-left: one row per follower with their status and a job picker.</summary>
+/// <summary>The helper bots panel, top-left: one row per bot with its status and a job picker.</summary>
 public partial class Hud
 {
     private static readonly (string Label, Job? Job)[] _jobOptions =
@@ -27,7 +27,7 @@ public partial class Hud
         _ui.AddChild(_followerPanel);
         VBoxContainer v = new VBoxContainer();
         _followerPanel.AddChild(v);
-        v.AddChild(HudStyle.Title("Followers"));
+        v.AddChild(HudStyle.Title("Helper bots"));
         _followers = new VBoxContainer();
         _followers.AddThemeConstantOverride("separation", 2);
         v.AddChild(_followers);
@@ -93,6 +93,17 @@ public partial class Hud
             status.Text = u.Status;
             status.TooltipText = u.Status;
             name.AddThemeColorOverride("font_color", Root.SelectedId == u.Id ? HudStyle.Orange : HudStyle.Text);
+            // Jobs a bot lacks the module for are greyed out, naming the module it needs.
+            foreach ((JobKind kind, int index) in new[] { (JobKind.Build, 1), (JobKind.OperateTrain, 9) })
+            {
+                bool can = P.CanTakeJob(u, kind);
+                if (opt.IsItemDisabled(index) == can)
+                {
+                    opt.SetItemDisabled(index, can == false);
+                    opt.SetItemTooltip(index, can ? "" : $"Needs a {P.ModuleForJob(kind)?.Name ?? "module"}: click the bot to install one");
+                }
+            }
+
             if ((opt.GetPopup().Visible == false) && (opt.Selected != JobIndex(u.Job)))
             {
                 opt.Select(JobIndex(u.Job));

@@ -136,4 +136,35 @@ public class GoalBotTests
         bot.Tick(tw.W);
         tw.W.Step();
     }
+
+    [Test]
+    public async Task GoalBot_PlaysTheWholeGame_AndCallsTheSettlers()
+    {
+        World w = new World(TestWorld.Content, new WorldSettings { Seed = 1 });
+        GoalBot bot = new GoalBot(new SettlersGoal());
+        for (int i = 0; (i < 60 * 60 * 120) && (w.SettlersCalled == false); i++)
+        {
+            bot.Tick(w);
+            w.Step();
+        }
+
+        await Assert.That(w.SettlersCalled).IsTrue();
+        await Assert.That(w.AllPlanetsReady).IsTrue();
+    }
+
+    [Test]
+    public async Task GoalBot_FitsHelpersWithConstructionModules()
+    {
+        World w = new World(TestWorld.Content, new WorldSettings { Seed = 2 });
+        GoalBot bot = new GoalBot(new HelpersGoal(1));
+        Planet p = w.Planets[0];
+        for (int i = 0; (i < 60 * 60 * 60) && (w.HelpersBuilt == 0); i++)
+        {
+            bot.Tick(w);
+            w.Step();
+        }
+
+        await Assert.That(w.HelpersBuilt).IsEqualTo(1);
+        await Assert.That(p.Units.Count(u => (u.IsLeader == false) && p.CanTakeJob(u, JobKind.Build))).IsGreaterThanOrEqualTo(1);
+    }
 }

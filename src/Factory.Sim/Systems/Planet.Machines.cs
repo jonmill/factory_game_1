@@ -1,6 +1,6 @@
 namespace Factory.Sim;
 
-/// <summary>Drills, furnaces, fabricators, labs, beacons and sorters.</summary>
+/// <summary>Drills, furnaces, fabricators, labs, robot bays and sorters.</summary>
 public sealed partial class Planet
 {
     private const int MaxFuelStock = 10;
@@ -43,7 +43,7 @@ public sealed partial class Planet
                 }
             case BuildingKind.Drill or BuildingKind.SteamEngine:
                 return burner && c.IsFuel(item) ? Cap(MaxFuelStock) : 0;
-            case BuildingKind.Assembler or BuildingKind.Beacon:
+            case BuildingKind.Assembler or BuildingKind.RobotBay or BuildingKind.Terraformer or BuildingKind.Uplink:
                 {
                     RecipeDef? r = b.Recipe;
                     if ((r is null) || (r.In.TryGetValue(item, out int need) == false))
@@ -51,7 +51,7 @@ public sealed partial class Planet
                         return 0;
                     }
 
-                    return Cap(need * (b.Def.Kind == BuildingKind.Beacon ? 2 : 4));
+                    return Cap(need * (b.Def.Kind == BuildingKind.Assembler ? 4 : 2));
                 }
             case BuildingKind.Lab:
                 {
@@ -80,7 +80,7 @@ public sealed partial class Planet
         {
             case BuildingKind.Drill:
                 return (b.Out.Total < DrillBuffer) && (FindMinable(b) is not null);
-            case BuildingKind.Assembler or BuildingKind.Beacon:
+            case BuildingKind.Assembler or BuildingKind.RobotBay or BuildingKind.Terraformer or BuildingKind.Uplink:
                 return b.Crafting || ((b.Recipe is { } r) && b.Inv.Has(r.Inputs) && b.Out.CanAddAll(r.Outputs));
             case BuildingKind.Lab:
                 return b.Crafting || ((CurrentTech is { } t) && b.Inv.Has(t.UnitCostList));
@@ -166,7 +166,7 @@ public sealed partial class Planet
             case BuildingKind.Drill:
                 UpdateDrill(b);
                 break;
-            case BuildingKind.Furnace or BuildingKind.Assembler or BuildingKind.Beacon or BuildingKind.Lander:
+            case BuildingKind.Furnace or BuildingKind.Assembler or BuildingKind.RobotBay or BuildingKind.Terraformer or BuildingKind.Uplink or BuildingKind.Lander:
                 UpdateCrafter(b);
                 break;
             case BuildingKind.Lab:
@@ -310,6 +310,13 @@ public sealed partial class Planet
             }
         }
 
+        if (EffectBlocked(r) is { } blocked)
+        {
+            b.Status = blocked;
+
+            return false;
+        }
+
         if (b.Inv.Has(r.Inputs) == false)
         {
             b.Status = MachineStatus.NoInput;
@@ -367,12 +374,14 @@ public sealed partial class Planet
         World.Stats.Record(r.Category == "smelting" ? ItemFlow.Smelted : ItemFlow.Crafted, r.Outputs);
         b.Crafting = false;
         b.Progress = 0;
-        if (r.Effect == "summon-colonist")
+        if ((ContentDb.RobotForEffect(r.Effect) is { } robot) && World.Content.Robots.TryGetValue(robot, out RobotDef? def))
         {
-            Unit u = World.SpawnFollower(this, owner: 0);
-            World.FollowersSummoned++;
-            World.Emit($"{u.Name} has answered the colony beacon and landed!", Id, Fixed.ToTile(u.Pos));
+            Unit u = World.SpawnHelper(this, owner: 0, def, b);
+            World.HelpersBuilt++;
+            World.Emit($"{b.Name} assembled {u.Name}, a {def.Name}", Id, Fixed.ToTile(u.Pos));
         }
+
+        ApplyTerraformEffect(b, r);
 
         if ((b.Def.Kind == BuildingKind.Lander) && (b.CraftQueue.Count == 0))
         {

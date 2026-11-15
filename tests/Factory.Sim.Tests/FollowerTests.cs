@@ -34,6 +34,7 @@ public class FollowerTests
         tw.Do(new PlaceBuilding("chest", new Int2(l.X - 4, l.Y), Dir.North));
         foreach (Unit f in tw.Followers)
         {
+            tw.Equip(f, "construction-module");
             tw.Do(new AssignJob(f.Id, new Job(JobKind.Build)));
         }
 
@@ -49,6 +50,7 @@ public class FollowerTests
         TestWorld tw = new TestWorld();
         tw.Lander.Inv.Remove("stone", 1000);
         tw.Do(new PlaceBuilding("stone-furnace", new Int2(tw.Lander.Origin.X + 6, tw.Lander.Origin.Y), Dir.North));
+        tw.Equip(tw.Followers[0], "construction-module");
         tw.Do(new AssignJob(tw.Followers[0].Id, new Job(JobKind.Build)));
         tw.Run(600);
         await Assert.That(tw.P.Sites).HasSingleItem();
@@ -68,6 +70,7 @@ public class FollowerTests
         tw.Lander.Inv.Add("stone", 2);
         tw.Do(new PlaceBuilding("stone-furnace", new Int2(l.X + 20, l.Y), Dir.North));
         tw.Do(new PlaceBuilding("stone-furnace", new Int2(l.X + 24, l.Y), Dir.North));
+        tw.Equip(tw.Followers[0], "construction-module");
         tw.Do(new AssignJob(tw.Followers[0].Id, new Job(JobKind.Build)));
         tw.RunUntil(() => tw.P.Sites.Any(s => s.Delivered.Count("stone") == 2), 60 * 30, "first furnace part-supplied");
         tw.Run(60 * 5);
@@ -85,7 +88,9 @@ public class FollowerTests
         Building chest = tw.Build("chest", tw.Lander.Origin.X + 5, tw.Lander.Origin.Y);
         chest.Inv.Add("coal", 7);
         int wood = tw.Lander.Inv.Count("wood"), coal = tw.Lander.Inv.Count("coal");
+        tw.Leader.Pos += new Int2(Fixed.One * 30, 0); // out of the commander's own build reach
         tw.Do(new DeconstructEntity(chest.Id));
+        tw.Equip(tw.Followers[0], "construction-module");
         tw.Do(new AssignJob(tw.Followers[0].Id, new Job(JobKind.Build)));
         tw.RunUntil(() => (tw.W.Get<Building>(chest.Id) is null) && tw.Followers[0].Carry.IsEmpty, 60 * 30, "chest dismantled and stored");
         await Assert.That(tw.Lander.Inv.Count("wood")).IsEqualTo(wood + 4);

@@ -32,6 +32,10 @@ public enum BuildingKind
     WaterTower,
     /// <summary>An arm that moves items from the building behind it to the one in front.</summary>
     Sorter,
-    /// <summary>The colony beacon, which runs a fixed recipe to summon new followers.</summary>
-    Beacon
+    /// <summary>The robot assembly bay, which crafts robotics recipes that assemble new helper bots.</summary>
+    RobotBay,
+    /// <summary>Runs a fixed recipe that raises one of the planet's stats.</summary>
+    Terraformer,
+    /// <summary>The Settler Uplink, which calls the settlers once every planet is ready.</summary>
+    Uplink
 }

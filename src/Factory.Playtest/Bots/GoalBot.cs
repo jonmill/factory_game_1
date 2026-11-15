@@ -35,6 +35,9 @@ public sealed class GoalBot : IBot
     }
 
     private World _w = null!;
+    private Int2 _lastLeaderPos;
+    private int _stuckThinks;
+    private Int2? _cutting;
     private Planet P => _w.Planets[0];
     private ContentDb C => _w.Content;
     private void Send(Command c) => _w.Submit(c with { Player = Player });
@@ -68,6 +71,175 @@ public sealed class GoalBot : IBot
         ComputeDemand(plan);
         QueueCrafting(plan, lander);
         AssignFollowers(plan, lander);
+        ManageCommander(lander);
+    }
+
+    // ------------------------------------------------------------------ commander
+
+    private Unit? Commander() => P.Units.FirstOrDefault(u => u.IsLeader && (u.OwnerPlayer == Player));
+
+    /// <summary>Helper bots that can't take a job yet but have a free slot for its module.</summary>
+    private List<Unit> HelpersLacking(JobKind kind) => P.Units
+        .Where(u => (u.IsLeader == false) && (u.OwnerPlayer == Player) && (P.CanTakeJob(u, kind) == false) && (u.Modules.Count < P.ModuleSlots(u)))
+        .OrderBy(u => u.Id).ToList();
+
+    /// <summary>
+    /// What a player does with the commander: fit helper bots with construction modules, set new robot bays
+    /// to assemble helpers, and, while no helper can build, carry materials out to ghosts and build them
+    /// itself; otherwise wait by the lander.
+    /// </summary>
+    private void ManageCommander(Building lander)
+    {
+        if (Commander() is not { } leader)
+        {
+            return;
+        }
+
+        foreach (Building bay in P.Buildings.Where(b => (b.Def.Kind == BuildingKind.RobotBay) && (b.RecipeId is null)))
+        {
+            if (_w.Research.Unlocked.Contains(HelpersGoal.Recipe))
+            {
+                Send(new SetRecipe(bay.Id, HelpersGoal.Recipe));
+            }
+        }
+
+        bool nearLander = P.InLeaderReach(leader, lander.Origin);
+        Int2 home = P.Torus.Wrap(lander.Origin + new Int2(1, lander.H + 1));
+        if (P.ModuleForJob(JobKind.Build) is { } module)
+        {
+            List<Unit> lacking = HelpersLacking(JobKind.Build);
+            if ((leader.Carry.Count(module.Id) > 0) && (lacking.FirstOrDefault(h => P.InLeaderReach(leader, h.Tile)) is { } helper))
+            {
+                Send(new InstallModule(leader.Id, helper.Id, module.Id));
+
+                return;
+            }
+
+            int want = lacking.Count - leader.Carry.Count(module.Id);
+            if ((want > 0) && nearLander && (lander.Inv.Count(module.Id) > 0))
+            {
+                Send(new TakeFromBuilding(leader.Id, lander.Id, module.Id, want));
+
+                return;
+            }
+        }
+
+        bool helpersBuild = P.Units.Any(u => (u.IsLeader == false) && (u.OwnerPlayer == Player) && P.CanTakeJob(u, JobKind.Build));
+        IEnumerable<ConstructionSite> sites = helpersBuild ? [] : P.Sites.OrderBy(s => P.SubTorus.DistSq(lander.CenterSub, s.CenterSub)).ThenBy(s => s.Id);
+        foreach (ConstructionSite site in sites)
+        {
+            List<ItemAmount> missing = site.Missing().Select(m => new ItemAmount(m.Item, m.Count - leader.Carry.Count(m.Item))).Where(m => m.Count > 0).ToList();
+            if (missing.Count > 0)
+            {
+                // Fetch from the lander, or from whichever crate holds an item.
+                List<(ItemAmount Need, Building From)> sources = [];
+                foreach (ItemAmount m in missing)
+                {
+                    Building? from = lander.Inv.Count(m.Item) >= m.Count
+                        ? lander
+                        : P.Buildings.Where(b => (b.Def.Kind == BuildingKind.Chest) && (b.Inv.Count(m.Item) >= m.Count))
+                            .OrderBy(b => P.SubTorus.DistSq(leader.Pos, b.CenterSub)).ThenBy(b => b.Id).FirstOrDefault();
+                    if (from is not null)
+                    {
+                        sources.Add((m, from));
+                    }
+                }
+
+                if (sources.Count < missing.Count)
+                {
+                    continue; // not all in storage yet; try another ghost
+                }
+
+                (ItemAmount need, Building source) = sources[0];
+                if (P.InLeaderReach(leader, source.Origin))
+                {
+                    foreach ((ItemAmount m, Building from) in sources.Where(x => x.From == source))
+                    {
+                        Send(new TakeFromBuilding(leader.Id, from.Id, m.Item, m.Count));
+                    }
+                }
+                else
+                {
+                    WalkTowards(leader, source == lander ? home : P.Torus.Wrap(source.Origin + new Int2(0, source.H)));
+                }
+
+                return;
+            }
+
+            if (P.SubTorus.DistSq(leader.Pos, site.CenterSub) > 5L * 5 * Fixed.One * Fixed.One)
+            {
+                WalkTowards(leader, P.Torus.Wrap(Fixed.ToTile(site.CenterSub) + new Int2(0, (site.H / 2) + 1)));
+            }
+
+            return;
+        }
+
+        if (nearLander == false)
+        {
+            WalkTowards(leader, home);
+        }
+        else if (leader.Carry.IsEmpty == false)
+        {
+            Send(new DepositToBuilding(leader.Id, lander.Id));
+        }
+    }
+
+    private void WalkTowards(Unit leader, Int2 tile)
+    {
+        // Hemmed in by trees (chaos can leave the commander deep in a forest): cut a way out, as a player would.
+        _stuckThinks = leader.Pos == _lastLeaderPos ? _stuckThinks + 1 : 0;
+        _lastLeaderPos = leader.Pos;
+        if (leader.MiningTile is { } cutting)
+        {
+            if ((cutting == _cutting) && (leader.Status.StartsWith("Pockets full") == false))
+            {
+                return; // still cutting
+            }
+
+            // That tree is down (mining moved on to the next one), or there's no room for the wood: stop.
+            _cutting = null;
+            Send(new MineTile(leader.Id, null));
+
+            return;
+        }
+
+        if ((_stuckThinks >= 3) && (TreeTowards(leader, tile) is { } tree))
+        {
+            _stuckThinks = 0;
+            _cutting = tree;
+            Send(new MineTile(leader.Id, tree));
+
+            return;
+        }
+
+        if (leader.WalkTarget != tile)
+        {
+            Send(new WalkTo(leader.Id, tile));
+        }
+    }
+
+    /// <summary>The tree within the commander's mining reach that lies most in the direction of <paramref name="goal"/>.</summary>
+    private Int2? TreeTowards(Unit leader, Int2 goal)
+    {
+        Int2 at = Fixed.ToTile(leader.Pos);
+        Int2? best = null;
+        long bestDist = long.MaxValue;
+        for (int dy = -1; dy <= 1; dy++)
+        {
+            for (int dx = -1; dx <= 1; dx++)
+            {
+                Int2 t = P.Torus.Wrap(at + new Int2(dx, dy));
+                long d = P.SubTorus.DistSq(Fixed.TileCenter(t), Fixed.TileCenter(goal));
+                bool inReach = P.SubTorus.DistSq(leader.Pos, Fixed.TileCenter(t)) <= (long)Planet.LeaderMineReachTiles * Fixed.One * Planet.LeaderMineReachTiles * Fixed.One;
+                if (inReach && (P.ResourceAt(t) is { IsTree: true }) && (d < bestDist))
+                {
+                    best = t;
+                    bestDist = d;
+                }
+            }
+        }
+
+        return best;
     }
 
     // ------------------------------------------------------------------ research
@@ -104,13 +276,26 @@ public sealed class GoalBot : IBot
         {
             case TechGoal t:
                 return TechPath(t.TechId);
-            case FollowersGoal:
+            case HelpersGoal:
                 {
-                    BuildingDef beacon = C.BuildingList.First(b => b.Kind == BuildingKind.Beacon);
+                    BuildingDef bay = C.BuildingList.First(b => b.Kind == BuildingKind.RobotBay);
                     List<string> path = new List<string>();
-                    foreach (string? id in new[] { beacon.Id, beacon.Recipe! })
+                    foreach (string? id in new[] { bay.Id, HelpersGoal.Recipe })
                     {
                         if (TechUnlocking(id) is { } tech)
+                        {
+                            path.AddRange(TechPath(tech).Where(x => path.Contains(x) == false));
+                        }
+                    }
+
+                    return path;
+                }
+            case SettlersGoal:
+                {
+                    List<string> path = new List<string>();
+                    foreach (BuildingDef def in TerraformBuildings())
+                    {
+                        if (TechUnlocking(def.Id) is { } tech)
                         {
                             path.AddRange(TechPath(tech).Where(x => path.Contains(x) == false));
                         }
@@ -142,7 +327,23 @@ public sealed class GoalBot : IBot
     // ------------------------------------------------------------------ recovery / cleanup
 
     private static readonly HashSet<BuildingKind> _wanted =
-        [BuildingKind.Lab, BuildingKind.Furnace, BuildingKind.SteamEngine, BuildingKind.Pole, BuildingKind.Chest, BuildingKind.Beacon];
+        [BuildingKind.Lab, BuildingKind.Furnace, BuildingKind.SteamEngine, BuildingKind.Pole, BuildingKind.Chest, BuildingKind.RobotBay, BuildingKind.Terraformer, BuildingKind.Uplink];
+
+    /// <summary>The terraformers and the uplink, the buildings the settlers goal needs.</summary>
+    private IEnumerable<BuildingDef> TerraformBuildings() => C.BuildingList.Where(b => b.Kind is BuildingKind.Terraformer or BuildingKind.Uplink);
+
+    /// <summary>Points a terraformer still has to add before its stat is complete; 0 for the uplink.</summary>
+    private int PointsLeft(BuildingDef def)
+    {
+        if ((def.Recipe is null) || (Planet.TerraformEffect(C.Recipes[def.Recipe].Effect) is not { } t))
+        {
+            return 0;
+        }
+
+        int target = C.Terraform.Stats.First(s => s.Id == t.Stat).Target;
+
+        return System.Math.Max(0, target - P.Stats.GetValueOrDefault(t.Stat));
+    }
 
     /// <summary>
     /// What a sensible player does when inheriting a messy base: cancel ghosts it doesn't want (a few per
@@ -217,17 +418,29 @@ public sealed class GoalBot : IBot
     {
         Int2 center = Placement.Center(lander);
         bool needLab = plan.TechPath.Count > 0;
-        BuildingDef beaconDef = C.BuildingList.First(b => b.Kind == BuildingKind.Beacon);
-        bool needBeacon = (Goal is FollowersGoal) && _w.Research.Unlocked.Contains(beaconDef.Id);
+        BuildingDef bayDef = C.BuildingList.First(b => b.Kind == BuildingKind.RobotBay);
+        bool needBay = (Goal is HelpersGoal) && _w.Research.Unlocked.Contains(bayDef.Id);
 
         if (needLab && (CountOf(BuildingKind.Lab) < Params.Labs))
         {
             PlaceNear(plan, "lab", center, 4, 14);
         }
 
-        if (needBeacon && (CountOf(BuildingKind.Beacon) == 0))
+        if (needBay && (CountOf(BuildingKind.RobotBay) == 0))
         {
-            PlaceNear(plan, beaconDef.Id, center, 5, 16);
+            PlaceNear(plan, bayDef.Id, center, 5, 16);
+        }
+
+        if (Goal is SettlersGoal)
+        {
+            foreach (BuildingDef def in TerraformBuildings())
+            {
+                bool needed = (def.Kind == BuildingKind.Uplink) || (PointsLeft(def) > 0);
+                if (needed && _w.Research.Unlocked.Contains(def.Id) && (CountOf(def.Kind, def.Id) == 0))
+                {
+                    PlaceNear(plan, def.Id, center, 5, 20);
+                }
+            }
         }
 
         if (CountOf(BuildingKind.Furnace) < Params.Furnaces)
@@ -399,17 +612,24 @@ public sealed class GoalBot : IBot
             Add(c.Item, c.Count);
         }
 
-        if (Goal is FollowersGoal fg)
+        // A construction module for every helper bot that can't build yet.
+        ItemDef? buildModule = P.ModuleForJob(JobKind.Build);
+        if ((buildModule is not null) && _w.Research.Unlocked.Contains(buildModule.Id))
         {
-            RecipeDef recipe = C.Recipes[C.BuildingList.First(b => b.Kind == BuildingKind.Beacon).Recipe!];
-            int remaining = fg.Count - _w.FollowersSummoned;
+            Add(buildModule.Id, System.Math.Max(0, HelpersLacking(JobKind.Build).Count - (Commander()?.Carry.Count(buildModule.Id) ?? 0)));
+        }
+
+        if (Goal is HelpersGoal fg)
+        {
+            RecipeDef recipe = C.Recipes[HelpersGoal.Recipe];
+            int remaining = fg.Count - _w.HelpersBuilt;
             foreach (ItemAmount c in recipe.Inputs)
             {
                 Add(c.Item, (long)c.Count * remaining);
             }
 
-            BuildingDef beacon = C.BuildingList.First(b => b.Kind == BuildingKind.Beacon);
-            if (CountOf(BuildingKind.Beacon) == 0)
+            BuildingDef beacon = C.BuildingList.First(b => b.Kind == BuildingKind.RobotBay);
+            if (CountOf(BuildingKind.RobotBay) == 0)
             {
                 foreach (ItemAmount c in beacon.CostList)
                 {
@@ -421,6 +641,23 @@ public sealed class GoalBot : IBot
         if (Goal is ItemGoal ig)
         {
             Add(ig.Item, ig.Count);
+        }
+
+        if (Goal is SettlersGoal)
+        {
+            foreach (BuildingDef def in TerraformBuildings().Where(d => _w.Research.Unlocked.Contains(d.Id)))
+            {
+                RecipeDef recipe = C.Recipes[def.Recipe!];
+                int perCraft = Planet.TerraformEffect(recipe.Effect)?.Points ?? 1;
+                int crafts = def.Kind == BuildingKind.Uplink ? 1 : (PointsLeft(def) + perCraft - 1) / perCraft;
+                Building? built = P.Buildings.FirstOrDefault(b => b.Def.Id == def.Id);
+                foreach (ItemAmount c in recipe.Inputs)
+                {
+                    // Only a few crafts' worth at a time, so the rest of the base isn't starved.
+                    long want = (long)c.Count * System.Math.Min(crafts, 10);
+                    Add(c.Item, System.Math.Max(0, want - (built?.Inv.Count(c.Item) ?? 0)));
+                }
+            }
         }
 
         string fuelItem = C.Resources[Params.FuelResource].Item;
@@ -599,8 +836,8 @@ public sealed class GoalBot : IBot
             }
         }
 
-        // Beacon
-        foreach (Building? bc in P.Buildings.Where(b => b.Def.Kind == BuildingKind.Beacon))
+        // Robot bays
+        foreach (Building? bc in P.Buildings.Where(b => (b.Def.Kind is BuildingKind.RobotBay or BuildingKind.Terraformer or BuildingKind.Uplink) && (b.Status != MachineStatus.Complete)))
         {
             if ((bc.Recipe is { } r) && (bc.Crafting == false) && r.Inputs.Any(c => (bc.Inv.Count(c.Item) < c.Count) && (WorldProbe.StorageCount(P, c.Item) > 0)))
             {
@@ -650,13 +887,13 @@ public sealed class GoalBot : IBot
 
         foreach (Job job in open)
         {
-            if (free.Count == 0)
+            // Only robots with the right module can take some jobs (Build, Operate train).
+            if (free.FirstOrDefault(x => P.CanTakeJob(x, job.Kind)) is not { } u)
             {
-                break;
+                continue;
             }
 
-            Unit u = free[0];
-            free.RemoveAt(0);
+            free.Remove(u);
             Send(new AssignJob(u.Id, job));
         }
         // Spare hands: top up fuel if low, otherwise stockpile whichever resource storage has least of
