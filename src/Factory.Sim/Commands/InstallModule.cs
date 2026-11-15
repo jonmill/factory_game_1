@@ -36,7 +36,7 @@ public sealed record InstallModule(int UnitId, int TargetId, string Item) : Comm
             return $"{target.Name} has no free module slot";
         }
 
-        return (target == u) || u.Planet.InLeaderReach(u, target.Tile) ? null : "Too far away";
+        return (target == u) || ((target.Planet == u.Planet) && u.Planet.InLeaderReach(u, target.Tile)) ? null : "Too far away";
     }
 
     /// <summary>Moves the module from the commander's pockets into the robot and applies its effects.</summary>

@@ -32,7 +32,12 @@ public partial class GameRoot : Node2D
     /// <summary>The player index this client controls.</summary>
     public static int LocalPlayer => 0;
     /// <summary>The local player's leader unit on the current planet.</summary>
-    public Unit Leader => Planet.Units.First(u => u.IsLeader && (u.OwnerPlayer == LocalPlayer));
+    public Unit Leader => World.Planets.SelectMany(p => p.Units).First(u => u.IsLeader && (u.OwnerPlayer == LocalPlayer));
+
+    /// <summary>True if the commander is on the viewed planet and within reach of a tile on it.</summary>
+    /// <param name="tile">A tile on the viewed planet.</param>
+    /// <returns>Whether the commander can reach it.</returns>
+    public bool InReach(Int2 tile) => (Leader.Planet == Planet) && Planet.InLeaderReach(Leader, tile);
     /// <summary>Store/platform integration (Steam or offline).</summary>
     public IPlatformServices PlatformServices { get; private set; } = null!;
 
@@ -71,6 +76,7 @@ public partial class GameRoot : Node2D
     private Hud _hud = null!;
     private double _acc;
     private Int2 _lastIntent;
+    private Vector2 _panIntent;
     private Int2? _lastDragTile;
     private bool _mining;
     private Int2? _sweepSent;
@@ -148,12 +154,27 @@ public partial class GameRoot : Node2D
     {
         World = replay is null ? new World(Content, new WorldSettings { Seed = seed }) : replay.Play(Content);
         PlanetId = 0;
-        Int2 lp = Leader.Pos;
-        Cam = new Vector2(lp.X / (float)Fixed.One, lp.Y / (float)Fixed.One);
+        ViewPlanet(Leader.Planet.Id);
         SelectedId = 0;
         SetTool(ToolKind.Select);
         Messages.Clear();
         Notify("Landing complete. Your helper bots await orders.", Colors.Cyan);
+    }
+
+    /// <summary>
+    /// Shows another planet. On the commander's own planet the camera follows it; elsewhere it's a remote
+    /// view centred on the lander (or the middle of the map) that the movement keys pan.
+    /// </summary>
+    /// <param name="id">The planet to show.</param>
+    public void ViewPlanet(int id)
+    {
+        PlanetId = System.Math.Clamp(id, 0, World.Planets.Count - 1);
+        Int2 focus = Leader.Planet == Planet ? Leader.Pos
+            : World.Get<Building>(Planet.LanderId) is { } lander ? lander.CenterSub
+            : Fixed.TileCenter(new Int2(Planet.Width / 2, Planet.Height / 2));
+        Cam = new Vector2(focus.X / (float)Fixed.One, focus.Y / (float)Fixed.One);
+        SelectedId = 0;
+        SetTool(ToolKind.Select);
     }
 
     /// <inheritdoc />
@@ -279,9 +300,17 @@ public partial class GameRoot : Node2D
 
         World.Events.Clear();
 
-        // Camera follows the leader across the wrap.
-        Vector2 lt = SubToTile(Leader.Pos);
-        Cam += WrapDelta(Cam, lt) * Mathf.Min(1f, (float)delta * 6f);
+        // Camera follows the leader across the wrap; looking at another planet, the keys pan it instead.
+        if (Leader.Planet == Planet)
+        {
+            Vector2 lt = SubToTile(Leader.Pos);
+            Cam += WrapDelta(Cam, lt) * Mathf.Min(1f, (float)delta * 6f);
+        }
+        else
+        {
+            Cam += _panIntent * (float)delta * 30f / Zoom;
+        }
+
         Cam = new Vector2(Mathf.PosMod(Cam.X, Planet.Width), Mathf.PosMod(Cam.Y, Planet.Height));
 
         if ((Tool == ToolKind.Place) && (PlaceDefId == "rail") && Input.IsMouseButtonPressed(MouseButton.Left) && (_lastDragTile is { } last))
@@ -322,6 +351,12 @@ public partial class GameRoot : Node2D
         }
 
         Int2 intent = new Int2(dx, dy);
+        _panIntent = new Vector2(dx, dy);
+        if (Leader.Planet != Planet)
+        {
+            intent = Int2.Zero; // remote view: the keys pan the camera, the commander stays put
+        }
+
         if (intent != _lastIntent)
         {
             Send(new SetMoveIntent(Leader.Id, dx, dy));
@@ -474,6 +509,10 @@ public partial class GameRoot : Node2D
         else if (k.IsAction("replicator"))
         {
             _hud.Toggle(HudWindow.Replicator);
+        }
+        else if (k.IsAction("system"))
+        {
+            _hud.Toggle(HudWindow.System);
         }
         else if (k.IsAction("unload"))
         {
@@ -699,7 +738,7 @@ public partial class GameRoot : Node2D
         Unit leader = Leader;
 
         return Planet.Buildings
-            .Where(b => (b.Def.Kind is BuildingKind.Lander or BuildingKind.Chest) && Planet.InLeaderReach(leader, b.Origin) && ((filter is null) || filter(b)))
+            .Where(b => (b.Def.Kind is BuildingKind.Lander or BuildingKind.Chest) && InReach(b.Origin) && ((filter is null) || filter(b)))
             .OrderBy(b => Planet.SubTorus.DistSq(leader.Pos, b.CenterSub))
             .ThenBy(b => b.Id)
             .FirstOrDefault();
@@ -874,7 +913,7 @@ public partial class GameRoot : Node2D
             Zoom = 1.4f;
         }
 
-        // FACTORY_WINDOW=inventory|replicator|tech|help|victory and FACTORY_CATEGORY=<1-7> open HUD panels for screenshots;
+        // FACTORY_WINDOW=inventory|replicator|tech|help|victory|system and FACTORY_CATEGORY=<1-7> open HUD panels for screenshots;
         // FACTORY_SELECT=<building id> selects the nearest building of that type to the commander; "helper" selects a helper bot.
         if ((_uiHooksDone == false) && (Clock > 0.5))
         {
@@ -887,6 +926,13 @@ public partial class GameRoot : Node2D
             else if (Planet.Buildings.Where(b => b.Def.Id == selectDef).OrderBy(b => Planet.SubTorus.DistSq(Leader.Pos, b.CenterSub)).FirstOrDefault() is { } pick)
             {
                 SelectedId = pick.Id;
+            }
+
+            // FACTORY_PLANET=<planet id> views another planet (remote view).
+            if (System.Environment.GetEnvironmentVariable("FACTORY_PLANET") is { } planetId &&
+                (World.Planets.FindIndex(p => p.Def.Id == planetId) is int index and >= 0))
+            {
+                ViewPlanet(index);
             }
 
             if (System.Enum.TryParse(System.Environment.GetEnvironmentVariable("FACTORY_WINDOW"), true, out HudWindow window))
@@ -976,6 +1022,7 @@ public partial class GameRoot : Node2D
         Bind("speed_up", Key.Equal, Key.KpAdd);
         Bind("speed_down", Key.Minus, Key.KpSubtract);
         Bind("research", Key.T);
+        Bind("system", Key.M);
         Bind("help", Key.H);
         Bind("zoom_in", Key.Pageup);
         Bind("zoom_out", Key.Pagedown);

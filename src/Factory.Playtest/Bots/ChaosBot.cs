@@ -104,7 +104,7 @@ public sealed class ChaosBot(ulong seed, int actionsPerMinute = 30, int player =
             case 1:
                 return new Job(JobKind.Build);
             case 2:
-                return new Job(JobKind.Gather, Resource: Pick(c.ResourceList)!.Id);
+                return new Job(JobKind.Gather, Resource: Pick(c.ResourceList.Where(r => p.HasResource(r.Id)).ToList())!.Id);
             case 3 when p.Buildings.Count >= 2:
                 {
                     Building a = Pick(p.Buildings)!;

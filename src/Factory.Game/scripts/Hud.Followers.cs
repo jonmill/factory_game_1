@@ -7,14 +7,43 @@ namespace Factory.Game;
 /// <summary>The helper bots panel, top-left: one row per bot with its status and a job picker.</summary>
 public partial class Hud
 {
-    private static readonly (string Label, Job? Job)[] _jobOptions =
-    [
-        ("Idle", Job.Idle), ("Build", new Job(JobKind.Build)),
-        ("Gather Biomass", new Job(JobKind.Gather, Resource: "xylo")), ("Gather Siderite", new Job(JobKind.Gather, Resource: "siderite")),
-        ("Gather Cuprite", new Job(JobKind.Gather, Resource: "cuprite")), ("Gather Carbon", new Job(JobKind.Gather, Resource: "carbon")),
-        ("Gather Regolith", new Job(JobKind.Gather, Resource: "regolith")), ("Gather Galena", new Job(JobKind.Gather, Resource: "galena")),
-        ("Haul…", null), ("Operate train…", null),
-    ];
+    private const int BuildOption = 1;
+
+    /// <summary>The job picker's entries: Idle, Build, one Gather per resource on this planet, then Haul and Operate train.</summary>
+    private readonly List<(string Label, Job? Job)> _jobOptions = [];
+    private int _jobOptionsPlanet = -1;
+
+    private int HaulOption => _jobOptions.Count - 2;
+
+    private int TrainOption => _jobOptions.Count - 1;
+
+    /// <summary>Rebuilds the job list for the viewed planet: gather jobs only for resources it actually has.</summary>
+    private void RefreshJobOptions()
+    {
+        if (_jobOptionsPlanet == P.Id)
+        {
+            return;
+        }
+
+        _jobOptionsPlanet = P.Id;
+        _jobOptions.Clear();
+        _jobOptions.Add(("Idle", Job.Idle));
+        _jobOptions.Add(("Build", new Job(JobKind.Build)));
+        HashSet<string> here = P.Def.Resources.Select(r => r.Resource).ToHashSet();
+        if (P.Def.Biomes.Any(b => C.Biomes.TryGetValue(b.Biome, out BiomeDef? def) && (def.Trees > 0)))
+        {
+            here.UnionWith(C.ResourceList.Where(r => r.IsTree).Select(r => r.Id));
+        }
+
+        foreach (ResourceDef r in C.ResourceList.Where(r => here.Contains(r.Id)).OrderBy(r => r.IsTree ? 0 : 1))
+        {
+            _jobOptions.Add(($"Gather {C.Items[r.Item].Name}", new Job(JobKind.Gather, Resource: r.Id)));
+        }
+
+        _jobOptions.Add(("Haul…", null));
+        _jobOptions.Add(("Operate train…", null));
+        _followerSig = -1;
+    }
 
     private PanelContainer _followerPanel = null!;
     private VBoxContainer _followers = null!;
@@ -33,17 +62,18 @@ public partial class Hud
         v.AddChild(_followers);
     }
 
-    private static int JobIndex(Job j) => j.Kind switch
+    private int JobIndex(Job j) => j.Kind switch
     {
-        JobKind.Build => 1,
-        JobKind.Gather => j.Resource switch { "xylo" => 2, "siderite" => 3, "cuprite" => 4, "carbon" => 5, "regolith" => 6, "galena" => 7, _ => 0 },
-        JobKind.Haul => 8,
-        JobKind.OperateTrain => 9,
+        JobKind.Build => BuildOption,
+        JobKind.Gather => System.Math.Max(0, _jobOptions.FindIndex(o => o.Job?.Resource == j.Resource)),
+        JobKind.Haul => HaulOption,
+        JobKind.OperateTrain => TrainOption,
         _ => 0,
     };
 
     private void UpdateFollowers()
     {
+        RefreshJobOptions();
         List<Unit> units = P.Units.Where(u => (u.IsLeader == false) && (u.OwnerPlayer == GameRoot.LocalPlayer)).ToList();
         if (units.Count != _followerSig)
         {
@@ -94,7 +124,7 @@ public partial class Hud
             status.TooltipText = u.Status;
             name.AddThemeColorOverride("font_color", Root.SelectedId == u.Id ? HudStyle.Orange : HudStyle.Text);
             // Jobs a bot lacks the module for are greyed out, naming the module it needs.
-            foreach ((JobKind kind, int index) in new[] { (JobKind.Build, 1), (JobKind.OperateTrain, 9) })
+            foreach ((JobKind kind, int index) in new[] { (JobKind.Build, BuildOption), (JobKind.OperateTrain, TrainOption) })
             {
                 bool can = P.CanTakeJob(u, kind);
                 if (opt.IsItemDisabled(index) == can)
@@ -122,7 +152,7 @@ public partial class Hud
             return;
         }
 
-        if (index == 8)
+        if (index == HaulOption)
         {
             Root.SetTool(ToolKind.PickHaulFrom);
             Root.Notify($"{u.Name}: click a building to haul FROM", Colors.Khaki);

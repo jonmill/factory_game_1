@@ -17,7 +17,7 @@ public sealed record RemoveModule(int UnitId, int TargetId, int Slot) : Command
             return "Invalid";
         }
 
-        if ((target != u) && (u.Planet.InLeaderReach(u, target.Tile) == false))
+        if ((target != u) && ((target.Planet != u.Planet) || (u.Planet.InLeaderReach(u, target.Tile) == false)))
         {
             return "Too far away";
         }

@@ -53,11 +53,12 @@ public partial class Hud
     {
         int system = W.SystemReadiness;
         int bar = C.Terraform.ReadyBar;
-        int ready = W.Planets.Count(p => p.IsReady);
+        List<Planet> targets = W.SettlerTargets.ToList();
+        int ready = targets.Count(p => p.IsReady);
         _readinessBar.Value = system / 100.0;
-        _readinessText.Text = $"{system}%   ·   {ready}/{W.Planets.Count} planet{(W.Planets.Count == 1 ? "" : "s")} ready";
-        _readinessBar.TooltipText = $"The average readiness of every planet in the system. Every planet must reach {bar}% before a Settler Uplink can call the settlers.\n" +
-                                    string.Join("\n", W.Planets.Select(p => $"{p.Name}: {p.Readiness}%"));
+        _readinessText.Text = $"{system}%   ·   {ready}/{targets.Count} planet{(targets.Count == 1 ? "" : "s")} ready";
+        _readinessBar.TooltipText = $"The average readiness of the settler target planets. Each must reach {bar}% before a Settler Uplink can call the settlers.\n" +
+                                    string.Join("\n", targets.Select(p => $"{p.Name}: {p.Readiness}%"));
         foreach ((PlanetStatDef stat, ProgressBar b, Label value) in _statRows)
         {
             int pct = P.StatPercent(stat);

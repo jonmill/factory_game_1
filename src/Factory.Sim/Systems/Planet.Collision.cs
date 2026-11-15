@@ -75,6 +75,84 @@ public sealed partial class Planet
         u.Pos = SubTorus.Wrap(new Int2(x, y));
     }
 
+    /// <summary>
+    /// Moves anyone a new building was finished on top of, or walled into a small pocket by, to the
+    /// nearest free tile with room to move, like Factorio nudging the player out of a freshly placed entity.
+    /// </summary>
+    internal void PushOutOfSolids()
+    {
+        foreach (Unit u in Units.Where(u => (u.Boarded == false) && (IsBlockedForPerson(u.Pos) || IsPocket(u.Tile))).ToList())
+        {
+            if (NearestOpenTile(u.Tile) is { } t)
+            {
+                u.Pos = Fixed.TileCenter(t);
+                u.Path.Clear();
+                u.FailedPlans = 0;
+            }
+        }
+    }
+
+    private const int PocketTiles = 48;
+
+    /// <summary>True if only a few tiles can be reached from this one without crossing water or a building (trees can be cut, so they count as open).</summary>
+    private bool IsPocket(Int2 start)
+    {
+        if (IsOpen(start) == false)
+        {
+            return true;
+        }
+
+        HashSet<Int2> seen = [start];
+        Queue<Int2> open = new Queue<Int2>();
+        open.Enqueue(start);
+        while (open.Count > 0)
+        {
+            Int2 t = open.Dequeue();
+            foreach (Int2 d in new[] { new Int2(1, 0), new Int2(-1, 0), new Int2(0, 1), new Int2(0, -1) })
+            {
+                Int2 n = Torus.Wrap(t + d);
+                if (IsOpen(n) && seen.Add(n))
+                {
+                    if (seen.Count >= PocketTiles)
+                    {
+                        return false;
+                    }
+
+                    open.Enqueue(n);
+                }
+            }
+        }
+
+        return true;
+    }
+
+    private bool IsOpen(Int2 tile) => (TerrainAt(tile) == Terrain.Ground) && (BuildingAt(tile) is null);
+
+    private Int2? NearestOpenTile(Int2 from)
+    {
+        for (int r = 1; r <= 12; r++)
+        {
+            for (int dy = -r; dy <= r; dy++)
+            {
+                for (int dx = -r; dx <= r; dx++)
+                {
+                    if ((System.Math.Abs(dx) != r) && (System.Math.Abs(dy) != r))
+                    {
+                        continue;
+                    }
+
+                    Int2 t = Torus.Wrap(from + new Int2(dx, dy));
+                    if (IsWalkable(t) && (IsBlockedForPerson(Fixed.TileCenter(t)) == false) && (IsPocket(t) == false))
+                    {
+                        return t;
+                    }
+                }
+            }
+        }
+
+        return null;
+    }
+
     /// <summary>True if a person standing at the position would overlap something solid.</summary>
     /// <param name="pos">Position in sub-units.</param>
     /// <returns>Whether that spot is blocked.</returns>
@@ -98,7 +176,7 @@ public sealed partial class Planet
             {
                 Int2 tile = new Int2(tx, ty);
                 Int2 corner = new Int2(tx * Fixed.One, ty * Fixed.One);
-                if (TerrainAt(tile) == Terrain.Water)
+                if (TerrainAt(tile) != Terrain.Ground)
                 {
                     solids.Add(new Box(corner.X, corner.Y, corner.X + Fixed.One, corner.Y + Fixed.One));
                 }

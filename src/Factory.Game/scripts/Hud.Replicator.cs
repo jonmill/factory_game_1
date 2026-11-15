@@ -66,7 +66,7 @@ public partial class Hud
 
         List<RecipeDef> recipes = C.RecipeList.Where(r => lander.Def.Categories.Contains(r.Category)).ToList();
         _selectedRecipe ??= recipes.FirstOrDefault(r => W.Research.Unlocked.Contains(r.Id))?.Id;
-        bool reach = P.InLeaderReach(Root.Leader, lander.Origin);
+        bool reach = Root.InReach(lander.Origin);
         string inv = _selectedRecipe is { } sel
             ? string.Join(",", C.Recipes[sel].Inputs.Select(i => $"{lander.Inv.Count(i.Item)}+{Root.Leader.Carry.Count(i.Item)}"))
             : "";

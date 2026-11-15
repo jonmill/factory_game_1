@@ -114,7 +114,7 @@ public partial class Hud
             return;
         }
 
-        bool reach = P.InLeaderReach(Root.Leader, b.Origin);
+        bool reach = Root.InReach(b.Origin);
         _machineTitle.Text = BuildingTitle(b).ToUpperInvariant();
         _machineInfo.Text = DescribeBuilding(b).TrimEnd();
         _machineReach.Text = reach

@@ -107,6 +107,23 @@ if (command == "trace")
             Console.WriteLine($"    {leader.Name} {leader.Status} @{leader.Pos.X / Fixed.One},{leader.Pos.Y / Fixed.One} walkTo={leader.WalkTarget?.ToString() ?? "-"} intent={leader.MoveIntent} modules=[{string.Join(",", leader.Modules)}] carry=[{string.Join(",", leader.Carry.Items.Select(kv => kv.Key + "=" + kv.Value))}]");
         }
 
+        // TRACE_DIAG=1 prints the 5x5 tiles around the commander (l=building initial, ~=water, T=tree, g=ghost).
+        if (Environment.GetEnvironmentVariable("TRACE_DIAG") is not null)
+        {
+            Unit ld = p.Units.First(u => u.IsLeader);
+            Int2 lt = Fixed.ToTile(ld.Pos);
+            for (int dy = -2; dy <= 2; dy++)
+            {
+                Console.WriteLine("    DIAG " + string.Concat(Enumerable.Range(-2, 5).Select(dx =>
+                {
+                    Int2 t = p.Torus.Wrap(lt + new Int2(dx, dy));
+                    return p.BuildingAt(t) is { } bb ? bb.Def.Id[0] : p.TerrainAt(t) != Terrain.Ground ? '~' : p.ResourceAt(t) is { IsTree: true } ? 'T' : p.OccupantAt(t) != 0 ? 'g' : '.';
+                })) + $"  pos={ld.Pos} blocked={p.IsBlockedForPerson(ld.Pos)}");
+            }
+
+            Console.WriteLine($"    DIAG walkTo={ld.WalkTarget} path={string.Join(" ", ld.Path.Take(4))}");
+        }
+
         foreach (Unit? u in p.Units.Where(u => u.IsLeader == false))
         {
             Console.WriteLine($"    {u.Name,-6} {u.Job.Kind,-8} {u.Status} @{u.Pos.X / Fixed.One},{u.Pos.Y / Fixed.One} phase={u.Phase} job={u.Job} carry=[{string.Join(",", u.Carry.Items.Select(kv => kv.Key + "=" + kv.Value))}]{((u.Job.Kind == JobKind.Haul) && (s.World.Get<Building>(u.Job.FromId) is { } fb) ? $" from@{fb.Origin.X},{fb.Origin.Y} {fb.Def.Id}" : "")}");

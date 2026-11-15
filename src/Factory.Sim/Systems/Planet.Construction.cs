@@ -91,9 +91,9 @@ public sealed partial class Planet
                     }
                     else
                     {
-                        Building b = CreateBuildingRotated(def, s.Origin, s.Rot);
+                        _ = CreateBuildingRotated(def, s.Origin, s.Rot);
                         World.Emit($"{builder.Name} finished building a {def.Name}", Id, s.Origin);
-                        _ = b;
+                        PushOutOfSolids();
                     }
 
                     return true;

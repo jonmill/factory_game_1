@@ -30,11 +30,14 @@ public sealed partial class World
     /// <summary>True once the settlers have been called: the game is won.</summary>
     public bool SettlersCalled { get; internal set; }
 
-    /// <summary>The system-wide readiness meter: the average readiness of every planet, 0 to 100.</summary>
-    public int SystemReadiness => Planets.Count == 0 ? 0 : Planets.Sum(p => p.Readiness) / Planets.Count;
+    /// <summary>The planets the settlers are waiting on: every one must reach the readiness bar.</summary>
+    public IEnumerable<Planet> SettlerTargets => Planets.Where(p => p.Def.SettlerTarget);
 
-    /// <summary>True once every planet has reached the readiness bar.</summary>
-    public bool AllPlanetsReady => Planets.All(p => p.IsReady);
+    /// <summary>The system-wide readiness meter: the average readiness of the settler target planets, 0 to 100.</summary>
+    public int SystemReadiness => SettlerTargets.Any() ? SettlerTargets.Sum(p => p.Readiness) / SettlerTargets.Count() : 0;
+
+    /// <summary>True once every settler target planet has reached the readiness bar.</summary>
+    public bool AllPlanetsReady => SettlerTargets.All(p => p.IsReady);
 
     /// <summary>Extra module slots the commander has gained from research.</summary>
     public int CommanderBonusSlots => Research.Completed.Sum(id => Content.Techs.TryGetValue(id, out TechDef? t) ? t.CommanderSlots : 0);
@@ -62,11 +65,25 @@ public sealed partial class World
             Research.Unlocked.Add(u);
         }
 
-        Planet planet = new Planet(this, 0, "Kepler's Rest", settings.PlanetWidth, settings.PlanetHeight);
-        Planets.Add(planet);
-        planet.InitStats();
-        WorldGen.Generate(planet, Rng, settings);
-        SetupStart(planet);
+        // The start planet comes first (id 0), then every other surface world in content order. Each planet
+        // is generated from its own seeded generator, so adding a planet never reshuffles another.
+        List<PlanetDef> surfaces = content.PlanetList.Where(d => d.Kind == PlanetKind.Surface).OrderBy(d => d.Start ? 0 : 1).ToList();
+        if (surfaces.Count == 0)
+        {
+            surfaces.Add(new PlanetDef { Id = "home", Name = "Kepler's Rest", Start = true, SettlerTarget = true });
+        }
+
+        foreach (PlanetDef def in surfaces)
+        {
+            int size = def.Start ? 0 : (settings.OtherPlanetSize > 0 ? settings.OtherPlanetSize : def.Size);
+            Planet planet = new Planet(this, Planets.Count, def, def.Start ? settings.PlanetWidth : size, def.Start ? settings.PlanetHeight : size);
+            Planets.Add(planet);
+            planet.InitStats();
+            ulong planetSeed = (settings.Seed * 0x9E3779B97F4A7C15UL) ^ StateHasher.Of(def.Id);
+            WorldGen.Generate(planet, new Rng(planetSeed), settings);
+        }
+
+        SetupStart(Planets[0]);
     }
 
     /// <summary>Planet with the given id.</summary>

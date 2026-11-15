@@ -54,6 +54,7 @@ public partial class Hud : CanvasLayer
         _windows[HudWindow.Robot] = BuildRobot();
         _windows[HudWindow.Menu] = BuildMenu();
         _windows[HudWindow.Victory] = BuildVictory();
+        _windows[HudWindow.System] = BuildSystem();
         ShowOnly(_open);
     }
 
@@ -205,6 +206,9 @@ public partial class Hud : CanvasLayer
                 break;
             case HudWindow.Robot:
                 UpdateRobot();
+                break;
+            case HudWindow.System:
+                UpdateSystem();
                 break;
         }
 

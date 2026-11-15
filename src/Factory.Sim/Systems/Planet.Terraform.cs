@@ -35,7 +35,7 @@ public sealed partial class Planet
     {
         foreach (PlanetStatDef s in World.Content.Terraform.Stats)
         {
-            Stats[s.Id] = s.Initial;
+            Stats[s.Id] = Def.Stats.TryGetValue(s.Id, out int initial) ? initial : s.Initial;
         }
     }
 

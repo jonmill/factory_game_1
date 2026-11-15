@@ -18,6 +18,17 @@ public sealed class StateHasher
     public void Add(int v) => Add((long)v);
     /// <summary>Mixes a boolean into the hash as 1 or 0.</summary>
     public void Add(bool v) => Add(v ? 1L : 0L);
+
+    /// <summary>A stable 64-bit hash of a string (same on every machine and run).</summary>
+    /// <param name="s">The string to hash.</param>
+    /// <returns>Its hash.</returns>
+    public static ulong Of(string s)
+    {
+        StateHasher h = new StateHasher();
+        h.Add(s);
+
+        return h.Value;
+    }
     /// <summary>Mixes a string's characters and length into the hash; null hashes differently from empty.</summary>
     public void Add(string? s)
     {

@@ -71,7 +71,7 @@ public partial class Hud
         }
 
         Unit leader = Root.Leader;
-        bool reach = P.InLeaderReach(leader, u.Tile);
+        bool reach = (u.Planet == leader.Planet) && P.InLeaderReach(leader, u.Tile);
         _robotTitle.Text = $"{u.Name}   ·   {u.Robot.Name}".ToUpperInvariant();
         _robotInfo.Text = DescribeRobot(u);
         _robotReach.Text = reach

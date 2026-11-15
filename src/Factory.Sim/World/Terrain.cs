@@ -7,4 +7,6 @@ public enum Terrain : byte
     Ground,
     /// <summary>Water: impassable to construction, but a source for pumps placed beside it.</summary>
     Water,
+    /// <summary>Lava: impassable and can't be built on; it boils water but feeds nothing.</summary>
+    Lava,
 }

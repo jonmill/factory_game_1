@@ -31,7 +31,12 @@ public sealed record AssignJob(int UnitId, Job Job) : Command
         switch (Job.Kind)
         {
             case JobKind.Gather:
-                return (Job.Resource is not null) && w.Content.Resources.ContainsKey(Job.Resource) ? null : "Unknown resource";
+                if ((Job.Resource is null) || (w.Content.Resources.TryGetValue(Job.Resource, out ResourceDef? res) == false))
+                {
+                    return "Unknown resource";
+                }
+
+                return u!.Planet.HasResource(Job.Resource) ? null : $"There is no {res.Name} on {u.Planet.Name}";
             case JobKind.Haul:
                 if ((w.Get<Building>(Job.FromId) is null) || (w.Get<Building>(Job.ToId) is null))
                 {

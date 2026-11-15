@@ -19,7 +19,7 @@ public sealed record DepositToBuilding(int UnitId, int BuildingId, string? Item 
             return "Invalid";
         }
 
-        return u.Planet.InLeaderReach(u, b.Origin) ? null : "Too far away";
+        return (b.Planet == u.Planet) && u.Planet.InLeaderReach(u, b.Origin) ? null : "Too far away";
     }
 
     /// <summary>Moves as many carried items as the building will accept into its inventory.</summary>

@@ -53,7 +53,7 @@ public partial class Hud
         foreach ((HudWindow w, string label, string key) in new[]
         {
             (HudWindow.Inventory, "Inventory", "E"), (HudWindow.Replicator, "Replicator", "C"),
-            (HudWindow.Tech, "Tech", "T"), (HudWindow.Help, "Help", "H"),
+            (HudWindow.Tech, "Tech", "T"), (HudWindow.System, "Map", "M"), (HudWindow.Help, "Help", "H"),
         })
         {
             HudWindow which = w;

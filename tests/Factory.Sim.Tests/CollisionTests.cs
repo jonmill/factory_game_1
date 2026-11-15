@@ -116,4 +116,27 @@ public class CollisionTests
         tw.Do(new MineTile(tw.Leader.Id, tree));
         tw.RunUntil(() => tw.Leader.Carry.Count("biomass") == 3, 60 * 30, "the tree chopped down");
     }
+
+    [Test]
+    public async Task FinishedBuilding_PushesSomeoneStandingOnItOut()
+    {
+        (TestWorld tw, Int2 tile) = Clearing();
+        tw.Build("chest", tile.X, tile.Y);
+        tw.P.PushOutOfSolids();
+        await Assert.That(tw.P.IsBlockedForPerson(tw.Leader.Pos)).IsFalse();
+        await Assert.That(tw.Leader.Tile).IsNotEqualTo(tile);
+    }
+
+    [Test]
+    public async Task FinishedBuilding_ThatWallsSomeoneIn_MovesThemOut()
+    {
+        (TestWorld tw, Int2 tile) = Clearing();
+        tw.Water(tile.X - 1, tile.Y + 1, 3, 1);
+        tw.Water(tile.X - 1, tile.Y, 1, 1);
+        tw.Water(tile.X + 1, tile.Y, 1, 1);
+        tw.Build("chest", tile.X, tile.Y - 1);
+        tw.P.PushOutOfSolids();
+        await Assert.That(tw.Leader.Tile).IsNotEqualTo(tile).Because("the commander was sealed in a one-tile pocket");
+        await Assert.That(tw.P.IsBlockedForPerson(tw.Leader.Pos)).IsFalse();
+    }
 }

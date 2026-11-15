@@ -17,6 +17,8 @@ public enum HudWindow
     Machine,
     /// <summary>The selected helper bot's module slots and cargo beside the commander's pockets.</summary>
     Robot,
+    /// <summary>The star system: every planet, its type, resources and readiness; pick one to view.</summary>
+    System,
     /// <summary>The win screen, shown once the settlers have been called.</summary>
     Victory,
     /// <summary>The game menu: resume, save, load, controls, quit. Pauses the game while open.</summary>

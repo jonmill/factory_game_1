@@ -32,6 +32,7 @@ public partial class Hud
             ("LMB", "Click a machine, crate or helper bot to open it beside your pockets. Hover for quick info."),
             ("Drag", "Move stacks.  Shift-click: a stack.  Ctrl/Cmd-click: all.  RMB: half."),
             ("T", "Technology tree."),
+            ("M", "System map: every planet, its readiness and resources. View one from there."),
             ("H", "This help."),
             ("Space", "Pause.   + / –  game speed.   F5 / F9  save / load."),
         ]),
@@ -46,7 +47,7 @@ public partial class Hud
         ("Upgrades", "Research unlocks modules. Craft them, then drag them into your own slots (E) or a helper bot's. Later, a Robot Assembly Bay builds new helper bots."),
         ("Your pockets", "While you're nearby, whatever you carry supplies construction sites and the lander's queued crafts, so you can build straight from what you mined."),
         ("Power", "Steam engines must touch water and burn biomass or compacted carbon. Power poles carry power to machines around them; batteries store the surplus."),
-        ("Trains", "Lay track, place a Rail Stop facing it, then a train. Select the train to set its schedule. Hand carts need a helper bot to pump them; steam locomotives need water (a Water Tower near a stop) and fuel (coal in the stop)."),
+        ("Trains", "Lay track, place a Rail Stop facing it, then a train. Select the train to set its schedule. Hand carts need a helper bot to pump them; steam locomotives need water (a Water Tower near a stop) and fuel (compacted carbon in the stop)."),
     ];
 
     private PanelContainer BuildHelp()

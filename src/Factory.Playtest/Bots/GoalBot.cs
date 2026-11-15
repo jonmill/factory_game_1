@@ -910,7 +910,7 @@ public sealed class GoalBot : IBot
         // Spare hands: top up fuel if low, otherwise stockpile whichever resource storage has least of
         // (what a sensible player does; also gives balance analysis data on every resource).
         ResourceDef fuelRes = C.Resources[Params.FuelResource];
-        List<ResourceDef> stockpile = C.ResourceList.Where(r => (r.IsTree == false) && (WorldProbe.ResourceFor(C, r.Item) == r))
+        List<ResourceDef> stockpile = C.ResourceList.Where(r => (r.IsTree == false) && P.HasResource(r.Id) && (WorldProbe.ResourceFor(C, r.Item) == r))
             .OrderBy(r => WorldProbe.StorageCount(P, r.Item)).ThenBy(r => r.Id, StringComparer.Ordinal).ToList();
         int k = 0;
         foreach (Unit? u in free)

@@ -12,6 +12,8 @@ public sealed partial class Planet
     public int Id { get; }
     /// <summary>Display name of the planet.</summary>
     public string Name { get; }
+    /// <summary>The planet's definition: its type, biomes and resources.</summary>
+    public PlanetDef Def { get; }
     /// <summary>Width of the grid in tiles.</summary>
     public int Width { get; }
     /// <summary>Height of the grid in tiles.</summary>
@@ -22,6 +24,7 @@ public sealed partial class Planet
     public Torus SubTorus { get; }
 
     private readonly Terrain[] _terrain;
+    private readonly byte[] _biome;      // index into Def.Biomes
     private readonly byte[] _resource;   // 0 = none, else index+1 into Content.ResourceList
     private readonly int[] _amount;
     private readonly bool[] _rail;
@@ -45,20 +48,22 @@ public sealed partial class Planet
     /// <summary>Creates an empty planet of the given size; terrain is filled in by world generation.</summary>
     /// <param name="world">Owning world.</param>
     /// <param name="id">Planet index.</param>
-    /// <param name="name">Display name.</param>
+    /// <param name="def">The planet's definition.</param>
     /// <param name="width">Width in tiles.</param>
     /// <param name="height">Height in tiles.</param>
-    public Planet(World world, int id, string name, int width, int height)
+    public Planet(World world, int id, PlanetDef def, int width, int height)
     {
         World = world;
         Id = id;
-        Name = name;
+        Def = def;
+        Name = def.Name;
         Width = width;
         Height = height;
         Torus = new Torus(width, height);
         SubTorus = new Torus(width * Fixed.One, height * Fixed.One);
         int n = width * height;
         _terrain = new Terrain[n];
+        _biome = new byte[n];
         _resource = new byte[n];
         _amount = new int[n];
         _rail = new bool[n];
@@ -71,6 +76,27 @@ public sealed partial class Planet
 
         return (w.Y * Width) + w.X;
     }
+
+    /// <summary>The biome a tile lies in, or null on a planet without biomes.</summary>
+    public BiomeDef? BiomeAt(Int2 t) =>
+        Def.Biomes.Length == 0 ? null : World.Content.Biomes.GetValueOrDefault(Def.Biomes[_biome[Index(t)]].Biome);
+
+    /// <summary>True if the resource occurs on this planet: one of its deposits, or trees where its biomes grow them.</summary>
+    /// <param name="resourceId">The resource's id.</param>
+    /// <returns>Whether it can be found here.</returns>
+    public bool HasResource(string resourceId)
+    {
+        if ((Def.Resources.Length == 0) && (Def.Biomes.Length == 0))
+        {
+            return true; // a planet without a definition (tests) has whatever was placed on it
+        }
+
+        return Def.Resources.Any(r => r.Resource == resourceId) ||
+               (World.Content.Resources.TryGetValue(resourceId, out ResourceDef? res) && res.IsTree &&
+                Def.Biomes.Any(b => World.Content.Biomes.TryGetValue(b.Biome, out BiomeDef? biome) && (biome.Trees > 0)));
+    }
+
+    internal void SetBiome(Int2 t, int index) => _biome[Index(t)] = (byte)index;
 
     /// <summary>Terrain of a tile (coordinates are wrapped).</summary>
     public Terrain TerrainAt(Int2 t) => _terrain[Index(t)];
@@ -301,7 +327,7 @@ public sealed partial class Planet
             for (int x = 0; x < w; x++)
             {
                 Int2 t = new Int2(origin.X + x, origin.Y + y);
-                if (TerrainAt(t) == Terrain.Water)
+                if (TerrainAt(t) != Terrain.Ground)
                 {
                     return false;
                 }

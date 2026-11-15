@@ -65,6 +65,10 @@ public sealed class Unit : Entity
     internal int PathStop { get; set; } = -1;
     /// <summary>Ticks in a row the unit has been blocked while walking; enough of them triggers a new path.</summary>
     internal int StuckTicks { get; set; }
+    /// <summary>Path plans in a row made from the same spot without getting anywhere.</summary>
+    internal int FailedPlans { get; set; }
+    /// <summary>Where the last path was planned from.</summary>
+    internal Int2 LastPlanPos { get; set; }
 
     /// <summary>Tile the unit is standing on.</summary>
     public Int2 Tile => Fixed.ToTile(Pos);

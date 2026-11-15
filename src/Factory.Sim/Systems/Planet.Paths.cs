@@ -27,7 +27,7 @@ public sealed partial class Planet
     /// <param name="tile">The tile.</param>
     /// <returns>Whether the tile's centre is free.</returns>
     public bool IsWalkable(Int2 tile) =>
-        (TerrainAt(tile) != Terrain.Water) && (BuildingAt(tile) is null) && (ResourceAt(tile) is not { IsTree: true });
+        (TerrainAt(tile) == Terrain.Ground) && (BuildingAt(tile) is null) && (ResourceAt(tile) is not { IsTree: true });
 
     /// <summary>
     /// Walks a person toward a target along a planned path, colliding as they go. Returns true once
@@ -77,6 +77,36 @@ public sealed partial class Planet
         return DistTo(u.Pos, targetSub) <= stopDist;
     }
 
+    /// <summary>
+    /// A free tile next to the unit to step onto when it is wedged. Repeated failures cycle through the
+    /// candidates, nearest the target first, so one bad choice can't trap it forever.
+    /// </summary>
+    private Int2? EscapeTile(Unit u, Int2 targetSub)
+    {
+        Int2 at = Fixed.ToTile(u.Pos);
+        List<Int2> free = [];
+        for (int dy = -1; dy <= 1; dy++)
+        {
+            for (int dx = -1; dx <= 1; dx++)
+            {
+                Int2 t = Torus.Wrap(at + new Int2(dx, dy));
+                if (((dx != 0) || (dy != 0)) && IsWalkable(t) && (IsBlockedForPerson(Fixed.TileCenter(t)) == false))
+                {
+                    free.Add(t);
+                }
+            }
+        }
+
+        if (free.Count == 0)
+        {
+            return null;
+        }
+
+        free = free.OrderBy(t => SubTorus.DistSq(Fixed.TileCenter(t), targetSub)).ThenBy(t => t.Y).ThenBy(t => t.X).ToList();
+
+        return free[(u.FailedPlans - 2) % free.Count];
+    }
+
     private long DistTo(Int2 a, Int2 b)
     {
         Int2 d = SubTorus.Delta(a, b);
@@ -90,6 +120,17 @@ public sealed partial class Planet
         u.PathGoal = targetSub;
         u.PathStop = stopDist;
         u.StuckTicks = 0;
+        u.FailedPlans = u.Pos == u.LastPlanPos ? u.FailedPlans + 1 : 0;
+        u.LastPlanPos = u.Pos;
+        if ((u.FailedPlans >= 2) && (EscapeTile(u, targetSub) is { } escape))
+        {
+            // Planning keeps failing from this spot (wedged in a gap narrower than a person): step to a
+            // free neighbouring tile first, then plan again from there.
+            u.Path.Add(Fixed.TileCenter(escape));
+
+            return;
+        }
+
         List<Int2> tiles = FindPath(u.Pos, targetSub, stopDist);
         Straighten(u.Pos, tiles.Select(Fixed.TileCenter).ToList(), u.Path);
     }

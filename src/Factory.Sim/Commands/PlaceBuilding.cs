@@ -21,6 +21,11 @@ public sealed record PlaceBuilding(string DefId, Int2 Origin, Dir Rot) : Command
             return $"Unknown building {DefId}";
         }
 
+        if (P(w).Units.Any(u => u.OwnerPlayer == Player) == false)
+        {
+            return $"None of your robots are on {P(w).Name}";
+        }
+
         return P(w).CanPlace(def, Origin, Rot);
     }
     /// <summary>Creates the construction site.</summary>

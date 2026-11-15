@@ -11,6 +11,8 @@ public sealed class WorldSettings
     public int PlanetHeight { get; init; } = 128;
     /// <summary>Number of players, each getting their own leader unit.</summary>
     public int Players { get; init; } = 1;
+    /// <summary>Side length of the planets other than the start planet, or 0 for each planet's own size.</summary>
+    public int OtherPlanetSize { get; init; }
     /// <summary>Skip resource/lake/tree generation (useful for tests that build their own layout).</summary>
     public bool EmptyPlanet { get; init; }
 }

@@ -26,6 +26,10 @@ public sealed class ContentDb
     public TerraformDef Terraform { get; init; } = new();
     /// <summary>The tech ages in order, first to last.</summary>
     public List<AgeDef> AgeList { get; init; } = [];
+    /// <summary>Biome definitions in file order.</summary>
+    public List<BiomeDef> BiomeList { get; init; } = [];
+    /// <summary>The bodies of the star system in file order; the start planet comes first in the world.</summary>
+    public List<PlanetDef> PlanetList { get; init; } = [];
 
     /// <summary>Items indexed by id.</summary>
     [JsonIgnore] public Dictionary<string, ItemDef> Items { get; private set; } = new();
@@ -43,6 +47,10 @@ public sealed class ContentDb
     [JsonIgnore] public Dictionary<string, RobotDef> Robots { get; private set; } = new();
     /// <summary>Ages indexed by id.</summary>
     [JsonIgnore] public Dictionary<string, AgeDef> Ages { get; private set; } = new();
+    /// <summary>Biomes indexed by id.</summary>
+    [JsonIgnore] public Dictionary<string, BiomeDef> Biomes { get; private set; } = new();
+    /// <summary>Planets indexed by id.</summary>
+    [JsonIgnore] public Dictionary<string, PlanetDef> Planets { get; private set; } = new();
 
     /// <summary>Position of an age in <see cref="AgeList"/> (0 for the first); unknown ids count as the first.</summary>
     /// <param name="age">The age id.</param>
@@ -82,6 +90,8 @@ public sealed class ContentDb
         public StartDef Start { get; init; } = new();
         public TerraformDef Terraform { get; init; } = new();
         public List<AgeDef> Ages { get; init; } = [];
+        public List<BiomeDef> Biomes { get; init; } = [];
+        public List<PlanetDef> Planets { get; init; } = [];
     }
 
     /// <summary>Parses content JSON, builds the lookup indexes and validates cross-references, throwing <see cref="InvalidDataException"/> listing every problem found.</summary>
@@ -100,6 +110,8 @@ public sealed class ContentDb
             Start = raw.Start,
             Terraform = raw.Terraform,
             AgeList = raw.Ages,
+            BiomeList = raw.Biomes,
+            PlanetList = raw.Planets,
         };
         db.Index();
         db.Validate();
@@ -131,6 +143,8 @@ public sealed class ContentDb
         Techs = TechList.ToDictionary(i => i.Id);
         Robots = RobotList.ToDictionary(i => i.Id);
         Ages = AgeList.ToDictionary(i => i.Id);
+        Biomes = BiomeList.ToDictionary(i => i.Id);
+        Planets = PlanetList.ToDictionary(i => i.Id);
         foreach (RecipeDef r in RecipeList)
         {
             r.Inputs = Sorted(r.In);
@@ -215,6 +229,47 @@ public sealed class ContentDb
         }
 
         HashSet<string> unlockable = new HashSet<string>(Recipes.Keys.Concat(Buildings.Keys).Concat(Vehicles.Keys));
+        foreach (PlanetDef p in PlanetList)
+        {
+            foreach (BiomeWeight bw in p.Biomes.Where(bw => Biomes.ContainsKey(bw.Biome) == false))
+            {
+                errors.Add($"planet {p.Id}: unknown biome {bw.Biome}");
+            }
+
+            foreach (PlanetResourceDef pr in p.Resources)
+            {
+                if (Resources.ContainsKey(pr.Resource) == false)
+                {
+                    errors.Add($"planet {p.Id}: unknown resource {pr.Resource}");
+                }
+
+                if ((pr.Biome is not null) && (p.Biomes.Any(bw => bw.Biome == pr.Biome) == false))
+                {
+                    errors.Add($"planet {p.Id}: resource {pr.Resource} prefers biome {pr.Biome}, which the planet doesn't have");
+                }
+            }
+
+            foreach (string r in p.Orbital.Where(r => Resources.ContainsKey(r) == false))
+            {
+                errors.Add($"planet {p.Id}: unknown orbital resource {r}");
+            }
+
+            foreach (string stat in p.Stats.Keys.Where(st => Terraform.Stats.Any(x => x.Id == st) == false))
+            {
+                errors.Add($"planet {p.Id}: unknown stat {stat}");
+            }
+
+            if ((p.Kind == PlanetKind.Surface) && (p.Biomes.Length == 0))
+            {
+                errors.Add($"planet {p.Id}: a surface planet needs at least one biome");
+            }
+        }
+
+        if ((PlanetList.Count > 0) && (PlanetList.Count(p => p.Start && (p.Kind == PlanetKind.Surface)) != 1))
+        {
+            errors.Add("planets: exactly one surface planet must be the start planet");
+        }
+
         foreach (AgeDef a in AgeList)
         {
             if (a.Core is not null)
@@ -302,6 +357,8 @@ public sealed class ContentDb
             RobotList,
             Terraform,
             AgeList,
+            BiomeList,
+            PlanetList,
             Start
         }));
 

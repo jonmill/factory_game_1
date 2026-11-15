@@ -58,7 +58,7 @@ used with the replay).
 | 1 – 7, then 1 – 0 | Open a build category, then pick a building; left-click places, R rotates. The commander builds ghosts within 8 tiles by itself |
 | X · Q | Dismantle tool · pipette (pick the building under the cursor to place another) |
 | Esc | Step back out of the tool, category, window or selection; then the game menu |
-| E, I or Tab · C · T · H | Inventory (pockets + module slots + replicator + colony storage) · Replicator tab · Tech tree · Help |
+| E, I or Tab · C · T · M · H | Inventory (pockets + module slots + replicator + colony storage) · Replicator tab · Tech tree · System map · Help |
 | Left-click a machine, crate or helper bot | Opens it beside your pockets (a bot shows its module slots); hover anything for quick info |
 | Drag · Shift-click · Ctrl/Cmd-click · right-click | Move a stack between pockets and a machine or storage · one stack · all of that item · half |
 | F | Unload pockets into the nearest lander or crate |
@@ -108,8 +108,11 @@ the native `steam_api` library from the Steamworks SDK next to the executable, a
 
 ## Playtest scope
 
-Included: one 128×128 wrap-around planet; five ores (siderite, cuprite, carbon, regolith, galena), xylo
-trees and water; four tech **ages** (Salvage → Combustion are playable, Clean and Stellar are shown as
+Included: a star system of fixed planets with seeded variation (Kepler's Rest, the 128×128 start world,
+plus Cinder, Rime, Dune, the gas giant Vesper and the Shards belt), each with its own biomes and its own
+share of the raw resources (siderite, cuprite, carbon, regolith, galena, xylo trees, kerogen, brimstone,
+titanium, silica, lanthanide, deuterium, hafnium, tantalite, helium-3, osmiridium); a System map (M) to
+view them; four tech **ages** (Salvage → Combustion are playable, Clean and Stellar are shown as
 "coming soon"); research paid in **Cores** (Survey Cores in the Salvage Age, Analysis Cores from the
 Combustion Age). The commander (hand-mining, builds ghosts in reach, 2 module slots, +2 from research) and
 2 Helper Bot Mk1s (1 slot; Gather / Haul, with Build and Operate train taught by modules), 5 modules
@@ -120,7 +123,7 @@ hand-pump carts (need an operator, 1500 kg pull limit), steam locomotives (water
 carts, terraformers (Atmosphere Processor, Hydrosphere Seeder, Bio Incubator), a system readiness meter
 and the Settler Uplink to win.
 
-Not yet: belts (shown as "coming soon" tech), other planets / interplanetary travel (the readiness meter
-already averages every planet and needs each one ready), rail signals
+Not yet: belts (shown as "coming soon" tech), travel between planets (other planets can be viewed but
+not visited, so only the start planet counts toward readiness for now), rail signals
 (trains just block each other), train collision avoidance on single track, snapshot saves, audio,
 sprite art, multiplayer transport.

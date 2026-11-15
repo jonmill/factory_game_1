@@ -20,7 +20,7 @@ public sealed record TakeFromBuilding(int UnitId, int BuildingId, string? Item =
             return "Invalid";
         }
 
-        return u.Planet.InLeaderReach(u, b.Origin) ? null : "Too far away";
+        return (b.Planet == u.Planet) && u.Planet.InLeaderReach(u, b.Origin) ? null : "Too far away";
     }
 
     /// <summary>Moves items into the leader's carried inventory, from the output first and then the input inventory for non-storage buildings.</summary>
