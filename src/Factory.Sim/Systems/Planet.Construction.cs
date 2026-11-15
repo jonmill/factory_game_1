@@ -243,6 +243,12 @@ public sealed partial class Planet
         LaunchFuel = d.LaunchFuel,
         LaunchFuelList = d.LaunchFuelList,
         LandsAs = d.LandsAs,
+        Drones = d.Drones,
+        DroneLoad = d.DroneLoad,
+        Vessels = d.Vessels,
+        VesselLoad = d.VesselLoad,
+        StationSlots = d.StationSlots,
+        ItemCap = d.ItemCap,
         Color = d.Color,
         Description = d.Description,
     };

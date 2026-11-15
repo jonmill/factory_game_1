@@ -139,11 +139,13 @@ public partial class Hud
             FillPockets(b, reach);
         }
 
-        string sig = $"{b.Id}|{reach}|{b.RecipeId}|" + string.Join(",", b.Inv.Items.Select(kv => $"{kv.Key}:{kv.Value}")) + "|" +
+        // The third part changes whenever the action controls need rebuilding: recipe, launch target or station settings.
+        string actionsKey = $"{b.RecipeId};{b.TargetPlanetId};" + string.Join(",", b.StationSlots.Select(s => $"{s.Item}:{s.Mode}"));
+        string sig = $"{b.Id}|{reach}|{actionsKey}|" + string.Join(",", b.Inv.Items.Select(kv => $"{kv.Key}:{kv.Value}")) + "|" +
                      string.Join(",", b.Out.Items.Select(kv => $"{kv.Key}:{kv.Value}"));
         if (sig != _machineSig)
         {
-            bool recipeChanged = (_machineSig is null) || (_machineSig.Split('|')[2] != (b.RecipeId ?? "")) || (_machineSig.Split('|')[0] != $"{b.Id}");
+            bool recipeChanged = (_machineSig is null) || (_machineSig.Split('|')[2] != actionsKey) || (_machineSig.Split('|')[0] != $"{b.Id}");
             _machineSig = sig;
             FillMachine(b, reach);
             if (recipeChanged)

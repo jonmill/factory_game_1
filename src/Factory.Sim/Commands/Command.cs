@@ -30,6 +30,7 @@ namespace Factory.Sim;
 [JsonDerivedType(typeof(LaunchFerry), "launchFerry")]
 [JsonDerivedType(typeof(ReturnFerry), "returnFerry")]
 [JsonDerivedType(typeof(SetLaunchTarget), "setLaunchTarget")]
+[JsonDerivedType(typeof(SetStationSlot), "setStationSlot")]
 public abstract record Command
 {
     /// <summary>Issuing player (0 in single player).</summary>

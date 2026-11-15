@@ -54,6 +54,12 @@ public partial class WorldView
             case BuildingKind.PayloadLauncher:
                 DrawPayloadLauncher(b, r, accent, working);
                 break;
+            case BuildingKind.Belt:
+                DrawBelt(b, r, accent);
+                break;
+            case BuildingKind.LogisticsStation or BuildingKind.OrbitalStation:
+                DrawStation(b, r, accent, working);
+                break;
             default:
                 Hull(r.Grow(-T * 0.06f), accent, working);
                 break;

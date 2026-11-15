@@ -324,7 +324,7 @@ public partial class GameRoot : Node2D
 
         Cam = new Vector2(Mathf.PosMod(Cam.X, Planet.Width), Mathf.PosMod(Cam.Y, Planet.Height));
 
-        if ((Tool == ToolKind.Place) && (PlaceDefId == "rail") && Input.IsMouseButtonPressed(MouseButton.Left) && (_lastDragTile is { } last))
+        if ((Tool == ToolKind.Place) && (PlaceDefId is "rail" or "conveyor-belt") && Input.IsMouseButtonPressed(MouseButton.Left) && (_lastDragTile is { } last))
         {
             DragRail(last, HoverTile);
         }
@@ -392,6 +392,7 @@ public partial class GameRoot : Node2D
     {
         Int2 d = Planet.Torus.Delta(from, to);
         Int2 cur = from;
+        Int2 prev = from;
         while (d != Int2.Zero)
         {
             if (System.Math.Abs(d.X) >= System.Math.Abs(d.Y))
@@ -404,6 +405,20 @@ public partial class GameRoot : Node2D
             }
 
             d = Planet.Torus.Delta(cur, to);
+            if (PlaceDefId == "conveyor-belt")
+            {
+                // A dragged belt runs the way the mouse moved.
+                Int2 step = Planet.Torus.Delta(prev, cur);
+                SimDir dir = step.X > 0 ? SimDir.East : step.X < 0 ? SimDir.West : step.Y > 0 ? SimDir.South : SimDir.North;
+                if (Planet.CanPlace(Content.Buildings["conveyor-belt"], cur, dir) is null)
+                {
+                    Send(new PlaceBuilding("conveyor-belt", cur, dir));
+                }
+
+                prev = cur;
+                continue;
+            }
+
             TryPlaceRail(cur);
         }
 
@@ -621,6 +636,10 @@ public partial class GameRoot : Node2D
                     }
 
                     Send(new PlaceBuilding(def.Id, origin, PlaceRot));
+                    if (def.Kind == BuildingKind.Belt)
+                    {
+                        _lastDragTile = tile; // hold and drag to lay a run of belt
+                    }
 
                     return;
                 }
@@ -912,12 +931,38 @@ public partial class GameRoot : Node2D
                     Send(new PlaceBuilding("solar-panel", new Int2(l.X - 7, l.Y + 9), SimDir.North));
                     Send(new PlaceBuilding("wind-turbine", new Int2(l.X - 9, l.Y + 12), SimDir.North));
                     Send(new PlaceBuilding("payload-launcher", new Int2(l.X - 5, l.Y + 12), SimDir.North));
+                    // Belts carrying plates from a crate along a sorter line, and two logistics stations.
+                    lander.Inv.AddUnchecked("charge-cell", 50);
+                    Send(new PlaceBuilding("chest", new Int2(l.X - 12, l.Y + 16), SimDir.North));
+                    Send(new PlaceBuilding("sorter", new Int2(l.X - 11, l.Y + 16), SimDir.East));
+                    for (int x = l.X - 10; x <= l.X - 3; x++)
+                    {
+                        Send(new PlaceBuilding("conveyor-belt", new Int2(x, l.Y + 16), SimDir.East));
+                    }
+
+                    Send(new PlaceBuilding("power-pole", new Int2(l.X - 6, l.Y + 15), SimDir.North));
+                    Send(new PlaceBuilding("logistics-station", new Int2(l.X - 14, l.Y), SimDir.North));
+                    Send(new PlaceBuilding("power-pole", new Int2(l.X - 11, l.Y), SimDir.North));
+                    Send(new PlaceBuilding("solar-panel", new Int2(l.X - 14, l.Y + 3), SimDir.North));
+                    Send(new PlaceBuilding("logistics-station", new Int2(l.X + 13, l.Y + 1), SimDir.North));
+                    Send(new PlaceBuilding("power-pole", new Int2(l.X + 12, l.Y + 1), SimDir.North));
+                    Send(new PlaceBuilding("solar-panel", new Int2(l.X + 13, l.Y + 4), SimDir.North));
                     Leader.Carry.AddUnchecked("hover-module", 1);
                     Send(new InstallModule(Leader.Id, Leader.Id, "hover-module"));
                 }
             }
 
             World.Run(60 * 60);
+            if (demo == "5")
+            {
+                // Walk the commander past the Clean Age ghosts so it builds them.
+                foreach (Int2 stop in new[] { new Int2(l.X - 6, l.Y + 13), new Int2(l.X - 6, l.Y + 18), new Int2(l.X - 11, l.Y + 3), new Int2(l.X + 11, l.Y + 5) })
+                {
+                    Send(new WalkTo(Leader.Id, stop));
+                    World.Run(60 * 60);
+                }
+            }
+
             Send(new PlaceTrain(new Int2(l.X + 2, l.Y + 6), SimDir.East, ["hand-cart", "mine-cart"]));
             Send(new QueueCraft(Planet.LanderId, "drive-cog", 10));
             World.Run(60 * 60);
@@ -958,6 +1003,19 @@ public partial class GameRoot : Node2D
                     Send(new SetRecipe(refinery.Id, "kerogen-fuel"));
                 }
 
+                List<Building> stations = Planet.Buildings.Where(b => b.Def.Kind == BuildingKind.LogisticsStation).OrderBy(b => b.Id).ToList();
+                if ((demo == "5") && (stations.Count == 2))
+                {
+                    stations[0].Inv.AddUnchecked("siderite-plate", 300);
+                    Send(new SetStationSlot(stations[0].Id, 0, "siderite-plate", StationMode.Supply));
+                    Send(new SetStationSlot(stations[1].Id, 0, "siderite-plate", StationMode.Demand));
+                }
+
+                if ((demo == "5") && (Planet.Buildings.FirstOrDefault(b => b.Def.Id == "chest" && b.Origin.Y == l.Y + 16) is { } crate))
+                {
+                    crate.Inv.AddUnchecked("cupral-bar", 40);
+                }
+
                 if ((demo == "5") && (Planet.Buildings.FirstOrDefault(b => b.Def.Kind == BuildingKind.PayloadLauncher) is { } launcher))
                 {
                     launcher.Inv.AddUnchecked("catalyst-pack", 5);
@@ -978,6 +1036,11 @@ public partial class GameRoot : Node2D
             SelectedId = Planet.Trains.FirstOrDefault()?.Id ?? Planet.LanderId;
             _hud.ToggleHelp();
             Zoom = 1.4f;
+            if ((demo == "5") && (Planet.Buildings.FirstOrDefault(b => b.Def.IsStation) is { } station))
+            {
+                SelectedId = station.Id;
+                Zoom = 0.9f;
+            }
         }
 
         // FACTORY_WINDOW=inventory|replicator|tech|help|victory|system and FACTORY_CATEGORY=<1-7> open HUD panels for screenshots;

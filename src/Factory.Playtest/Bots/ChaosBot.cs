@@ -63,6 +63,9 @@ public sealed class ChaosBot(ulong seed, int actionsPerMinute = 30, int player =
             < 92 => leader is null ? null : new SetMoveIntent(leader.Id, _rng.Range(-1, 2), _rng.Range(-1, 2)),
             < 94 => leader is null ? null : new MineTile(leader.Id, _rng.Range(0, 3) == 0 ? null : RandTile(3)),
             < 95 => Travel(world, anyLeader, followers),
+            < 96 => Pick(buildings.Where(b => b.Def.IsStation).ToList()) is { } st && (Pick(c.ItemList) is { } it)
+                ? new SetStationSlot(st.Id, _rng.Range(0, st.Def.StationSlots), _rng.Range(0, 5) == 0 ? null : it.Id, (StationMode)_rng.Range(0, 2))
+                : null,
             < 98 => (leader is null) || (buildings.Count == 0) ? null : new DepositToBuilding(leader.Id, Pick(buildings)!.Id),
             _ => (leader is null) || (buildings.Count == 0) ? null : new TakeFromBuilding(leader.Id, Pick(buildings)!.Id),
         };

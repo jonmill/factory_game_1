@@ -43,7 +43,7 @@ dotnet run --project tests/Factory.Sim.Tests    # tests (TUnit runs as an execut
 Debug/automation env vars for the client: `FACTORY_DEMO=1` (queues a sample base and fast-forwards
 via normal commands; `FACTORY_DEMO=2` also unlocks everything and stocks the lander to show the late-game
 buildings, so it is not a replayable game; `3` adds the Combustion Age set and a loaded launch pad, `4` also
-flies the ferry to Rime, `5` adds the Clean Age set: solar, wind, a payload launcher and a hover module), `FACTORY_PLANET=<planet id>` (view another planet), `FACTORY_SCREENSHOT=/path.png` (saves a frame after 3 s and quits),
+flies the ferry to Rime, `5` adds the Clean Age set: solar, wind, a payload launcher, a hover module, belts and logistics stations), `FACTORY_PLANET=<planet id>` (view another planet), `FACTORY_SCREENSHOT=/path.png` (saves a frame after 3 s and quits),
 `FACTORY_SEED=<n>` (pins the map seed), `FACTORY_WINDOW=inventory|replicator|tech|help|victory|system` and
 `FACTORY_CATEGORY=<1-7>` (open a HUD window or build category), `FACTORY_SELECT=<building id>` (selects the
 nearest building of that type, e.g. `burner-smelter`, or `helper` for a helper bot), `FACTORY_REPLAY=/path.replay.json`
@@ -125,11 +125,13 @@ carts, a Kerogen Refinery (Kerogen Fuel, Polymer Resin), Kerogen Generators (no 
 Lattice Pylons (20-tile reach), a Launch Pad and reusable Ferry Rocket to fly the commander, helper bots
 and cargo to the other planets (a landed ferry always flies home); in the Clean Age Solar Panels (scaled by each planet's sunlight),
 Wind Turbines (scaled by its atmosphere), a Hover Module (float over water and lava) and a Payload Launcher that
-terraforms another planet from home; terraformers (Atmosphere Processor, Hydrosphere Seeder, Bio Incubator), a system readiness meter
+terraforms another planet from home, Conveyor Belts (sorter arms load and unload them), Planetary Logistics
+Stations (drones carry supplied items to stations that demand them) and Orbital Logistics Stations (vessels
+between planets); terraformers (Atmosphere Processor, Hydrosphere Seeder, Bio Incubator), a system readiness meter
 and the Settler Uplink to win.
 
 Settler targets: Kepler's Rest and Rime (terraformed from home with the Payload Launcher).
 
-Not yet: belts (shown as "coming soon" tech), automated logistics between planets (the ferry is by hand), rail signals
+Not yet: splitters and underground belts, rail signals
 (trains just block each other), train collision avoidance on single track, snapshot saves, audio,
 sprite art, multiplayer transport.

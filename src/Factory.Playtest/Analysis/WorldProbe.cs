@@ -64,6 +64,11 @@ public static class WorldProbe
                 Add(s.Delivered);
             }
 
+            foreach (Shipment s in p.Shipments)
+            {
+                d[s.Item] = d.GetValueOrDefault(s.Item) + s.Count;
+            }
+
             foreach (Train t in p.Trains)
             {
                 foreach (Vehicle v in t.Vehicles)

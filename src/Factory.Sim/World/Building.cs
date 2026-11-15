@@ -40,6 +40,10 @@ public sealed class Building : Entity
     public int HomePlanetId { get; internal set; }
     /// <summary>Payload launchers: the planet it fires at (an index into the world's planets), or -1 for none.</summary>
     public int TargetPlanetId { get; internal set; } = -1;
+    /// <summary>A belt's items, front (furthest along) first. They are also counted in <see cref="Inv"/>.</summary>
+    public List<BeltItem> Lane { get; } = [];
+    /// <summary>A logistics station's item settings: what it supplies and what it demands.</summary>
+    public List<StationSlot> StationSlots { get; } = [];
     /// <summary>Generation actually delivered last tick (W), for UI.</summary>
     public long LastOutputJ { get; internal set; }
 

@@ -65,12 +65,19 @@ public partial class WorldView : Node2D
             DrawSite(s);
         }
 
-        foreach (Building b in P.Buildings)
+        // Belts lie flat under everything else.
+        foreach (Building b in P.Buildings.Where(b => b.Def.Kind == BuildingKind.Belt))
+        {
+            DrawBuilding(b);
+        }
+
+        foreach (Building b in P.Buildings.Where(b => b.Def.Kind != BuildingKind.Belt))
         {
             DrawBuilding(b);
         }
 
         DrawPowerWires();
+        DrawShipments();
         DrawRoutes();
         foreach (Train t in P.Trains)
         {

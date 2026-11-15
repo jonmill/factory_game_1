@@ -331,6 +331,27 @@ public static class Icons
                 ci.DrawCircle(m, s * 0.08f, _glass);
                 ci.DrawCircle(m, s * 0.04f, accent);
                 break;
+            case BuildingKind.Belt:
+                ci.DrawRect(new Rect2(m - new Vector2(s * 0.36f, s * 0.22f), new Vector2(s * 0.72f, s * 0.44f)), new Color(0.17f, 0.19f, 0.22f));
+                ci.DrawLine(m + new Vector2(-s * 0.36f, -s * 0.22f), m + new Vector2(s * 0.36f, -s * 0.22f), accent, Mathf.Max(1.5f, s * 0.05f));
+                ci.DrawLine(m + new Vector2(-s * 0.36f, s * 0.22f), m + new Vector2(s * 0.36f, s * 0.22f), accent, Mathf.Max(1.5f, s * 0.05f));
+                for (int i = 0; i < 2; i++)
+                {
+                    Vector2 tip = m + new Vector2((i * s * 0.26f) - (s * 0.04f), 0);
+                    ci.DrawPolyline([tip + new Vector2(-s * 0.1f, -s * 0.12f), tip, tip + new Vector2(-s * 0.1f, s * 0.12f)], new Color(1, 1, 1, 0.6f), Mathf.Max(1.5f, s * 0.04f));
+                }
+
+                break;
+            case BuildingKind.LogisticsStation or BuildingKind.OrbitalStation:
+                ci.DrawCircle(m, s * 0.24f, _glass);
+                for (int i = 0; i < 6; i++)
+                {
+                    float a = i * Mathf.Tau / 6f;
+                    ci.DrawCircle(m + (new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * s * 0.18f), s * 0.035f, accent);
+                }
+
+                ci.DrawCircle(m, s * (def.Kind == BuildingKind.OrbitalStation ? 0.1f : 0.07f), def.Kind == BuildingKind.OrbitalStation ? new Color(0.92f, 0.94f, 0.97f) : accent);
+                break;
             case BuildingKind.PayloadLauncher:
                 ci.DrawCircle(m, s * 0.22f, _glass);
                 ci.DrawLine(m + new Vector2(-s * 0.06f, s * 0.04f), m + new Vector2(s * 0.2f, -s * 0.28f), new Color(0.92f, 0.94f, 0.97f), Mathf.Max(1.5f, s * 0.05f), true);

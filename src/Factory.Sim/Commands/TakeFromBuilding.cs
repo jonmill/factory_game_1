@@ -49,7 +49,16 @@ public sealed record TakeFromBuilding(int UnitId, int BuildingId, string? Item =
                     return;
                 }
 
-                left -= inv.MoveTo(u.Carry, item, System.Math.Min(n, left));
+                int moved = inv.MoveTo(u.Carry, item, System.Math.Min(n, left));
+                left -= moved;
+                if (b.Def.Kind == BuildingKind.Belt)
+                {
+                    // Keep the belt's lane in step with its inventory.
+                    for (int i = 0; i < moved; i++)
+                    {
+                        b.Lane.Remove(b.Lane.Last(x => x.Item == item));
+                    }
+                }
             }
         }
     }

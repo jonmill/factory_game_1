@@ -13,7 +13,7 @@ public partial class Hud
 {
     private static readonly (string Name, BuildingKind[] Kinds)[] _categories =
     [
-        ("Logistics", [BuildingKind.Chest, BuildingKind.Sorter]),
+        ("Logistics", [BuildingKind.Chest, BuildingKind.Sorter, BuildingKind.Belt, BuildingKind.LogisticsStation, BuildingKind.OrbitalStation]),
         ("Production", [BuildingKind.Drill, BuildingKind.Furnace, BuildingKind.Assembler]),
         ("Power", [BuildingKind.SteamEngine, BuildingKind.SolarPanel, BuildingKind.WindTurbine, BuildingKind.Pole, BuildingKind.Battery]),
         ("Science", [BuildingKind.Lab, BuildingKind.RobotBay]),

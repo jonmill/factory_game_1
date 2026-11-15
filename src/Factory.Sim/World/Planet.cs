@@ -38,6 +38,8 @@ public sealed partial class Planet
     public List<Unit> Units { get; } = [];
     /// <summary>Trains on the planet.</summary>
     public List<Train> Trains { get; } = [];
+    /// <summary>Drones and vessels this planet's stations have out, with what they carry.</summary>
+    public List<Shipment> Shipments { get; } = [];
     /// <summary>Id of the colony lander building, the starting storage and crafter.</summary>
     public int LanderId { get; internal set; }
 
@@ -375,6 +377,7 @@ public sealed partial class Planet
         }
 
         UpdateTrains();
+        UpdateShipments();
     }
 
     internal void Hash(StateHasher h)
@@ -406,11 +409,32 @@ public sealed partial class Planet
             h.Add(b.HomePadId);
             h.Add(b.HomePlanetId);
             h.Add(b.TargetPlanetId);
+            foreach (BeltItem it in b.Lane)
+            {
+                h.Add(it.Item);
+                h.Add(it.Pos);
+            }
+
+            foreach (StationSlot slot in b.StationSlots)
+            {
+                h.Add(slot.Item);
+                h.Add((int)slot.Mode);
+            }
+
             b.Inv.Hash(h);
             if (b.Def.IsStorage == false)
             {
                 b.Out.Hash(h);
             }
+        }
+
+        foreach (Shipment s in Shipments)
+        {
+            h.Add(s.FromId);
+            h.Add(s.ToId);
+            h.Add(s.Item);
+            h.Add(s.Count);
+            h.Add(s.ArriveTick);
         }
 
         foreach (ConstructionSite s in Sites)

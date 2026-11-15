@@ -41,6 +41,8 @@ public sealed partial class Planet
 
                     return burner && c.IsFuel(item) ? Cap(MaxFuelStock) : 0;
                 }
+            case BuildingKind.LogisticsStation or BuildingKind.OrbitalStation:
+                return b.StationSlots.Any(s => s.Item == item) ? Cap(b.Def.ItemCap) : 0;
             case BuildingKind.Drill or BuildingKind.SteamEngine:
                 return burner && c.IsFuel(item) ? Cap(MaxFuelStock) : 0;
             case BuildingKind.PayloadLauncher:
@@ -90,6 +92,8 @@ public sealed partial class Planet
                 return b.Crafting || (NextPayload(b) is not null);
             case BuildingKind.Sorter:
                 return b.Progress < b.Def.Period * 100L;
+            case BuildingKind.LogisticsStation or BuildingKind.OrbitalStation:
+                return true;
             default:
                 return false;
         }
@@ -179,6 +183,12 @@ public sealed partial class Planet
             case BuildingKind.Sorter:
                 UpdateSorter(b);
                 break;
+            case BuildingKind.Belt:
+                UpdateBelt(b);
+                break;
+            case BuildingKind.LogisticsStation or BuildingKind.OrbitalStation:
+                UpdateStation(b);
+                break;
         }
     }
 
@@ -246,6 +256,13 @@ public sealed partial class Planet
         Building? target = BuildingAt(b.FrontTile());
         if ((target is null) || (target == b))
         {
+            return;
+        }
+
+        if (target.Def.Kind == BuildingKind.Belt)
+        {
+            DrillOntoBelt(b);
+
             return;
         }
 
@@ -478,19 +495,48 @@ public sealed partial class Planet
             return;
         }
 
-        foreach ((string? item, int _) in src.Out.Items)
+        if (dst.Def.Kind == BuildingKind.Belt)
         {
-            if (AcceptAmount(dst, item) <= 0)
+            // Onto a belt: one item from the source's output, if the belt has room at the back.
+            if (BeltHasRoom(dst) && (src.Def.Kind != BuildingKind.Belt) && (src.Out.IsEmpty == false))
             {
-                continue;
+                string item = src.Out.Items.First().Key;
+                src.Out.Remove(item, 1);
+                PutOnBelt(dst, item);
+                b.Progress = 0;
+                b.Status = MachineStatus.Working;
+
+                return;
             }
+        }
+        else if (src.Def.Kind == BuildingKind.Belt)
+        {
+            // Off a belt: the frontmost item the destination wants.
+            if (TakeFromBelt(src, dst) is { } item)
+            {
+                dst.Inv.AddUnchecked(item, 1);
+                b.Progress = 0;
+                b.Status = MachineStatus.Working;
 
-            src.Out.Remove(item, 1);
-            dst.Inv.AddUnchecked(item, 1);
-            b.Progress = 0;
-            b.Status = MachineStatus.Working;
+                return;
+            }
+        }
+        else
+        {
+            foreach ((string? item, int _) in src.Out.Items)
+            {
+                if (AcceptAmount(dst, item) <= 0)
+                {
+                    continue;
+                }
 
-            return;
+                src.Out.Remove(item, 1);
+                dst.Inv.AddUnchecked(item, 1);
+                b.Progress = 0;
+                b.Status = MachineStatus.Working;
+
+                return;
+            }
         }
 
         b.Status = MachineStatus.Idle;

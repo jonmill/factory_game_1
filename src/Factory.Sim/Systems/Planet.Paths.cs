@@ -27,7 +27,7 @@ public sealed partial class Planet
     /// <param name="tile">The tile.</param>
     /// <returns>Whether the tile's centre is free.</returns>
     public bool IsWalkable(Int2 tile) =>
-        (_hoverWalk || (TerrainAt(tile) == Terrain.Ground)) && (BuildingAt(tile) is null) && (ResourceAt(tile) is not { IsTree: true });
+        (_hoverWalk || (TerrainAt(tile) == Terrain.Ground)) && ((BuildingAt(tile) is not { } b) || b.Def.IsWalkable) && (ResourceAt(tile) is not { IsTree: true });
 
     /// <summary>True while moving a robot with a hover module, which floats over water and lava.</summary>
     private bool _hoverWalk;

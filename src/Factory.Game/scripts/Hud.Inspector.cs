@@ -321,6 +321,11 @@ public partial class Hud
             BuildLauncherTarget(into, b);
         }
 
+        if (b.Def.IsStation)
+        {
+            BuildStationActions(into, b);
+        }
+
         if (b.Def.Kind == BuildingKind.Ferry)
         {
             (Planet home, Building store) = b.Planet.HomeOf(b);

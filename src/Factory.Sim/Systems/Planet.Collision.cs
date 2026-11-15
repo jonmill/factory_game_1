@@ -126,7 +126,7 @@ public sealed partial class Planet
         return true;
     }
 
-    private bool IsOpen(Int2 tile) => (TerrainAt(tile) == Terrain.Ground) && (BuildingAt(tile) is null);
+    private bool IsOpen(Int2 tile) => (TerrainAt(tile) == Terrain.Ground) && ((BuildingAt(tile) is not { } b) || b.Def.IsWalkable);
 
     private Int2? NearestOpenTile(Int2 from)
     {
@@ -187,7 +187,7 @@ public sealed partial class Planet
                     solids.Add(new Box(trunk.X - TrunkHalf, trunk.Y - TrunkHalf, trunk.X + TrunkHalf, trunk.Y + TrunkHalf));
                 }
 
-                if ((BuildingAt(tile) is { } b) && seen.Add(b.Id))
+                if ((BuildingAt(tile) is { Def.IsWalkable: false } b) && seen.Add(b.Id))
                 {
                     // Place the building's box next to this tile in unwrapped space.
                     Int2 into = Torus.Delta(b.Origin, Torus.Wrap(tile));

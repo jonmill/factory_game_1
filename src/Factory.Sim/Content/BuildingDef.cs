@@ -66,6 +66,18 @@ public sealed class BuildingDef
     public Dictionary<string, int> LaunchFuel { get; init; } = new();
     /// <summary>Launch pads: the building the vessel becomes once it lands (a landed ferry).</summary>
     public string? LandsAs { get; init; }
+    /// <summary>Logistics stations: how many drones fly its supplies around the planet.</summary>
+    public int Drones { get; init; }
+    /// <summary>Logistics stations: items one drone carries.</summary>
+    public int DroneLoad { get; init; }
+    /// <summary>Orbital stations: how many vessels carry its supplies to other planets.</summary>
+    public int Vessels { get; init; }
+    /// <summary>Orbital stations: items one vessel carries.</summary>
+    public int VesselLoad { get; init; }
+    /// <summary>Logistics stations: how many items it can be set to supply or demand.</summary>
+    public int StationSlots { get; init; } = 5;
+    /// <summary>Logistics stations: the most of each item it stocks.</summary>
+    public int ItemCap { get; init; }
     /// <summary>The age this building belongs to, if set explicitly; otherwise its unlocking technology's age.</summary>
     public string? Age { get; init; }
     /// <summary>The age this building belongs to (resolved when content loads).</summary>
@@ -73,7 +85,11 @@ public sealed class BuildingDef
     /// <summary><see cref="Cost"/> as an id-sorted list, for deterministic iteration.</summary>
     [JsonIgnore] public ItemAmount[] CostList { get; internal set; } = [];
     /// <summary>True for buildings whose inventory is general storage (lander, chest, rail stop), so input and output share one inventory.</summary>
-    [JsonIgnore] public bool IsStorage => Kind is BuildingKind.Lander or BuildingKind.Chest or BuildingKind.RailStop or BuildingKind.Ferry or BuildingKind.LaunchPad;
+    [JsonIgnore] public bool IsStorage => Kind is BuildingKind.Lander or BuildingKind.Chest or BuildingKind.RailStop or BuildingKind.Ferry or BuildingKind.LaunchPad or BuildingKind.LogisticsStation or BuildingKind.OrbitalStation;
+    /// <summary>True for planetary and orbital logistics stations.</summary>
+    [JsonIgnore] public bool IsStation => Kind is BuildingKind.LogisticsStation or BuildingKind.OrbitalStation;
+    /// <summary>True for buildings people walk over, such as belts.</summary>
+    [JsonIgnore] public bool IsWalkable => Kind == BuildingKind.Belt;
     /// <summary>True for buildings that feed power into a grid.</summary>
     [JsonIgnore] public bool IsGenerator => Kind is BuildingKind.SteamEngine or BuildingKind.SolarPanel or BuildingKind.WindTurbine;
     /// <summary>True for generators that burn nothing.</summary>

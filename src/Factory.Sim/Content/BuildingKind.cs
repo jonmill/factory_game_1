@@ -47,5 +47,11 @@ public enum BuildingKind
     /// <summary>A wind turbine: power from wind, which grows with the planet's atmosphere.</summary>
     WindTurbine,
     /// <summary>Fires terraforming payloads at another planet.</summary>
-    PayloadLauncher
+    PayloadLauncher,
+    /// <summary>A conveyor belt tile: carries items forward; sorters load and unload it. People walk over it.</summary>
+    Belt,
+    /// <summary>A planetary logistics station: drones carry its supplied items to stations that demand them on the same planet.</summary>
+    LogisticsStation,
+    /// <summary>An orbital logistics station: drones on its own planet, and vessels to orbital stations on other planets.</summary>
+    OrbitalStation,
 }
