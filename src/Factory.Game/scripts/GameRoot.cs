@@ -15,6 +15,12 @@ public partial class GameRoot : Node2D
     /// <summary>Size of one tile in pixels at zoom 1.</summary>
     public const float TilePx = 32f;
 
+    /// <summary>Furthest the camera zooms out.</summary>
+    public const float MinZoom = 0.45f;
+
+    /// <summary>Closest the camera zooms in.</summary>
+    public const float MaxZoom = 2.5f;
+
     /// <summary>Loaded game content definitions.</summary>
     public ContentDb Content { get; private set; } = null!;
     /// <summary>The running simulation.</summary>
@@ -300,12 +306,12 @@ public partial class GameRoot : Node2D
     {
         if (Input.IsActionJustPressed("zoom_in"))
         {
-            Zoom = Mathf.Min(2.5f, Zoom * 1.15f);
+            Zoom = Mathf.Min(MaxZoom, Zoom * 1.15f);
         }
 
         if (Input.IsActionJustPressed("zoom_out"))
         {
-            Zoom = Mathf.Max(0.45f, Zoom / 1.15f);
+            Zoom = Mathf.Max(MinZoom, Zoom / 1.15f);
         }
     }
 
@@ -341,25 +347,36 @@ public partial class GameRoot : Node2D
 
     // ------------------------------------------------------------------ input
 
+    /// <summary>
+    /// Zoom is handled before the GUI sees the event, so the wheel works over HUD panels too, and it
+    /// accepts the mouse wheel (with precise trackpad deltas) as well as trackpad pinch and two-finger
+    /// scroll gestures.
+    /// </summary>
+    /// <param name="event">The input event.</param>
+    public override void _Input(InputEvent @event)
+    {
+        float steps = @event switch
+        {
+            InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.WheelUp } mb => mb.Factor > 0 ? mb.Factor : 1,
+            InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.WheelDown } mb => -(mb.Factor > 0 ? mb.Factor : 1),
+            InputEventPanGesture pan => -pan.Delta.Y,
+            InputEventMagnifyGesture mag => Mathf.Log(mag.Factor) / Mathf.Log(1.1f),
+            _ => 0,
+        };
+        if (steps == 0)
+        {
+            return;
+        }
+
+        Zoom = Mathf.Clamp(Zoom * Mathf.Pow(1.1f, steps), MinZoom, MaxZoom);
+        GetViewport().SetInputAsHandled();
+    }
+
     /// <inheritdoc />
     public override void _UnhandledInput(InputEvent @event)
     {
         if (@event is InputEventMouseButton mb)
         {
-            if ((mb.ButtonIndex == MouseButton.WheelUp) && mb.Pressed)
-            {
-                Zoom = Mathf.Min(2.5f, Zoom * 1.1f);
-
-                return;
-            }
-
-            if ((mb.ButtonIndex == MouseButton.WheelDown) && mb.Pressed)
-            {
-                Zoom = Mathf.Max(0.45f, Zoom / 1.1f);
-
-                return;
-            }
-
             if ((mb.ButtonIndex == MouseButton.Left) && mb.Pressed)
             {
                 LeftClick();
