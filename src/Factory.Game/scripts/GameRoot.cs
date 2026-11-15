@@ -401,14 +401,23 @@ public partial class GameRoot : Node2D
         }
         else if (k.IsAction("cancel"))
         {
+            // Esc steps back one level: the tool, then a window or build category, then the selection.
             if (Tool != ToolKind.Select)
             {
                 SetTool(ToolKind.Select);
             }
-            else
+            else if (_hud.BackOut() == false)
             {
                 SelectedId = 0;
             }
+        }
+        else if (k.IsAction("inventory"))
+        {
+            _hud.Toggle(HudWindow.Inventory);
+        }
+        else if (k.IsAction("replicator"))
+        {
+            _hud.Toggle(HudWindow.Replicator);
         }
         else if (k.IsAction("unload"))
         {
@@ -448,11 +457,11 @@ public partial class GameRoot : Node2D
         }
         else if ((k.Keycode >= Key.Key1) && (k.Keycode <= Key.Key9))
         {
-            _hud.HotbarSelect((int)(k.Keycode - Key.Key1));
+            _hud.BuildKey((int)(k.Keycode - Key.Key1));
         }
         else if (k.Keycode == Key.Key0)
         {
-            _hud.HotbarSelect(9);
+            _hud.BuildKey(9);
         }
     }
 
@@ -602,8 +611,22 @@ public partial class GameRoot : Node2D
         }
     }
 
+    /// <summary>The nearest lander or crate within the commander's reach, optionally only ones matching a filter.</summary>
+    /// <param name="filter">Extra condition a storage building must meet.</param>
+    /// <returns>The storage building, or null if none is in reach.</returns>
+    public Building? NearestStorage(System.Func<Building, bool>? filter = null)
+    {
+        Unit leader = Leader;
+
+        return Planet.Buildings
+            .Where(b => (b.Def.Kind is BuildingKind.Lander or BuildingKind.Chest) && Planet.InLeaderReach(leader, b.Origin) && ((filter is null) || filter(b)))
+            .OrderBy(b => Planet.SubTorus.DistSq(leader.Pos, b.CenterSub))
+            .ThenBy(b => b.Id)
+            .FirstOrDefault();
+    }
+
     /// <summary>Empties the leader's pockets into the nearest lander or crate within reach.</summary>
-    private void UnloadPockets()
+    public void UnloadPockets()
     {
         Unit leader = Leader;
         if (leader.Carry.IsEmpty)
@@ -613,11 +636,7 @@ public partial class GameRoot : Node2D
             return;
         }
 
-        Building? store = Planet.Buildings
-            .Where(b => (b.Def.Kind is BuildingKind.Lander or BuildingKind.Chest) && Planet.InLeaderReach(leader, b.Origin))
-            .OrderBy(b => Planet.SubTorus.DistSq(leader.Pos, b.CenterSub))
-            .ThenBy(b => b.Id)
-            .FirstOrDefault();
+        Building? store = NearestStorage();
         if (store is null)
         {
             Notify("No lander or crate within reach to unload into", Colors.OrangeRed);
@@ -675,6 +694,7 @@ public partial class GameRoot : Node2D
     // ------------------------------------------------------------------ debug / automation hooks
 
     private bool _demoDone;
+    private bool _uiHooksDone;
 
     /// <summary>
     /// FACTORY_DEMO=1 queues a small sample base and fast-forwards (all via normal Commands).
@@ -750,6 +770,21 @@ public partial class GameRoot : Node2D
             Zoom = 1.4f;
         }
 
+        // FACTORY_WINDOW=inventory|replicator|tech|help and FACTORY_CATEGORY=<1-6> open HUD panels for screenshots.
+        if ((_uiHooksDone == false) && (Clock > 0.5))
+        {
+            _uiHooksDone = true;
+            if (System.Enum.TryParse(System.Environment.GetEnvironmentVariable("FACTORY_WINDOW"), true, out HudWindow window))
+            {
+                _hud.Toggle(window);
+            }
+
+            if (int.TryParse(System.Environment.GetEnvironmentVariable("FACTORY_CATEGORY"), out int category))
+            {
+                _hud.BuildKey(category - 1);
+            }
+        }
+
         string? shot = System.Environment.GetEnvironmentVariable("FACTORY_SCREENSHOT");
         if ((shot is not null) && (Clock > 3.0))
         {
@@ -817,6 +852,8 @@ public partial class GameRoot : Node2D
         Bind("cancel", Key.Escape, Key.Q);
         Bind("deconstruct", Key.X);
         Bind("unload", Key.F);
+        Bind("inventory", Key.I, Key.Tab);
+        Bind("replicator", Key.C);
         Bind("pause", Key.Space);
         Bind("speed_up", Key.Equal, Key.KpAdd);
         Bind("speed_down", Key.Minus, Key.KpSubtract);

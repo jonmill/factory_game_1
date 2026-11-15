@@ -40,8 +40,22 @@ dotnet run --project tests/Factory.Sim.Tests    # tests (TUnit runs as an execut
 
 Debug/automation env vars for the client: `FACTORY_DEMO=1` (queues a sample base and fast-forwards
 via normal commands), `FACTORY_SCREENSHOT=/path.png` (saves a frame after 3 s and quits),
-`FACTORY_SEED=<n>` (pins the map seed), `FACTORY_REPLAY=/path.replay.json` (loads a headless replay
-and centres on the lander) and `FACTORY_ZOOM=<f>` (initial camera zoom, used with the replay).
+`FACTORY_SEED=<n>` (pins the map seed), `FACTORY_WINDOW=inventory|replicator|tech|help` and
+`FACTORY_CATEGORY=<1-6>` (open a HUD window or build category), `FACTORY_REPLAY=/path.replay.json`
+(loads a headless replay and centres on the lander) and `FACTORY_ZOOM=<f>` (initial camera zoom,
+used with the replay).
+
+### Controls
+
+| Key | Action |
+|---|---|
+| WASD | Walk |
+| Right-click (drag) | Mine ore or trees; the commander walks over and works through the deposit |
+| 1 – 6, then 1 – 0 | Open a build category, then pick a building; left-click places, R rotates |
+| X / Q / Esc | Dismantle tool / step back out of the tool, category or window |
+| I or Tab · C · T · H | Inventory · Replicator (lander crafting) · Tech tree · Help |
+| F | Unload pockets into the nearest lander or crate |
+| Space · + / − · F5 / F9 | Pause · game speed · quicksave / quickload |
 
 ## Headless playtesting
 
