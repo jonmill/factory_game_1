@@ -78,6 +78,7 @@ public partial class GameRoot : Node2D
     /// <inheritdoc />
     public override void _Ready()
     {
+        FitWindowToScreen();
         RegisterInput();
         PlatformServices = Platform.PlatformServices.Create();
         Content = ContentDb.LoadDefault();
@@ -112,6 +113,32 @@ public partial class GameRoot : Node2D
         _hud = new Hud { Root = this };
         AddChild(_hud);
         Notify($"Platform: {PlatformServices.Name}. Press H for help.", Colors.LightSkyBlue);
+    }
+
+    /// <summary>
+    /// Opens the window at about 80% of the screen. The project's 1600×900 is in physical pixels, which is
+    /// a small window on a high-DPI display; the canvas_items stretch mode then scales the game to fit.
+    /// Screenshot runs keep the fixed size so shots stay comparable.
+    /// </summary>
+    private static void FitWindowToScreen()
+    {
+        if ((System.Environment.GetEnvironmentVariable("FACTORY_SCREENSHOT") is not null) || (DisplayServer.WindowGetMode() != DisplayServer.WindowMode.Windowed))
+        {
+            return;
+        }
+
+        Rect2I usable = DisplayServer.ScreenGetUsableRect();
+        Vector2I size = new Vector2I((int)(usable.Size.X * 0.8f), (int)(usable.Size.Y * 0.8f));
+        // Keep the design aspect so the first view matches what the game was laid out for.
+        size = new Vector2I(System.Math.Min(size.X, size.Y * 16 / 9), System.Math.Min(size.Y, size.X * 9 / 16));
+        if ((size.X <= DisplayServer.WindowGetSize().X) || (size.Y <= 0))
+        {
+            return;
+        }
+
+        DisplayServer.WindowSetSize(size);
+        DisplayServer.WindowSetPosition(usable.Position + ((usable.Size - size) / 2));
+        GD.Print($"Window {size.X}x{size.Y} on a {usable.Size.X}x{usable.Size.Y} screen (scale {DisplayServer.ScreenGetScale()})");
     }
 
     /// <summary>Starts a new game from a seed, or reconstructs one by playing back a replay, and resets the view.</summary>

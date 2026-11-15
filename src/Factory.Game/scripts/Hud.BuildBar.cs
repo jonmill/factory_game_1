@@ -167,7 +167,7 @@ public partial class Hud
                 TooltipText = list.Count == 0 ? $"{_categories[i].Name} (nothing unlocked yet)" : $"{_categories[i].Name}  [{i + 1}]",
             };
             slot.Clicked += (_, _) => OpenCategory(index);
-            Label name = HudStyle.Caption(_categories[i].Name, HudStyle.TextDim, 10);
+            Label name = HudStyle.Caption(_categories[i].Name, HudStyle.TextDim, 11);
             name.HorizontalAlignment = HorizontalAlignment.Center;
             name.CustomMinimumSize = new Vector2(70, 0);
             slot.SizeFlagsHorizontal = Control.SizeFlags.ShrinkCenter;
