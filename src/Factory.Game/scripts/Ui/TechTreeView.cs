@@ -16,7 +16,10 @@ public partial class TechTreeView : Control
     private const float RowGap = 22;
     private const float Pad = 16;
 
+    private const float HeaderH = 30;
+
     private readonly Dictionary<string, Rect2> _cards = [];
+    private readonly List<(AgeDef Age, int First, int Last)> _bands = [];
     private string? _hover;
 
     /// <summary>Content with the technologies.</summary>
@@ -37,28 +40,46 @@ public partial class TechTreeView : Control
     /// <summary>Lays the cards out from the content; call once after setting <see cref="Content"/>.</summary>
     public void Layout()
     {
-        Dictionary<string, int> depth = [];
-        int Depth(TechDef t)
-        {
-            if (depth.TryGetValue(t.Id, out int d))
-            {
-                return d;
-            }
-
-            d = t.Prereqs.Length == 0 ? 0 : t.Prereqs.Max(p => Depth(Content.Techs[p]) + 1);
-            depth[t.Id] = d;
-
-            return d;
-        }
-
+        // Ages run left to right; within an age, a tech sits one column right of its deepest prerequisite.
+        Dictionary<string, int> column = [];
         Dictionary<int, int> rows = [];
         _cards.Clear();
-        foreach (TechDef t in Content.TechList)
+        _bands.Clear();
+        int ageStart = 0;
+        List<AgeDef> ages = Content.AgeList.Count > 0 ? Content.AgeList : [new AgeDef { Id = "" }];
+        foreach (AgeDef age in ages)
         {
-            int col = Depth(t);
-            int row = rows.GetValueOrDefault(col);
-            rows[col] = row + 1;
-            _cards[t.Id] = new Rect2(Pad + (col * (CardW + ColGap)), Pad + (row * (CardH + RowGap)), CardW, CardH);
+            List<TechDef> techs = Content.TechList.Where(t => (Content.AgeList.Count == 0) || (Content.AgeIndex(t.Age) == Content.AgeIndex(age.Id))).ToList();
+            if (techs.Count == 0)
+            {
+                continue;
+            }
+
+            int Col(TechDef t)
+            {
+                if (column.TryGetValue(t.Id, out int c))
+                {
+                    return c;
+                }
+
+                c = System.Math.Max(ageStart, t.Prereqs.Length == 0 ? 0 : t.Prereqs.Max(p => Col(Content.Techs[p]) + 1));
+                column[t.Id] = c;
+
+                return c;
+            }
+
+            int last = ageStart;
+            foreach (TechDef t in techs)
+            {
+                int col = Col(t);
+                int row = rows.GetValueOrDefault(col);
+                rows[col] = row + 1;
+                _cards[t.Id] = new Rect2(Pad + (col * (CardW + ColGap)), Pad + HeaderH + (row * (CardH + RowGap)), CardW, CardH);
+                last = System.Math.Max(last, col);
+            }
+
+            _bands.Add((age, ageStart, last));
+            ageStart = last + 1;
         }
 
         float w = _cards.Values.Max(r => r.End.X) + Pad;
@@ -91,7 +112,8 @@ public partial class TechTreeView : Control
 
     /// <inheritdoc />
     public override string _GetTooltip(Vector2 atPosition) =>
-        Hit(atPosition) is { } id ? $"{Content.Techs[id].Name}\n{Content.Techs[id].Description}" : "";
+        Hit(atPosition) is { } id ? $"{Content.Techs[id].Name}\n{Content.Techs[id].Description}" :
+        _bands.FirstOrDefault(b => (atPosition.Y < Pad + HeaderH) && (atPosition.X >= Pad + (b.First * (CardW + ColGap))) && (atPosition.X <= Pad + ((b.Last + 1) * (CardW + ColGap)))).Age?.Description ?? "";
 
     private string? Hit(Vector2 p) => _cards.FirstOrDefault(kv => kv.Value.HasPoint(p)).Key;
 
@@ -100,6 +122,7 @@ public partial class TechTreeView : Control
     {
         ResearchState rs = Research();
         DrawGrid();
+        DrawAgeBands();
 
         // Links first, so cards sit on top of them.
         foreach (TechDef t in Content.TechList)
@@ -153,6 +176,27 @@ public partial class TechTreeView : Control
                 DrawRect(bar, new Color(0, 0, 0, 0.5f));
                 DrawRect(new Rect2(bar.Position, new Vector2(bar.Size.X * units / System.Math.Max(1, t.Units), bar.Size.Y)), HudStyle.Orange);
             }
+        }
+    }
+
+    /// <summary>A tinted column band behind each age's techs, with the age's name along the top.</summary>
+    private void DrawAgeBands()
+    {
+        Font font = ThemeDB.FallbackFont;
+        foreach ((AgeDef age, int first, int last) in _bands)
+        {
+            if (age.Id.Length == 0)
+            {
+                continue;
+            }
+
+            Color c = Color.FromString(age.Color, HudStyle.LineBright);
+            float x0 = Pad + (first * (CardW + ColGap)) - (ColGap * 0.35f);
+            float x1 = Pad + (last * (CardW + ColGap)) + CardW + (ColGap * 0.35f);
+            Rect2 band = new Rect2(x0, 4, x1 - x0, Size.Y - 8);
+            DrawRect(band, new Color(c, 0.03f));
+            DrawRect(new Rect2(band.Position, new Vector2(band.Size.X, 2)), new Color(c, 0.8f));
+            DrawString(font, new Vector2(x0 + 10, 4 + 20), age.Name.ToUpperInvariant(), HorizontalAlignment.Left, band.Size.X - 20, 13, c);
         }
     }
 

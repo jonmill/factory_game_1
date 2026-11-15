@@ -46,7 +46,7 @@ public partial class Hud
         _techDetail.AddThemeConstantOverride("separation", 6);
         cols.AddChild(_techDetail);
 
-        body.AddChild(HudStyle.Caption("Labs consume the unit materials and need power. Helper bots can haul materials in, or deposit them by hand.", HudStyle.TextDim, 11));
+        body.AddChild(HudStyle.Caption("Research Stations consume Cores and need power. Helper bots can haul Cores in, or deposit them by hand.", HudStyle.TextDim, 11));
 
         return win;
     }
@@ -111,6 +111,11 @@ public partial class Hud
         hv.AddChild(title);
         string state = done ? "Researched" : current ? "Researching" : t.ComingSoon ? "Coming soon" : available ? "Available" : "Locked";
         hv.AddChild(HudStyle.Caption(state, done ? HudStyle.Good : current ? HudStyle.Orange : available ? HudStyle.Header : HudStyle.TextDim, 12));
+        if (C.Ages.TryGetValue(t.Age, out AgeDef? age))
+        {
+            hv.AddChild(HudStyle.Caption(age.Name, Color.FromString(age.Color, HudStyle.TextDim), 11));
+        }
+
         head.AddChild(hv);
         _techDetail.AddChild(head);
 

@@ -16,6 +16,15 @@ public sealed class TestWorld
         W = new World(Content, new WorldSettings { Seed = seed, EmptyPlanet = empty, PlanetWidth = 96, PlanetHeight = 96 });
     }
 
+    /// <summary>A test world with railways unlocked, for tests that exercise trains without researching them.</summary>
+    public static TestWorld WithTrains()
+    {
+        TestWorld tw = new TestWorld();
+        tw.Unlock(Content.Techs["rail-logistics"].Unlocks);
+
+        return tw;
+    }
+
     /// <summary>Places a finished building instantly (skips construction).</summary>
     public Building Build(string id, int x, int y, Dir rot = Dir.North)
     {

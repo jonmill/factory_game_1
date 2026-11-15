@@ -24,6 +24,8 @@ public sealed class TechDef
     public string[] Unlocks { get; init; } = [];
     /// <summary>Extra module slots the commander gains on completion.</summary>
     public int CommanderSlots { get; init; }
+    /// <summary>The age the technology belongs to (see <see cref="AgeDef"/>).</summary>
+    public string Age { get; init; } = "salvage";
     /// <summary>Shown in the tree but not yet researchable (placeholder for future content).</summary>
     public bool ComingSoon { get; init; }
     /// <summary><see cref="UnitCost"/> as an id-sorted list, for deterministic iteration.</summary>

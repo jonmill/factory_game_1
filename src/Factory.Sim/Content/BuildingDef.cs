@@ -6,7 +6,7 @@ namespace Factory.Sim;
 /// <summary>Static definition of a placeable building type, loaded from content JSON.</summary>
 public sealed class BuildingDef
 {
-    /// <summary>Unique content id (e.g. "stone-furnace"); referenced by recipes, techs and saves.</summary>
+    /// <summary>Unique content id (e.g. "burner-smelter"); referenced by recipes, techs and saves.</summary>
     public string Id { get; init; } = "";
     /// <summary>Display name shown to the player.</summary>
     public string Name { get; init; } = "";
@@ -60,6 +60,10 @@ public sealed class BuildingDef
     public string Color { get; init; } = "#88aaff";
     /// <summary>Tooltip text describing the building to the player.</summary>
     public string Description { get; init; } = "";
+    /// <summary>The age this building belongs to, if set explicitly; otherwise its unlocking technology's age.</summary>
+    public string? Age { get; init; }
+    /// <summary>The age this building belongs to (resolved when content loads).</summary>
+    [JsonIgnore] public string AgeId { get; internal set; } = "";
     /// <summary><see cref="Cost"/> as an id-sorted list, for deterministic iteration.</summary>
     [JsonIgnore] public ItemAmount[] CostList { get; internal set; } = [];
     /// <summary>True for buildings whose inventory is general storage (lander, chest, rail stop), so input and output share one inventory.</summary>

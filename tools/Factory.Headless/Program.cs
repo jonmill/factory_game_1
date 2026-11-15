@@ -216,6 +216,6 @@ static List<ulong> ParseSeeds(string spec)
 static void PrintHelp()
 {
     Console.WriteLine("usage: Factory.Headless <list|static|balance|speedrun|softlock|suite|verify> [options]");
-    Console.WriteLine("  --seeds 1-8  --minutes 60  --goal tech:automation|helpers:1|settlers|item:iron-plate:200");
+    Console.WriteLine("  --seeds 1-8  --minutes 60  --goal tech:automation|helpers:1|settlers|item:siderite-plate:200");
     Console.WriteLine("  --iterations 12  --chaos-minutes 15  --out DIR  --parallel N  --fail-on high");
 }

@@ -47,11 +47,11 @@ public class PathTests
             tw.Build("chest", l.X - 7, l.Y + 10 + y);
         }
 
-        from.Inv.Add("stone", 40);
+        from.Inv.Add("regolith", 40);
         Unit f = tw.Followers[0];
         tw.Do(new AssignJob(f.Id, new Job(JobKind.Haul, FromId: from.Id, ToId: to.Id)));
-        RunWithoutOverlaps(tw, 60 * 120, () => to.Inv.Count("stone") == 40);
-        await Assert.That(to.Inv.Count("stone")).IsEqualTo(40);
+        RunWithoutOverlaps(tw, 60 * 120, () => to.Inv.Count("regolith") == 40);
+        await Assert.That(to.Inv.Count("regolith")).IsEqualTo(40);
     }
 
     [Test]
@@ -63,14 +63,14 @@ public class PathTests
         {
             for (int x = 0; x < 7; x++)
             {
-                tw.P.SetResource(new Int2(l.X + 12 + x, l.Y + y), TestWorld.Content.Resources["tree"], 4);
+                tw.P.SetResource(new Int2(l.X + 12 + x, l.Y + y), TestWorld.Content.Resources["xylo"], 4);
             }
         }
 
-        int wood = tw.Lander.Inv.Count("wood");
-        tw.Do(new AssignJob(tw.Followers[0].Id, new Job(JobKind.Gather, Resource: "tree")));
-        RunWithoutOverlaps(tw, 60 * 240, () => tw.Lander.Inv.Count("wood") >= wood + 40);
-        await Assert.That(tw.Lander.Inv.Count("wood") >= wood + 40).IsTrue();
+        int wood = tw.Lander.Inv.Count("biomass");
+        tw.Do(new AssignJob(tw.Followers[0].Id, new Job(JobKind.Gather, Resource: "xylo")));
+        RunWithoutOverlaps(tw, 60 * 240, () => tw.Lander.Inv.Count("biomass") >= wood + 40);
+        await Assert.That(tw.Lander.Inv.Count("biomass") >= wood + 40).IsTrue();
     }
 
     [Test]
@@ -80,10 +80,10 @@ public class PathTests
         Int2 l = tw.Lander.Origin;
         Building from = tw.Build("chest", l.X - 14, l.Y + 12);
         Building to = tw.Build("chest", l.X - 2, l.Y + 12);
-        from.Inv.Add("stone", 40);
+        from.Inv.Add("regolith", 40);
         Unit f = tw.Followers[0];
         tw.Do(new AssignJob(f.Id, new Job(JobKind.Haul, FromId: from.Id, ToId: to.Id)));
-        RunWithoutOverlaps(tw, 60 * 60, () => f.Carry.Count("stone") > 0);
+        RunWithoutOverlaps(tw, 60 * 60, () => f.Carry.Count("regolith") > 0);
 
         // Wall off the way back while the hauler is on its way.
         for (int y = -8; y <= 8; y++)
@@ -91,8 +91,8 @@ public class PathTests
             tw.Build("chest", l.X - 8, l.Y + 12 + y);
         }
 
-        RunWithoutOverlaps(tw, 60 * 120, () => to.Inv.Count("stone") == 40);
-        await Assert.That(to.Inv.Count("stone")).IsEqualTo(40);
+        RunWithoutOverlaps(tw, 60 * 120, () => to.Inv.Count("regolith") == 40);
+        await Assert.That(to.Inv.Count("regolith")).IsEqualTo(40);
     }
 
     [Test]

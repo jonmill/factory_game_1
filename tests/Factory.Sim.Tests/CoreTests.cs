@@ -49,12 +49,12 @@ public class CoreTests
     public async Task Inventory_RespectsSlotAndStackLimits()
     {
         Inventory inv = new Inventory(TestWorld.Content, 2);
-        await Assert.That(inv.Add("wood", 120)).IsEqualTo(100); // 2 stacks of 50
-        await Assert.That(inv.Add("stone", 1)).IsEqualTo(0);
+        await Assert.That(inv.Add("biomass", 120)).IsEqualTo(100); // 2 stacks of 50
+        await Assert.That(inv.Add("regolith", 1)).IsEqualTo(0);
         await Assert.That(inv.IsFull).IsTrue();
-        await Assert.That(inv.Remove("wood", 30)).IsEqualTo(30);
-        await Assert.That(inv.SpaceFor("wood")).IsEqualTo(30);
-        await Assert.That(inv.SpaceFor("stone")).IsEqualTo(0);
+        await Assert.That(inv.Remove("biomass", 30)).IsEqualTo(30);
+        await Assert.That(inv.SpaceFor("biomass")).IsEqualTo(30);
+        await Assert.That(inv.SpaceFor("regolith")).IsEqualTo(0);
     }
 
     [Test]
@@ -73,14 +73,14 @@ public class CoreTests
         World w = new World(TestWorld.Content, new WorldSettings { Seed = 42 });
         Planet p = w.Planets[0];
         Int2 center = new Int2(p.Width / 2, p.Height / 2);
-        foreach (string? id in new[] { "iron", "copper", "coal", "stone" })
+        foreach (string? id in new[] { "siderite", "cuprite", "carbon", "regolith" })
         {
             Int2? t = p.FindNearestResource(center, TestWorld.Content.Resources[id]);
             await Assert.That(t).IsNotNull();
             await Assert.That(p.Torus.Chebyshev(center, t.Value) <= 22).IsTrue().Because($"{id} too far: {t}");
         }
 
-        Int2? lead = p.FindNearestResource(center, TestWorld.Content.Resources["lead"]);
+        Int2? lead = p.FindNearestResource(center, TestWorld.Content.Resources["galena"]);
         await Assert.That(lead).IsNotNull();
         await Assert.That(p.Torus.Chebyshev(center, lead.Value) >= 20).IsTrue().Because("lead should need a railway");
         await Assert.That(p.Units.Count(u => u.IsLeader == false)).IsEqualTo(2);
@@ -91,12 +91,12 @@ public class CoreTests
     {
         TestWorld tw = new TestWorld(empty: false, seed: 99);
         Unit follower = tw.Followers[0];
-        tw.W.Submit(new AssignJob(follower.Id, new Job(JobKind.Gather, Resource: "iron")));
-        tw.W.Submit(new AssignJob(tw.Followers[1].Id, new Job(JobKind.Gather, Resource: "stone")));
+        tw.W.Submit(new AssignJob(follower.Id, new Job(JobKind.Gather, Resource: "siderite")));
+        tw.W.Submit(new AssignJob(tw.Followers[1].Id, new Job(JobKind.Gather, Resource: "regolith")));
         tw.W.Submit(new SetMoveIntent(tw.Leader.Id, 1, 0));
         tw.Run(30);
         tw.W.Submit(new PlaceBuilding("chest", new Int2(tw.Lander.Origin.X + 5, tw.Lander.Origin.Y), Dir.North));
-        tw.W.Submit(new QueueCraft(tw.Lander.Id, "iron-gear", 3));
+        tw.W.Submit(new QueueCraft(tw.Lander.Id, "drive-cog", 3));
         tw.W.Submit(new SetMoveIntent(tw.Leader.Id, 0, 0));
         tw.Run(1200);
 
@@ -126,7 +126,7 @@ public class CoreTests
     [Test]
     public async Task Content_DrawsShipAndElectricTechAsHighTechAndEverythingElseAsIndustrial()
     {
-        string[] highTech = ["assembler", "atmo-processor", "bio-incubator", "electric-drill", "hydro-seeder", "lab", "lander", "robot-bay", "settler-uplink", "sorter"];
+        string[] highTech = ["arc-smelter", "assembler", "atmo-processor", "bio-incubator", "electric-drill", "hydro-seeder", "lab", "lander", "robot-bay", "settler-uplink", "sorter"];
 
         string[] actual = TestWorld.Content.BuildingList.Where(b => b.Look == VisualStyle.HighTech).Select(b => b.Id).Order(StringComparer.Ordinal).ToArray();
 

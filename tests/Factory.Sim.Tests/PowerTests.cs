@@ -9,7 +9,7 @@ public class PowerTests
         Building engine = tw.Build("steam-engine", 10, 10);
         if (fuel)
         {
-            engine.Inv.Add("coal", 10);
+            engine.Inv.Add("compacted-carbon", 10);
         }
 
         tw.Build("power-pole", 12, 10);
@@ -23,8 +23,7 @@ public class PowerTests
     {
         (TestWorld? tw, Building _, Building? lab) = Grid(fuel: true);
         tw.Do(new SetResearch("automation"));
-        lab.Inv.Add("iron-gear", 10);
-        lab.Inv.Add("copper-plate", 10);
+        lab.Inv.Add("survey-core", 20);
         tw.Run((600 * 3) + 10);
         await Assert.That(tw.W.Research.UnitsDone).IsEqualTo(3);
         await Assert.That(lab.Satisfaction).IsEqualTo(1000);
@@ -35,8 +34,7 @@ public class PowerTests
     {
         (TestWorld? tw, Building? engine, Building? lab) = Grid(fuel: false);
         tw.Do(new SetResearch("automation"));
-        lab.Inv.Add("iron-gear", 10);
-        lab.Inv.Add("copper-plate", 10);
+        lab.Inv.Add("survey-core", 20);
         tw.Run(100);
         await Assert.That(lab.Status).IsEqualTo(MachineStatus.NoPower);
         await Assert.That(engine.Status).IsEqualTo(MachineStatus.NoFuel);
@@ -47,15 +45,14 @@ public class PowerTests
     public async Task Battery_StoresSurplusAndCoversOutage()
     {
         (TestWorld? tw, Building? engine, Building? lab) = Grid(fuel: true);
-        Building bat = tw.Build("lead-acid-battery", 12, 12);
+        Building bat = tw.Build("cell-bank", 12, 12);
         tw.Run(600);
         await Assert.That(bat.StoredJ > 0).IsTrue().Because("battery should charge from idle engine");
         // Remove fuel: battery should keep the lab running for a while.
         engine.Inv.Clear();
         engine.FuelJ = 0;
         tw.Do(new SetResearch("automation"));
-        lab.Inv.Add("iron-gear", 10);
-        lab.Inv.Add("copper-plate", 10);
+        lab.Inv.Add("survey-core", 20);
         tw.Run(30);
         await Assert.That(lab.Status).IsEqualTo(MachineStatus.Working);
     }
@@ -64,10 +61,9 @@ public class PowerTests
     public async Task ResearchCompletion_UnlocksFabricator()
     {
         (TestWorld? tw, Building? engine, Building? lab) = Grid(fuel: true);
-        engine.Inv.Add("coal", 40);
+        engine.Inv.Add("compacted-carbon", 40);
         tw.Do(new SetResearch("automation"));
-        lab.Inv.Add("iron-gear", 10);
-        lab.Inv.Add("copper-plate", 10);
+        lab.Inv.Add("survey-core", 20);
         tw.RunUntil(() => tw.W.Research.Completed.Contains("automation"), 600 * 11, "automation research");
         await Assert.That(tw.W.Research.Unlocked).Contains("assembler");
         await Assert.That(tw.W.Research.Current).IsNull();
@@ -78,14 +74,14 @@ public class PowerTests
     {
         (TestWorld? tw, Building _, Building _) = Grid(fuel: true);
         tw.Unlock("sorter");
-        Building furnace = tw.Build("stone-furnace", 10, 13);   // occupies 10..11, 13..14
-        furnace.Out.Add("copper-plate", 3);
+        Building furnace = tw.Build("burner-smelter", 10, 13);   // occupies 10..11, 13..14
+        furnace.Out.Add("cupral-bar", 3);
         tw.Build("power-pole", 12, 15);                    // wires to pole (12,10) and covers the sorter
         Building sorter = tw.Build("sorter", 12, 13, Dir.East); // back = (11,13) furnace, front = (13,13) chest
         Building chest = tw.Build("chest", 13, 13);
         tw.Run(60 * 6);
         await Assert.That(sorter.Satisfaction).IsEqualTo(1000);
-        await Assert.That(chest.Inv.Count("copper-plate")).IsEqualTo(3);
-        await Assert.That(furnace.Out.Count("copper-plate")).IsEqualTo(0);
+        await Assert.That(chest.Inv.Count("cupral-bar")).IsEqualTo(3);
+        await Assert.That(furnace.Out.Count("cupral-bar")).IsEqualTo(0);
     }
 }

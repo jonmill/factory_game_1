@@ -7,7 +7,7 @@ public class TerraformTests
         TestWorld tw = new TestWorld();
         tw.Water(9, 10, 1, 2);
         Building engine = tw.Build("steam-engine", 10, 10);
-        engine.Inv.AddUnchecked("coal", 500);
+        engine.Inv.AddUnchecked("compacted-carbon", 500);
         tw.Build("power-pole", 12, 10);
 
         return (tw, engine);

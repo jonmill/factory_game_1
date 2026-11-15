@@ -71,7 +71,7 @@ public sealed class GoalBot : IBot
         ComputeDemand(plan);
         QueueCrafting(plan, lander);
         AssignFollowers(plan, lander);
-        ManageCommander(lander);
+        ManageCommander(plan, lander);
     }
 
     // ------------------------------------------------------------------ commander
@@ -88,7 +88,7 @@ public sealed class GoalBot : IBot
     /// to assemble helpers, and, while no helper can build, carry materials out to ghosts and build them
     /// itself; otherwise wait by the lander.
     /// </summary>
-    private void ManageCommander(Building lander)
+    private void ManageCommander(BotPlan plan, Building lander)
     {
         if (Commander() is not { } leader)
         {
@@ -124,6 +124,28 @@ public sealed class GoalBot : IBot
             }
         }
 
+        // A smelter stuck on a leftover ore that isn't wanted (one regolith when bricks need two) blocks
+        // every other ore: take the leftover out by hand.
+        HashSet<string> wantedOres = plan.SmeltDeficit.Keys.Select(it => WorldProbe.RecipeFor(C, it)!.Inputs[0].Item).ToHashSet();
+        Building? clogged = P.Buildings
+            .Where(b => (b.Def.Kind == BuildingKind.Furnace) && (b.Crafting == false))
+            .Where(b => b.Inv.Items.Any(kv => (C.IsFuel(kv.Key) == false) && (wantedOres.Contains(kv.Key) == false)))
+            .OrderBy(b => P.SubTorus.DistSq(leader.Pos, b.CenterSub)).ThenBy(b => b.Id).FirstOrDefault();
+        if ((clogged is not null) && (wantedOres.Count > 0))
+        {
+            if (P.InLeaderReach(leader, clogged.Origin))
+            {
+                string ore = clogged.Inv.Items.First(kv => (C.IsFuel(kv.Key) == false) && (wantedOres.Contains(kv.Key) == false)).Key;
+                Send(new TakeFromBuilding(leader.Id, clogged.Id, ore, int.MaxValue, InventoryPart.Input));
+            }
+            else
+            {
+                WalkTowards(leader, P.Torus.Wrap(clogged.Origin + new Int2(0, clogged.H)));
+            }
+
+            return;
+        }
+
         bool helpersBuild = P.Units.Any(u => (u.IsLeader == false) && (u.OwnerPlayer == Player) && P.CanTakeJob(u, JobKind.Build));
         IEnumerable<ConstructionSite> sites = helpersBuild ? [] : P.Sites.OrderBy(s => P.SubTorus.DistSq(lander.CenterSub, s.CenterSub)).ThenBy(s => s.Id);
         foreach (ConstructionSite site in sites)
@@ -131,36 +153,25 @@ public sealed class GoalBot : IBot
             List<ItemAmount> missing = site.Missing().Select(m => new ItemAmount(m.Item, m.Count - leader.Carry.Count(m.Item))).Where(m => m.Count > 0).ToList();
             if (missing.Count > 0)
             {
-                // Fetch from the lander, or from whichever crate holds an item.
-                List<(ItemAmount Need, Building From)> sources = [];
-                foreach (ItemAmount m in missing)
-                {
-                    Building? from = lander.Inv.Count(m.Item) >= m.Count
-                        ? lander
-                        : P.Buildings.Where(b => (b.Def.Kind == BuildingKind.Chest) && (b.Inv.Count(m.Item) >= m.Count))
-                            .OrderBy(b => P.SubTorus.DistSq(leader.Pos, b.CenterSub)).ThenBy(b => b.Id).FirstOrDefault();
-                    if (from is not null)
-                    {
-                        sources.Add((m, from));
-                    }
-                }
-
-                if (sources.Count < missing.Count)
+                // Fetch from the lander and crates: enough must be in storage altogether, possibly split.
+                List<Building> stores = P.Buildings.Where(b => b.Def.Kind is BuildingKind.Lander or BuildingKind.Chest)
+                    .OrderBy(b => b.Id == lander.Id ? 0 : 1).ThenBy(b => P.SubTorus.DistSq(leader.Pos, b.CenterSub)).ThenBy(b => b.Id).ToList();
+                if (missing.Any(m => stores.Sum(st => st.Inv.Count(m.Item)) < m.Count))
                 {
                     continue; // not all in storage yet; try another ghost
                 }
 
-                (ItemAmount need, Building source) = sources[0];
+                Building source = stores.First(st => missing.Any(m => st.Inv.Count(m.Item) > 0));
                 if (P.InLeaderReach(leader, source.Origin))
                 {
-                    foreach ((ItemAmount m, Building from) in sources.Where(x => x.From == source))
+                    foreach (ItemAmount m in missing.Where(m => source.Inv.Count(m.Item) > 0))
                     {
-                        Send(new TakeFromBuilding(leader.Id, from.Id, m.Item, m.Count));
+                        Send(new TakeFromBuilding(leader.Id, source.Id, m.Item, System.Math.Min(m.Count, source.Inv.Count(m.Item))));
                     }
                 }
                 else
                 {
-                    WalkTowards(leader, source == lander ? home : P.Torus.Wrap(source.Origin + new Int2(0, source.H)));
+                    WalkTowards(leader, source.Id == lander.Id ? home : P.Torus.Wrap(source.Origin + new Int2(0, source.H)));
                 }
 
                 return;
@@ -445,7 +456,7 @@ public sealed class GoalBot : IBot
 
         if (CountOf(BuildingKind.Furnace) < Params.Furnaces)
         {
-            PlaceNear(plan, "stone-furnace", center, 3, 10);
+            PlaceNear(plan, "burner-smelter", center, 3, 10);
         }
 
         // Storage pressure → add a crate.

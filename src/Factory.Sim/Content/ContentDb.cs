@@ -24,6 +24,8 @@ public sealed class ContentDb
     public StartDef Start { get; init; } = new();
     /// <summary>Planet stats and the readiness bar.</summary>
     public TerraformDef Terraform { get; init; } = new();
+    /// <summary>The tech ages in order, first to last.</summary>
+    public List<AgeDef> AgeList { get; init; } = [];
 
     /// <summary>Items indexed by id.</summary>
     [JsonIgnore] public Dictionary<string, ItemDef> Items { get; private set; } = new();
@@ -39,6 +41,13 @@ public sealed class ContentDb
     [JsonIgnore] public Dictionary<string, TechDef> Techs { get; private set; } = new();
     /// <summary>Robot models indexed by id.</summary>
     [JsonIgnore] public Dictionary<string, RobotDef> Robots { get; private set; } = new();
+    /// <summary>Ages indexed by id.</summary>
+    [JsonIgnore] public Dictionary<string, AgeDef> Ages { get; private set; } = new();
+
+    /// <summary>Position of an age in <see cref="AgeList"/> (0 for the first); unknown ids count as the first.</summary>
+    /// <param name="age">The age id.</param>
+    /// <returns>Its index.</returns>
+    public int AgeIndex(string age) => System.Math.Max(0, AgeList.FindIndex(a => a.Id == age));
 
     /// <summary>Looks up an item by id, throwing <see cref="KeyNotFoundException"/> if it does not exist.</summary>
     public ItemDef Item(string id) => Items.TryGetValue(id, out ItemDef? d) ? d : throw new KeyNotFoundException($"Unknown item '{id}'");
@@ -72,6 +81,7 @@ public sealed class ContentDb
         public List<RobotDef> Robots { get; init; } = [];
         public StartDef Start { get; init; } = new();
         public TerraformDef Terraform { get; init; } = new();
+        public List<AgeDef> Ages { get; init; } = [];
     }
 
     /// <summary>Parses content JSON, builds the lookup indexes and validates cross-references, throwing <see cref="InvalidDataException"/> listing every problem found.</summary>
@@ -89,6 +99,7 @@ public sealed class ContentDb
             RobotList = raw.Robots,
             Start = raw.Start,
             Terraform = raw.Terraform,
+            AgeList = raw.Ages,
         };
         db.Index();
         db.Validate();
@@ -119,6 +130,7 @@ public sealed class ContentDb
         Vehicles = VehicleList.ToDictionary(i => i.Id);
         Techs = TechList.ToDictionary(i => i.Id);
         Robots = RobotList.ToDictionary(i => i.Id);
+        Ages = AgeList.ToDictionary(i => i.Id);
         foreach (RecipeDef r in RecipeList)
         {
             r.Inputs = Sorted(r.In);
@@ -138,6 +150,19 @@ public sealed class ContentDb
         foreach (TechDef t in TechList)
         {
             t.UnitCostList = Sorted(t.UnitCost);
+        }
+
+        // A building or vehicle belongs to the age of the technology that unlocks it, unless it says otherwise.
+        string first = AgeList.Count > 0 ? AgeList[0].Id : "";
+        string AgeOf(string id) => TechList.FirstOrDefault(t => t.Unlocks.Contains(id))?.Age ?? first;
+        foreach (BuildingDef b in BuildingList)
+        {
+            b.AgeId = b.Age ?? AgeOf(b.Id);
+        }
+
+        foreach (VehicleDef v in VehicleList)
+        {
+            v.AgeId = AgeOf(v.Id);
         }
     }
 
@@ -190,9 +215,32 @@ public sealed class ContentDb
         }
 
         HashSet<string> unlockable = new HashSet<string>(Recipes.Keys.Concat(Buildings.Keys).Concat(Vehicles.Keys));
+        foreach (AgeDef a in AgeList)
+        {
+            if (a.Core is not null)
+            {
+                CheckItems($"age {a.Id}", [a.Core]);
+            }
+        }
+
+        foreach (BuildingDef b in BuildingList.Where(b => (b.Age is not null) && (Ages.ContainsKey(b.Age) == false)))
+        {
+            errors.Add($"building {b.Id}: unknown age {b.Age}");
+        }
+
         foreach (TechDef t in TechList)
         {
             CheckItems($"tech {t.Id}", t.UnitCost.Keys);
+            if ((AgeList.Count > 0) && (Ages.ContainsKey(t.Age) == false))
+            {
+                errors.Add($"tech {t.Id}: unknown age {t.Age}");
+            }
+
+            foreach (string p in t.Prereqs.Where(p => Techs.ContainsKey(p) && (AgeIndex(Techs[p].Age) > AgeIndex(t.Age))))
+            {
+                errors.Add($"tech {t.Id}: prereq {p} is from a later age");
+            }
+
             foreach (string p in t.Prereqs)
             {
                 if (Techs.ContainsKey(p) == false)
@@ -253,6 +301,7 @@ public sealed class ContentDb
             TechList,
             RobotList,
             Terraform,
+            AgeList,
             Start
         }));
 

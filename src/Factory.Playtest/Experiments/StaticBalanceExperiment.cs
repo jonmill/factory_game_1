@@ -48,12 +48,17 @@ public sealed class StaticBalanceExperiment : IExperiment
                 return true;
             }
             // Finite starting stock in the lander deliberately does NOT count as a source.
+            // "seen" is the current chain of items being resolved, so only a real cycle stops the search;
+            // an item that two inputs share (ballast plate in a charge cell and in a core) is fine.
             if (seen.Add(item) == false)
             {
                 return false;
             }
 
-            return c.RecipeList.Any(rc => (rc.Effect is null) && rc.Out.ContainsKey(item) && unlocked.Contains(rc.Id) && rc.In.Keys.All(i => Obtainable(i, seen)));
+            bool ok = c.RecipeList.Any(rc => (rc.Effect is null) && rc.Out.ContainsKey(item) && unlocked.Contains(rc.Id) && rc.In.Keys.All(i => Obtainable(i, seen)));
+            seen.Remove(item);
+
+            return ok;
         }
 
         bool progress = true;
@@ -176,7 +181,7 @@ public sealed class StaticBalanceExperiment : IExperiment
         r.Tables.Add(table);
 
         BuildingDef? burner = c.BuildingList.FirstOrDefault(b => (b.Kind == BuildingKind.Drill) && (b.Energy == EnergyKind.Burner));
-        ResourceDef? iron = c.ResourceList.FirstOrDefault(x => x.Id == "iron");
+        ResourceDef? iron = c.ResourceList.FirstOrDefault(x => x.Id == "siderite");
         if ((burner is not null) && (iron is not null))
         {
             double drill = 3600.0 * burner.Speed / 100 / burner.MiningTicks, hand = 3600.0 / iron.HandTicks;
@@ -203,7 +208,7 @@ public sealed class StaticBalanceExperiment : IExperiment
                 {
                     r.Add(new Finding(Severity.Medium, "power", $"A fully loaded {g.Name} needs {followers:F1} followers gathering {c.Items[res.Item].Name}",
                         $"At {g.OutputKw} kW and {g.Efficiency}% efficiency it burns {items:F0} {c.Items[res.Item].Name}/min. With {Followers} followers and no drills/automation, " +
-                        "heavy power use stalls everything else. Intentional pressure toward coal drills, but check the early curve."));
+                        "heavy power use stalls everything else. Intentional pressure toward carbon drills, but check the early curve."));
                 }
             }
         }
@@ -237,7 +242,7 @@ public sealed class StaticBalanceExperiment : IExperiment
             {
                 r.Add(new Finding(Severity.High, "trains", $"A hand cart can't pull one full cart of {item.Name}",
                     $"Full mine cart of {item.Name} = {full} kg > hand cart limit {hand.MaxPull} kg. The train sits 'Overloaded' after loading until the player " +
-                    "unloads by hand — likely to read as a bug. Lead is the resource meant to motivate early rail."));
+                    "unloads by hand — likely to read as a bug. Galena is the resource meant to motivate early rail."));
             }
         }
 

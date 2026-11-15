@@ -78,7 +78,7 @@ public class CollisionTests
     public async Task Commander_WalksOutOfABuildingFinishedOnTopOfThem()
     {
         (TestWorld tw, Int2 tile) = Clearing();
-        tw.Build("stone-furnace", tile.X, tile.Y);
+        tw.Build("burner-smelter", tile.X, tile.Y);
         Walk(tw, -1, 0, 120);
         await Assert.That(tw.P.IsBlockedForPerson(tw.Leader.Pos)).IsFalse();
         await Assert.That(tw.Leader.Pos.X < (tile.X * Fixed.One) - Fixed.One).IsTrue();
@@ -88,9 +88,9 @@ public class CollisionTests
     public async Task Commander_WalksThroughGhostsRailAndOre()
     {
         (TestWorld tw, Int2 tile) = Clearing();
-        tw.Do(new PlaceBuilding("stone-furnace", new Int2(tile.X + 2, tile.Y - 1), Dir.North));
+        tw.Do(new PlaceBuilding("burner-smelter", new Int2(tile.X + 2, tile.Y - 1), Dir.North));
         tw.Rail(tile.X + 5, tile.Y - 3, 6, Dir.South);
-        tw.Ore("iron", tile.X + 7, tile.Y - 2, 3, 3);
+        tw.Ore("siderite", tile.X + 7, tile.Y - 2, 3, 3);
         Walk(tw, 1, 0, 150);
         await Assert.That(tw.Leader.Pos.X > (tile.X + 10) * Fixed.One).IsTrue();
     }
@@ -100,7 +100,7 @@ public class CollisionTests
     {
         (TestWorld tw, Int2 tile) = Clearing();
         Int2 tree = new Int2(tile.X + 3, tile.Y);
-        tw.P.SetResource(tree, TestWorld.Content.Resources["tree"], 10);
+        tw.P.SetResource(tree, TestWorld.Content.Resources["xylo"], 10);
         Int2 trunk = (tree * Fixed.One) + Planet.TreeTrunkOffset(tree);
         tw.Leader.Pos = new Int2(tw.Leader.Pos.X, trunk.Y);
         Walk(tw, 1, 0, 120);
@@ -112,8 +112,8 @@ public class CollisionTests
     {
         (TestWorld tw, Int2 tile) = Clearing();
         Int2 tree = new Int2(tile.X + 6, tile.Y + 1);
-        tw.P.SetResource(tree, TestWorld.Content.Resources["tree"], 3);
+        tw.P.SetResource(tree, TestWorld.Content.Resources["xylo"], 3);
         tw.Do(new MineTile(tw.Leader.Id, tree));
-        tw.RunUntil(() => tw.Leader.Carry.Count("wood") == 3, 60 * 30, "the tree chopped down");
+        tw.RunUntil(() => tw.Leader.Carry.Count("biomass") == 3, 60 * 30, "the tree chopped down");
     }
 }

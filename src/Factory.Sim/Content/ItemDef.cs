@@ -6,7 +6,7 @@ namespace Factory.Sim;
 /// <summary>Static definition of an item type, loaded from content JSON.</summary>
 public sealed class ItemDef
 {
-    /// <summary>Unique content id (e.g. "iron-plate").</summary>
+    /// <summary>Unique content id (e.g. "siderite-plate").</summary>
     public string Id { get; init; } = "";
     /// <summary>Display name shown to the player.</summary>
     public string Name { get; init; } = "";

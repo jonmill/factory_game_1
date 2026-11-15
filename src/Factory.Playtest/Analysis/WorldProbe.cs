@@ -53,6 +53,10 @@ public static class WorldProbe
             foreach (Unit u in p.Units)
             {
                 Add(u.Carry);
+                foreach (string module in u.Modules)
+                {
+                    d[module] = d.GetValueOrDefault(module) + 1;
+                }
             }
 
             foreach (ConstructionSite s in p.Sites)

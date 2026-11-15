@@ -107,5 +107,5 @@ public sealed class InvariantChecker
 
     /// <summary>Strip entity-specific names so equivalent problems dedupe.</summary>
     private static string Normalize(string status) =>
-        System.Text.RegularExpressions.Regex.Replace(status, @"(Stop|Train|Supply Crate|Stone Furnace|Colony Lander|Lander|Research Station|Steam Engine|Fabricator)\s*\d*", "<building>");
+        System.Text.RegularExpressions.Regex.Replace(status, @"(Stop|Train|Supply Crate|Burner Smelter|Arc Smelter|Colony Lander|Lander|Research Station|Steam Engine|Fabricator)\s*\d*", "<building>");
 }

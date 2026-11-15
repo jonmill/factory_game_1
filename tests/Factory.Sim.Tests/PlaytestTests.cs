@@ -11,7 +11,7 @@ public class PlaytestTests
     [Arguments("tech:automation", typeof(TechGoal))]
     [Arguments("helpers:2", typeof(HelpersGoal))]
     [Arguments("settlers", typeof(SettlersGoal))]
-    [Arguments("item:iron-plate:200", typeof(ItemGoal))]
+    [Arguments("item:siderite-plate:200", typeof(ItemGoal))]
     public async Task GoalParse_AcceptsEachGoalForm(string spec, Type expected)
     {
         Goal goal = Goal.Parse(spec);
@@ -24,14 +24,14 @@ public class PlaytestTests
     {
         await Assert.That(Goal.Parse("tech:automation")).IsEqualTo(new TechGoal("automation"));
         await Assert.That(Goal.Parse("helpers:3")).IsEqualTo(new HelpersGoal(3));
-        await Assert.That(Goal.Parse("item:iron-gear:25")).IsEqualTo(new ItemGoal("iron-gear", 25));
+        await Assert.That(Goal.Parse("item:drive-cog:25")).IsEqualTo(new ItemGoal("drive-cog", 25));
     }
 
     [Test]
     [Arguments("")]
     [Arguments("tech")]
     [Arguments("tech:a:b")]
-    [Arguments("item:iron-plate")]
+    [Arguments("item:siderite-plate")]
     [Arguments("planet:2")]
     public async Task GoalParse_RejectsMalformedSpecs(string spec)
     {
@@ -97,6 +97,6 @@ public class PlaytestTests
 
         Finding? gathering = report.Findings.FirstOrDefault(f => f.Category == "gathering");
         await Assert.That(gathering).IsNotNull();
-        await Assert.That(gathering!.Title).Contains("Alien Tree");
+        await Assert.That(gathering!.Title).Contains("Xylo Tree");
     }
 }

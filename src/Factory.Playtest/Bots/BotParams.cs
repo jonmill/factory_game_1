@@ -11,8 +11,8 @@ public sealed record BotParams
     public int Furnaces { get; init; } = 2;
     /// <summary>Number of research labs to build while research remains.</summary>
     public int Labs { get; init; } = 1;
-    /// <summary>Resource gathered for fuel ("tree" or "coal").</summary>
-    public string FuelResource { get; init; } = "tree";
+    /// <summary>Resource gathered for fuel ("xylo" or "carbon").</summary>
+    public string FuelResource { get; init; } = "xylo";
     /// <summary>Minimum fuel to keep in storage; gathering switches to fuel when stock falls well below this.</summary>
     public int MinFuelStock { get; init; } = 40;
     /// <summary>Maximum number of batches queued in a single craft order.</summary>
@@ -31,7 +31,7 @@ public sealed record BotParams
         ThinkInterval = rng.Range(30, 181),
         Furnaces = rng.Range(1, 5),
         Labs = rng.Range(1, 3),
-        FuelResource = rng.Range(0, 2) == 0 ? "tree" : "coal",
+        FuelResource = rng.Range(0, 2) == 0 ? "xylo" : "carbon",
         MinFuelStock = rng.Range(10, 81),
         CraftBatch = rng.Range(1, 11),
         MaxBuilders = rng.Range(1, 3),
@@ -50,7 +50,7 @@ public sealed record BotParams
             0 => this with { ThinkInterval = Nudge(ThinkInterval, 30, 180, 30) },
             1 => this with { Furnaces = Nudge(Furnaces, 1, 4, 1) },
             2 => this with { Labs = Nudge(Labs, 1, 2, 1) },
-            3 => this with { FuelResource = FuelResource == "tree" ? "coal" : "tree" },
+            3 => this with { FuelResource = FuelResource == "xylo" ? "carbon" : "xylo" },
             4 => this with { MinFuelStock = Nudge(MinFuelStock, 10, 80, 15) },
             5 => this with { CraftBatch = Nudge(CraftBatch, 1, 10, 3) },
             6 => this with { MaxBuilders = Nudge(MaxBuilders, 1, 2, 1) },

@@ -10,9 +10,9 @@ public partial class Hud
     private static readonly (string Label, Job? Job)[] _jobOptions =
     [
         ("Idle", Job.Idle), ("Build", new Job(JobKind.Build)),
-        ("Gather Wood", new Job(JobKind.Gather, Resource: "tree")), ("Gather Iron", new Job(JobKind.Gather, Resource: "iron")),
-        ("Gather Copper", new Job(JobKind.Gather, Resource: "copper")), ("Gather Coal", new Job(JobKind.Gather, Resource: "coal")),
-        ("Gather Stone", new Job(JobKind.Gather, Resource: "stone")), ("Gather Lead", new Job(JobKind.Gather, Resource: "lead")),
+        ("Gather Biomass", new Job(JobKind.Gather, Resource: "xylo")), ("Gather Siderite", new Job(JobKind.Gather, Resource: "siderite")),
+        ("Gather Cuprite", new Job(JobKind.Gather, Resource: "cuprite")), ("Gather Carbon", new Job(JobKind.Gather, Resource: "carbon")),
+        ("Gather Regolith", new Job(JobKind.Gather, Resource: "regolith")), ("Gather Galena", new Job(JobKind.Gather, Resource: "galena")),
         ("Haul…", null), ("Operate train…", null),
     ];
 
@@ -36,7 +36,7 @@ public partial class Hud
     private static int JobIndex(Job j) => j.Kind switch
     {
         JobKind.Build => 1,
-        JobKind.Gather => j.Resource switch { "tree" => 2, "iron" => 3, "copper" => 4, "coal" => 5, "stone" => 6, "lead" => 7, _ => 0 },
+        JobKind.Gather => j.Resource switch { "xylo" => 2, "siderite" => 3, "cuprite" => 4, "carbon" => 5, "regolith" => 6, "galena" => 7, _ => 0 },
         JobKind.Haul => 8,
         JobKind.OperateTrain => 9,
         _ => 0,

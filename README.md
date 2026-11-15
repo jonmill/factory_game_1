@@ -45,7 +45,7 @@ via normal commands; `FACTORY_DEMO=2` also unlocks everything and stocks the lan
 buildings, so it is not a replayable game), `FACTORY_SCREENSHOT=/path.png` (saves a frame after 3 s and quits),
 `FACTORY_SEED=<n>` (pins the map seed), `FACTORY_WINDOW=inventory|replicator|tech|help|victory` and
 `FACTORY_CATEGORY=<1-7>` (open a HUD window or build category), `FACTORY_SELECT=<building id>` (selects the
-nearest building of that type, e.g. `stone-furnace`, or `helper` for a helper bot), `FACTORY_REPLAY=/path.replay.json`
+nearest building of that type, e.g. `burner-smelter`, or `helper` for a helper bot), `FACTORY_REPLAY=/path.replay.json`
 (loads a headless replay and centres on the lander) and `FACTORY_ZOOM=<f>` (initial camera zoom,
 used with the replay).
 
@@ -108,14 +108,17 @@ the native `steam_api` library from the Steamworks SDK next to the executable, a
 
 ## Playtest scope
 
-Included: one 128×128 wrap-around planet, 5 ores + trees + water, the commander (hand-mining, builds
-ghosts in reach, 2 module slots, +2 from research) and 2 Helper Bot Mk1s (1 slot; Gather / Haul, with
-Build and Operate train taught by modules), 5 modules (construction, servo, cargo, rail operator, mining
-laser), a Robot Assembly Bay for Mk1 and Mk2 (3 slots) helper bots, lander fabricator, burner drills,
-furnaces, steam engines, poles, lead-acid batteries, labs, rails, rail stops, water towers, hand-pump carts
-(need an operator, 1200 kg pull limit), steam locomotives (water + fuel, 12 t pull), mine carts,
-terraformers (Atmosphere Processor, Hydrosphere Seeder, Bio Incubator), a system readiness meter and the
-Settler Uplink to win, 14 techs.
+Included: one 128×128 wrap-around planet; five ores (siderite, cuprite, carbon, regolith, galena), xylo
+trees and water; four tech **ages** (Salvage → Combustion are playable, Clean and Stellar are shown as
+"coming soon"); research paid in **Cores** (Survey Cores in the Salvage Age, Analysis Cores from the
+Combustion Age). The commander (hand-mining, builds ghosts in reach, 2 module slots, +2 from research) and
+2 Helper Bot Mk1s (1 slot; Gather / Haul, with Build and Operate train taught by modules), 5 modules
+(construction, servo, cargo, rail operator, mining laser), a Robot Assembly Bay for Mk1 and Mk2 (3 slots)
+helper bots, lander fabricator, burner drills and smelters, steam engines, poles, charge cell banks,
+research stations; in the Combustion Age electric drills, arc smelters, rails, rail stops, water towers,
+hand-pump carts (need an operator, 1500 kg pull limit), steam locomotives (water + fuel, 12 t pull), mine
+carts, terraformers (Atmosphere Processor, Hydrosphere Seeder, Bio Incubator), a system readiness meter
+and the Settler Uplink to win.
 
 Not yet: belts (shown as "coming soon" tech), other planets / interplanetary travel (the readiness meter
 already averages every planet and needs each one ready), rail signals

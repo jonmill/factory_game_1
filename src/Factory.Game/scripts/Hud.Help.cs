@@ -42,9 +42,10 @@ public partial class Hud
         ("Goal", "You are a robot sent ahead of human settlers. Terraform the system: raise every planet's Atmosphere, Hydrosphere and Biosphere until it is ready, then call the settlers from a Settler Uplink."),
         ("Building", "You build every ghost within reach by yourself, using materials from your pockets or a lander or crate nearby. Helper bots with a Construction Module build anywhere."),
         ("Helper bots", "Give each helper bot a job in the left panel: Gather a resource or Haul between two buildings. Modules teach them more: Build, Operate train. Click a bot to fit modules."),
+        ("Research", "Craft Survey Cores and feed them to a Research Station. Analytical Engines unlocks Analysis Cores and the Combustion Age: electric machines, railways, robotics and terraforming."),
         ("Upgrades", "Research unlocks modules. Craft them, then drag them into your own slots (E) or a helper bot's. Later, a Robot Assembly Bay builds new helper bots."),
         ("Your pockets", "While you're nearby, whatever you carry supplies construction sites and the lander's queued crafts, so you can build straight from what you mined."),
-        ("Power", "Steam engines must touch water and burn wood or coal. Copper poles carry power to machines around them; batteries store the surplus."),
+        ("Power", "Steam engines must touch water and burn biomass or compacted carbon. Power poles carry power to machines around them; batteries store the surplus."),
         ("Trains", "Lay track, place a Rail Stop facing it, then a train. Select the train to set its schedule. Hand carts need a helper bot to pump them; steam locomotives need water (a Water Tower near a stop) and fuel (coal in the stop)."),
     ];
 

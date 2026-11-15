@@ -67,18 +67,18 @@ public static class Icons
             return;
         }
 
-        if (id == "wood")
+        if (id == "biomass")
         {
             Log(ci, m + new Vector2(-s * 0.05f, s * 0.12f), s, c);
             Log(ci, m + new Vector2(s * 0.05f, -s * 0.12f), s, c.Lightened(0.08f));
         }
-        else if (id == "coal")
+        else if (id == "compacted-carbon")
         {
             Lump(ci, m + new Vector2(-s * 0.14f, s * 0.08f), s * 0.2f, c);
             Lump(ci, m + new Vector2(s * 0.14f, s * 0.1f), s * 0.17f, c);
             Lump(ci, m + new Vector2(0, -s * 0.12f), s * 0.19f, c.Lightened(0.05f));
         }
-        else if (id == "stone")
+        else if (id == "regolith")
         {
             Lump(ci, m + new Vector2(-s * 0.12f, s * 0.1f), s * 0.2f, c.Darkened(0.1f));
             Lump(ci, m + new Vector2(s * 0.13f, -s * 0.06f), s * 0.18f, c);
@@ -99,7 +99,37 @@ public static class Icons
                 ci.DrawPolyline([.. p, p[0]], c.Darkened(0.45f), 1, true);
             }
         }
-        else if (id == "stone-brick")
+        else if (id.EndsWith("-bar", System.StringComparison.Ordinal))
+        {
+            // Stacked ingots: a trapezoid cross-section with a bright top face.
+            for (int i = 0; i < 3; i++)
+            {
+                Vector2 o = m + new Vector2((i - 1) * s * 0.2f, (i == 1 ? -s * 0.1f : s * 0.08f));
+                Vector2[] top = [o + new Vector2(-s * 0.1f, -s * 0.06f), o + new Vector2(s * 0.1f, -s * 0.06f), o + new Vector2(s * 0.14f, s * 0.12f), o + new Vector2(-s * 0.14f, s * 0.12f)];
+                ci.DrawColoredPolygon(top, i == 1 ? c.Lightened(0.12f) : c.Darkened(0.1f));
+                ci.DrawLine(top[0], top[1], c.Lightened(0.35f), 1);
+                ci.DrawPolyline([.. top, top[0]], c.Darkened(0.45f), 1, true);
+            }
+        }
+        else if (id.EndsWith("-core", System.StringComparison.Ordinal))
+        {
+            // A research Core: a glowing hexagonal crystal in a dark collar.
+            Vector2[] hex = new Vector2[6];
+            for (int i = 0; i < 6; i++)
+            {
+                float a = (Mathf.Tau * i / 6) - (Mathf.Pi / 2);
+                hex[i] = m + (new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * s * 0.34f);
+            }
+
+            ci.DrawCircle(m, s * 0.4f, A(c, 0.18f));
+            ci.DrawColoredPolygon(hex, new Color(0.08f, 0.1f, 0.13f));
+            ci.DrawPolyline([.. hex, hex[0]], c.Darkened(0.2f), Mathf.Max(1.2f, s * 0.04f), true);
+            Vector2[] inner = hex.Select(p => m + ((p - m) * 0.6f)).ToArray();
+            ci.DrawColoredPolygon(inner, c.Darkened(0.15f));
+            ci.DrawColoredPolygon([inner[5], inner[0], inner[1], m], c.Lightened(0.3f));
+            ci.DrawCircle(m, s * 0.07f, Colors.White);
+        }
+        else if (id == "sintered-brick")
         {
             for (int row = 0; row < 3; row++)
             {
@@ -112,11 +142,11 @@ public static class Icons
                 }
             }
         }
-        else if (id == "iron-gear")
+        else if (id == "drive-cog")
         {
             Gear(ci, m, s * 0.34f, c);
         }
-        else if (id == "copper-wire")
+        else if (id == "cupral-filament")
         {
             for (int i = 0; i < 4; i++)
             {
@@ -125,7 +155,7 @@ public static class Icons
 
             ci.DrawLine(m + new Vector2(s * 0.26f, -s * 0.15f), m + new Vector2(s * 0.36f, -s * 0.32f), c, Mathf.Max(1.5f, s * 0.05f), true);
         }
-        else if (id == "basic-circuit")
+        else if (id == "logic-board")
         {
             Rect2 board = new Rect2(m - new Vector2(s * 0.34f, s * 0.26f), new Vector2(s * 0.68f, s * 0.52f));
             ci.DrawRect(board, new Color(0.08f, 0.35f, 0.2f));
@@ -139,7 +169,7 @@ public static class Icons
             ci.DrawRect(new Rect2(m - new Vector2(s * 0.12f, s * 0.1f), new Vector2(s * 0.24f, s * 0.2f)), new Color(0.12f, 0.14f, 0.16f));
             ci.DrawRect(new Rect2(m - new Vector2(s * 0.05f, s * 0.04f), new Vector2(s * 0.1f, s * 0.08f)), c);
         }
-        else if (id == "battery-cell")
+        else if (id == "charge-cell")
         {
             Rect2 cell = new Rect2(m - new Vector2(s * 0.17f, s * 0.28f), new Vector2(s * 0.34f, s * 0.6f));
             ci.DrawRect(cell, new Color(0.2f, 0.22f, 0.2f));

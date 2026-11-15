@@ -33,6 +33,9 @@ public partial class WorldView
             case BuildingKind.Drill:
                 DrawElectricDrill(b, r, accent, working);
                 break;
+            case BuildingKind.Furnace:
+                DrawArcSmelter(b, r, accent, working);
+                break;
             case BuildingKind.Sorter:
                 DrawSorterArm(b, r, accent);
                 break;
@@ -287,6 +290,40 @@ public partial class WorldView
         DrawArc(c, T * 0.4f, spin, spin + (Mathf.Pi * 1.5f), 24, Trim(accent, working), T * 0.08f);
         Vector2 v = new Vector2(b.Rot.Vec().X, b.Rot.Vec().Y);
         DrawArrow(c + (v * T * 0.8f), b.Rot, T * 0.15f, Trim(accent, working));
+    }
+
+    /// <summary>A crucible between two electrodes; a jagged arc jumps between them while it smelts.</summary>
+    private void DrawArcSmelter(Building b, Rect2 r, Color accent, bool working)
+    {
+        Hull(r.Grow(-T * 0.06f), accent, working);
+        Vector2 c = r.GetCenter();
+        GlassDisc(c, T * 0.5f);
+        DrawCircle(c, T * 0.34f, working ? Hdr(accent.Darkened(0.1f), 1.1f) : accent.Darkened(0.6f));
+        DrawCircle(c, T * 0.2f, working ? Hdr(new Color(1f, 0.85f, 0.5f), 1.4f) : accent.Darkened(0.75f));
+        Vector2 left = c + new Vector2(-T * 0.62f, -T * 0.3f), right = c + new Vector2(T * 0.62f, -T * 0.3f);
+        foreach (Vector2 e in new[] { left, right })
+        {
+            DrawRect(new Rect2(e - new Vector2(T * 0.08f, T * 0.24f), new Vector2(T * 0.16f, T * 0.48f)), _hullShade);
+            DrawCircle(e + new Vector2(0, T * 0.24f), T * 0.07f, Trim(accent, working));
+        }
+
+        if (working)
+        {
+            // Re-randomise the bolt a few times a second.
+            int seed = (int)(Time * 12) + b.Id;
+            List<Vector2> bolt = [left + new Vector2(0, T * 0.24f)];
+            for (int i = 1; i < 6; i++)
+            {
+                float k = i / 6f;
+                float jitter = ((((seed * 31) + (i * 17)) % 9) - 4) * T * 0.03f;
+                bolt.Add(left.Lerp(right, k) + new Vector2(0, (T * 0.24f) + (Mathf.Sin(k * Mathf.Pi) * T * 0.12f) + jitter));
+            }
+
+            bolt.Add(right + new Vector2(0, T * 0.24f));
+            DrawPolyline(bolt.ToArray(), Hdr(new Color(0.7f, 0.85f, 1f), 1.6f), Mathf.Max(1.5f, T * 0.05f), true);
+        }
+
+        DrawProgressRing(b, c, T * 0.42f, accent);
     }
 
     private void DrawSorterArm(Building b, Rect2 r, Color accent)

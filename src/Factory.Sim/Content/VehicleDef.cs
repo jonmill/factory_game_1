@@ -34,6 +34,8 @@ public sealed class VehicleDef
     public int WaterCapacity { get; init; }
     /// <summary>Placeholder render colour as a hex string.</summary>
     public string Color { get; init; } = "#cccccc";
+    /// <summary>The age this vehicle belongs to: its unlocking technology's age (resolved when content loads).</summary>
+    [JsonIgnore] public string AgeId { get; internal set; } = "";
     /// <summary><see cref="Cost"/> as an id-sorted list, for deterministic iteration.</summary>
     [JsonIgnore] public ItemAmount[] CostList { get; internal set; } = [];
     /// <summary>True for powered vehicles (anything other than a cart).</summary>

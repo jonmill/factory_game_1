@@ -9,7 +9,7 @@ public class ProgressionTests
         TestWorld tw = new TestWorld();
         tw.Water(9, 10, 1, 2);
         Building engine = tw.Build("steam-engine", 10, 10);
-        engine.Inv.AddUnchecked("coal", 200);
+        engine.Inv.AddUnchecked("compacted-carbon", 200);
         tw.Build("power-pole", 12, 10);
         tw.Unlock("robot-bay", "helper-mk2");
         Building bay = tw.Build("robot-bay", 13, 9);
@@ -34,7 +34,7 @@ public class ProgressionTests
         TestWorld tw = new TestWorld();
         tw.Unlock("robot-bay", "helper-mk1");
         Building bay = tw.Build("robot-bay", 13, 9);
-        await Assert.That(tw.Try(new SetRecipe(bay.Id, "iron-gear"))).IsNotNull();
+        await Assert.That(tw.Try(new SetRecipe(bay.Id, "drive-cog"))).IsNotNull();
         await Assert.That(tw.Try(new SetRecipe(bay.Id, "helper-mk1"))).IsNull();
     }
 }

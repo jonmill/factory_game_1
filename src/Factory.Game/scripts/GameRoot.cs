@@ -806,10 +806,10 @@ public partial class GameRoot : Node2D
             Int2 l = World.Get<Building>(Planet.LanderId)!.Origin;
             List<Unit> f = Planet.Units.Where(u => u.IsLeader == false).ToList();
             // The helpers gather; the commander builds everything near the lander by itself.
-            Send(new AssignJob(f[0].Id, new Job(JobKind.Gather, Resource: "tree")));
-            Send(new AssignJob(f[1].Id, new Job(JobKind.Gather, Resource: "stone")));
-            Send(new PlaceBuilding("stone-furnace", new Int2(l.X + 5, l.Y), SimDir.North));
-            Send(new PlaceBuilding("stone-furnace", new Int2(l.X + 5, l.Y + 3), SimDir.North));
+            Send(new AssignJob(f[0].Id, new Job(JobKind.Gather, Resource: "xylo")));
+            Send(new AssignJob(f[1].Id, new Job(JobKind.Gather, Resource: "regolith")));
+            Send(new PlaceBuilding("burner-smelter", new Int2(l.X + 5, l.Y), SimDir.North));
+            Send(new PlaceBuilding("burner-smelter", new Int2(l.X + 5, l.Y + 3), SimDir.North));
             Send(new PlaceBuilding("chest", new Int2(l.X - 3, l.Y), SimDir.North));
             Send(new PlaceBuilding("power-pole", new Int2(l.X - 3, l.Y + 3), SimDir.North));
             Send(new PlaceBuilding("lab", new Int2(l.X - 6, l.Y + 2), SimDir.North));
@@ -829,7 +829,7 @@ public partial class GameRoot : Node2D
                 }
 
                 Building lander = World.Get<Building>(Planet.LanderId)!;
-                foreach (string item in new[] { "basic-circuit", "iron-plate", "iron-gear", "stone-brick", "copper-plate", "lead-plate", "battery-cell" })
+                foreach (string item in new[] { "logic-board", "siderite-plate", "drive-cog", "sintered-brick", "cupral-bar", "ballast-plate", "charge-cell" })
                 {
                     lander.Inv.AddUnchecked(item, 200);
                 }
@@ -844,7 +844,7 @@ public partial class GameRoot : Node2D
 
             World.Run(60 * 60);
             Send(new PlaceTrain(new Int2(l.X + 2, l.Y + 6), SimDir.East, ["hand-cart", "mine-cart"]));
-            Send(new QueueCraft(Planet.LanderId, "iron-gear", 10));
+            Send(new QueueCraft(Planet.LanderId, "drive-cog", 10));
             World.Run(60 * 60);
             // Show the commander hand-mining the nearest ore.
             Int2 me = Leader.Tile;

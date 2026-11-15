@@ -4,7 +4,7 @@ public class TrainTests
 {
     private static (TestWorld tw, Building a, Building b) Line(int length = 30)
     {
-        TestWorld tw = new TestWorld();
+        TestWorld tw = TestWorld.WithTrains();
         tw.Rail(10, 20, length);
         Building a = tw.Build("rail-stop", 10, 19, Dir.South);           // points at (10,20)
         Building b = tw.Build("rail-stop", 10 + length - 1, 19, Dir.South); // points at end
@@ -29,13 +29,13 @@ public class TrainTests
     public async Task HandCart_ShuttlesCargoAndReversesOnADeadEndLine()
     {
         (TestWorld? tw, Building? a, Building? b) = Line();
-        a.Inv.Add("iron-ore", 200);
+        a.Inv.Add("siderite-ore", 200);
         Train t = tw.P.CreateTrain(["hand-cart", "mine-cart"], [new Int2(12, 20), new Int2(11, 20)]);
         tw.Equip(tw.Followers[0], "rail-module");
         tw.Do(new AssignJob(tw.Followers[0].Id, new Job(JobKind.OperateTrain, TrainId: t.Id)));
         tw.Do(new SetSchedule(t.Id, [new ScheduleStop(a.Id, StopAction.Load), new ScheduleStop(b.Id, StopAction.Unload)]));
-        tw.RunUntil(() => b.Inv.Count("iron-ore") > 0, 60 * 120, "first delivery");
-        tw.RunUntil(() => b.Inv.Count("iron-ore") == 200, 60 * 300, "all ore delivered");
+        tw.RunUntil(() => b.Inv.Count("siderite-ore") > 0, 60 * 120, "first delivery");
+        tw.RunUntil(() => b.Inv.Count("siderite-ore") == 200, 60 * 300, "all ore delivered");
     }
 
     [Test]
@@ -43,8 +43,8 @@ public class TrainTests
     {
         (TestWorld? tw, Building? a, Building? b) = Line();
         Train t = tw.P.CreateTrain(["hand-cart", "mine-cart", "mine-cart"], [new Int2(13, 20), new Int2(12, 20), new Int2(11, 20)]);
-        t.Vehicles[1].Cargo.Add("lead-ore", 400);
-        t.Vehicles[2].Cargo.Add("lead-ore", 400);
+        t.Vehicles[1].Cargo.Add("galena-ore", 400);
+        t.Vehicles[2].Cargo.Add("galena-ore", 400);
         tw.Equip(tw.Followers[0], "rail-module");
         tw.Do(new AssignJob(tw.Followers[0].Id, new Job(JobKind.OperateTrain, TrainId: t.Id)));
         tw.Do(new SetSchedule(t.Id, [new ScheduleStop(b.Id, StopAction.Unload)]));
@@ -65,7 +65,7 @@ public class TrainTests
         // Water tower next to stop A and coal at the stop.
         tw.Water(8, 17, 1, 1);
         tw.Build("water-tower", 9, 17);
-        a.Inv.Add("coal", 30);
+        a.Inv.Add("compacted-carbon", 30);
         t.Water = 1; // just enough to crawl back? no: start at stop A instead
         tw.Do(new SetSchedule(t.Id, [new ScheduleStop(a.Id, StopAction.Pass), new ScheduleStop(b.Id, StopAction.Pass)]));
         t.Water = 0;
@@ -75,7 +75,7 @@ public class TrainTests
         Train t2 = tw.P.CreateTrain(["steam-locomotive", "mine-cart"], [new Int2(10, 20), new Int2(11, 20)]);
         tw.Do(new SetSchedule(t2.Id, [new ScheduleStop(a.Id, StopAction.Pass), new ScheduleStop(b.Id, StopAction.Pass)]));
         tw.RunUntil(() => (t2.Tiles[0] == b.FrontTile()) && (t2.State == TrainState.AtStop), 60 * 60, "steam train reaches B");
-        await Assert.That((t2.Locomotive!.Cargo.Count("coal") > 0) || (t2.FuelJ > 0)).IsTrue();
+        await Assert.That((t2.Locomotive!.Cargo.Count("compacted-carbon") > 0) || (t2.FuelJ > 0)).IsTrue();
         await Assert.That(t2.Water < t2.Locomotive.Def.WaterCapacity).IsTrue();
     }
 
@@ -86,8 +86,8 @@ public class TrainTests
         Train t1 = tw.P.CreateTrain(["steam-locomotive"], [new Int2(20, 20)]);
         Train t2 = tw.P.CreateTrain(["steam-locomotive"], [new Int2(15, 20)]);
         t1.Water = t2.Water = 3000;
-        t1.Locomotive!.Cargo.Add("coal", 10);
-        t2.Locomotive!.Cargo.Add("coal", 10);
+        t1.Locomotive!.Cargo.Add("compacted-carbon", 10);
+        t2.Locomotive!.Cargo.Add("compacted-carbon", 10);
         tw.Do(new SetSchedule(t2.Id, [new ScheduleStop(b.Id, StopAction.Pass)])); // t2 must pass through t1's tile
         tw.Run(60 * 10);
         await Assert.That(t2.State).IsEqualTo(TrainState.Blocked);
@@ -97,7 +97,7 @@ public class TrainTests
     [Test]
     public async Task Followers_AssembleATrainFromAGhost()
     {
-        TestWorld tw = new TestWorld();
+        TestWorld tw = TestWorld.WithTrains();
         Int2 l = tw.Lander.Origin;
         tw.Rail(l.X - 5, l.Y + 6, 10);
         tw.Do(new PlaceTrain(new Int2(l.X, l.Y + 6), Dir.East, ["hand-cart", "mine-cart"]));

@@ -9,7 +9,7 @@ public class ModuleTests
         Unit bot = tw.Followers[0];
         await Assert.That(tw.Followers.Count).IsEqualTo(2);
         await Assert.That(tw.Try(new AssignJob(bot.Id, new Job(JobKind.Build)))).Contains("Construction Module");
-        await Assert.That(tw.Try(new AssignJob(bot.Id, new Job(JobKind.Gather, Resource: "stone")))).IsNull();
+        await Assert.That(tw.Try(new AssignJob(bot.Id, new Job(JobKind.Gather, Resource: "regolith")))).IsNull();
     }
 
     [Test]
@@ -46,8 +46,8 @@ public class ModuleTests
         TestWorld tw = new TestWorld();
         tw.Leader.Carry.Add("construction-module", 2);
         await Assert.That(tw.Try(new InstallModule(tw.Leader.Id, tw.Leader.Id, "construction-module"))).Contains("only fits helper bots");
-        tw.Leader.Carry.Add("iron-plate", 1);
-        await Assert.That(tw.Try(new InstallModule(tw.Leader.Id, tw.Leader.Id, "iron-plate"))).IsEqualTo("That isn't a module");
+        tw.Leader.Carry.Add("siderite-plate", 1);
+        await Assert.That(tw.Try(new InstallModule(tw.Leader.Id, tw.Leader.Id, "siderite-plate"))).IsEqualTo("That isn't a module");
         Unit bot = tw.Followers[0];
         bot.Pos = tw.Leader.Pos + new Int2(Fixed.One * 20, 0);
         await Assert.That(tw.Try(new InstallModule(tw.Leader.Id, bot.Id, "construction-module"))).IsEqualTo("Too far away");
@@ -84,10 +84,10 @@ public class ModuleTests
     {
         TestWorld tw = new TestWorld();
         Int2 at = tw.Leader.Tile + new Int2(3, 0);
-        tw.Leader.Carry.Add("stone", 5);
-        tw.Do(new PlaceBuilding("stone-furnace", at, Dir.North));
+        tw.Leader.Carry.Add("regolith", 5);
+        tw.Do(new PlaceBuilding("burner-smelter", at, Dir.North));
         tw.RunUntil(() => tw.P.Sites.Count == 0, 60 * 5, "the commander to build the furnace");
-        await Assert.That(tw.P.BuildingAt(at)?.Def.Id).IsEqualTo("stone-furnace");
+        await Assert.That(tw.P.BuildingAt(at)?.Def.Id).IsEqualTo("burner-smelter");
         await Assert.That(tw.Followers.All(f => f.Job.Kind == JobKind.Idle)).IsTrue();
     }
 
@@ -95,11 +95,11 @@ public class ModuleTests
     public async Task Commander_BuildsFromTheLanderInReach()
     {
         TestWorld tw = new TestWorld();
-        int stone = tw.Lander.Inv.Count("stone");
+        int stone = tw.Lander.Inv.Count("regolith");
         Int2 at = tw.Leader.Tile + new Int2(-4, 0);
-        tw.Do(new PlaceBuilding("stone-furnace", at, Dir.North));
+        tw.Do(new PlaceBuilding("burner-smelter", at, Dir.North));
         tw.RunUntil(() => tw.P.Sites.Count == 0, 60 * 5, "the commander to build the furnace from the lander");
-        await Assert.That(tw.Lander.Inv.Count("stone")).IsEqualTo(stone - 5);
+        await Assert.That(tw.Lander.Inv.Count("regolith")).IsEqualTo(stone - 5);
         await Assert.That(tw.Leader.Carry.IsEmpty).IsTrue();
     }
 
@@ -108,8 +108,8 @@ public class ModuleTests
     {
         TestWorld tw = new TestWorld();
         Int2 at = tw.Leader.Tile + new Int2(20, 0);
-        tw.Leader.Carry.Add("stone", 5);
-        tw.Do(new PlaceBuilding("stone-furnace", at, Dir.North));
+        tw.Leader.Carry.Add("regolith", 5);
+        tw.Do(new PlaceBuilding("burner-smelter", at, Dir.North));
         tw.Run(60 * 5);
         await Assert.That(tw.P.Sites.Count).IsEqualTo(1);
     }

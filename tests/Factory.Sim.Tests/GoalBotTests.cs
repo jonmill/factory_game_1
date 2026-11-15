@@ -12,10 +12,10 @@ public class GoalBotTests
     public async Task GoalBot_ClearsCraftQueueWhenNothingQueuedCanBeCrafted()
     {
         TestWorld tw = new TestWorld();
-        tw.Lander.Inv.Remove("copper-wire", 1000);
-        tw.Lander.Inv.Remove("copper-plate", 1000);
-        tw.Do(new QueueCraft(tw.Lander.Id, "basic-circuit", 5));
-        GoalBot bot = new GoalBot(Goal.Parse("item:iron-gear:200"));
+        tw.Lander.Inv.Remove("cupral-filament", 1000);
+        tw.Lander.Inv.Remove("cupral-bar", 1000);
+        tw.Do(new QueueCraft(tw.Lander.Id, "logic-board", 5));
+        GoalBot bot = new GoalBot(Goal.Parse("item:drive-cog:200"));
 
         Think(tw, bot);
 
@@ -27,15 +27,15 @@ public class GoalBotTests
     public async Task GoalBot_KeepsCraftQueueWhenAnEntryCanStillBeCrafted()
     {
         TestWorld tw = new TestWorld();
-        tw.Lander.Inv.Remove("copper-wire", 1000);
-        tw.Lander.Inv.Remove("copper-plate", 1000);
-        tw.Do(new QueueCraft(tw.Lander.Id, "basic-circuit", 2));
-        tw.Do(new QueueCraft(tw.Lander.Id, "iron-gear", 1));
-        GoalBot bot = new GoalBot(Goal.Parse("item:iron-gear:200"));
+        tw.Lander.Inv.Remove("cupral-filament", 1000);
+        tw.Lander.Inv.Remove("cupral-bar", 1000);
+        tw.Do(new QueueCraft(tw.Lander.Id, "logic-board", 2));
+        tw.Do(new QueueCraft(tw.Lander.Id, "drive-cog", 1));
+        GoalBot bot = new GoalBot(Goal.Parse("item:drive-cog:200"));
 
         Think(tw, bot);
 
-        await Assert.That(tw.Lander.CraftQueue).Contains("basic-circuit");
+        await Assert.That(tw.Lander.CraftQueue).Contains("logic-board");
     }
 
     [Test]
@@ -43,9 +43,9 @@ public class GoalBotTests
     {
         TestWorld tw = new TestWorld();
         Int2 l = tw.Lander.Origin;
-        Building furnace = tw.Build("stone-furnace", l.X + 6, l.Y);
-        furnace.Inv.AddUnchecked("iron-ore", 10);
-        GoalBot bot = new GoalBot(Goal.Parse("item:iron-plate:500"));
+        Building furnace = tw.Build("burner-smelter", l.X + 6, l.Y);
+        furnace.Inv.AddUnchecked("siderite-ore", 10);
+        GoalBot bot = new GoalBot(Goal.Parse("item:siderite-plate:500"));
 
         Think(tw, bot);
 
@@ -58,17 +58,17 @@ public class GoalBotTests
     {
         TestWorld tw = new TestWorld();
         Int2 l = tw.Lander.Origin;
-        tw.Lander.Inv.Remove("wood", 1000);
-        tw.Lander.Inv.Remove("coal", 1000);
+        tw.Lander.Inv.Remove("biomass", 1000);
+        tw.Lander.Inv.Remove("compacted-carbon", 1000);
         Building chest = tw.Build("chest", l.X - 6, l.Y);
-        chest.Inv.AddUnchecked("wood", 50);
-        Building furnace = tw.Build("stone-furnace", l.X + 6, l.Y);
-        furnace.Inv.AddUnchecked("iron-ore", 10);
-        GoalBot bot = new GoalBot(Goal.Parse("item:iron-plate:500"));
+        chest.Inv.AddUnchecked("biomass", 50);
+        Building furnace = tw.Build("burner-smelter", l.X + 6, l.Y);
+        furnace.Inv.AddUnchecked("siderite-ore", 10);
+        GoalBot bot = new GoalBot(Goal.Parse("item:siderite-plate:500"));
 
         Think(tw, bot);
 
-        Job? fuelHaul = bot.LastPlan!.Needs.FirstOrDefault(j => (j.Kind == JobKind.Haul) && (j.ToId == furnace.Id) && (j.Item == "wood"));
+        Job? fuelHaul = bot.LastPlan!.Needs.FirstOrDefault(j => (j.Kind == JobKind.Haul) && (j.ToId == furnace.Id) && (j.Item == "biomass"));
         await Assert.That(fuelHaul).IsNotNull();
         await Assert.That(fuelHaul!.FromId).IsEqualTo(chest.Id);
     }
@@ -78,15 +78,15 @@ public class GoalBotTests
     {
         TestWorld tw = new TestWorld();
         Int2 l = tw.Lander.Origin;
-        tw.Lander.Inv.Remove("iron-plate", 1000);
-        tw.Lander.Inv.Remove("iron-gear", 1000);
+        tw.Lander.Inv.Remove("siderite-plate", 1000);
+        tw.Lander.Inv.Remove("drive-cog", 1000);
         Building chest = tw.Build("chest", l.X - 6, l.Y);
-        chest.Inv.AddUnchecked("iron-plate", 60);
-        GoalBot bot = new GoalBot(Goal.Parse("item:iron-gear:20"));
+        chest.Inv.AddUnchecked("siderite-plate", 60);
+        GoalBot bot = new GoalBot(Goal.Parse("item:drive-cog:20"));
 
         Think(tw, bot);
 
-        bool consolidate = bot.LastPlan!.Needs.Any(j => (j.Kind == JobKind.Haul) && (j.FromId == chest.Id) && (j.ToId == tw.Lander.Id) && (j.Item == "iron-plate"));
+        bool consolidate = bot.LastPlan!.Needs.Any(j => (j.Kind == JobKind.Haul) && (j.FromId == chest.Id) && (j.ToId == tw.Lander.Id) && (j.Item == "siderite-plate"));
         await Assert.That(consolidate).IsTrue();
     }
 
@@ -96,12 +96,12 @@ public class GoalBotTests
         TestWorld tw = new TestWorld();
         Int2 l = tw.Lander.Origin;
         Building chest = tw.Build("chest", l.X - 10, l.Y);
-        chest.Inv.AddUnchecked("stone", 30);
+        chest.Inv.AddUnchecked("regolith", 30);
         Unit f = tw.Followers[0];
-        Job unneeded = new Job(JobKind.Haul, FromId: chest.Id, ToId: tw.Lander.Id, Item: "stone");
+        Job unneeded = new Job(JobKind.Haul, FromId: chest.Id, ToId: tw.Lander.Id, Item: "regolith");
         tw.Do(new AssignJob(f.Id, unneeded));
         tw.RunUntil(() => (f.Phase == UnitPhase.Deliver) && (f.Carry.IsEmpty == false), 60 * 30, "follower to pick up stone");
-        GoalBot bot = new GoalBot(Goal.Parse("item:iron-gear:200"));
+        GoalBot bot = new GoalBot(Goal.Parse("item:drive-cog:200"));
 
         Think(tw, bot);
 
@@ -114,11 +114,11 @@ public class GoalBotTests
         TestWorld tw = new TestWorld();
         Int2 l = tw.Lander.Origin;
         Building chest = tw.Build("chest", l.X - 30, l.Y);
-        chest.Inv.AddUnchecked("stone", 30);
+        chest.Inv.AddUnchecked("regolith", 30);
         Unit f = tw.Followers[0];
-        Job unneeded = new Job(JobKind.Haul, FromId: chest.Id, ToId: tw.Lander.Id, Item: "stone");
+        Job unneeded = new Job(JobKind.Haul, FromId: chest.Id, ToId: tw.Lander.Id, Item: "regolith");
         tw.Do(new AssignJob(f.Id, unneeded));
-        GoalBot bot = new GoalBot(Goal.Parse("item:iron-gear:200"));
+        GoalBot bot = new GoalBot(Goal.Parse("item:drive-cog:200"));
 
         Think(tw, bot);
 

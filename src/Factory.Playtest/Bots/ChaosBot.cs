@@ -116,7 +116,7 @@ public sealed class ChaosBot(ulong seed, int actionsPerMinute = 30, int player =
             case 4 when p.Trains.Count > 0:
                 return new Job(JobKind.OperateTrain, TrainId: Pick(p.Trains)!.Id);
             default:
-                return new Job(JobKind.Gather, Resource: "tree");
+                return new Job(JobKind.Gather, Resource: "xylo");
         }
     }
 }

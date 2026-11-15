@@ -2,7 +2,7 @@ using Factory.Sim;
 
 namespace Factory.Playtest.Bots;
 
-/// <summary>What a bot is trying to achieve. Parse from strings like "tech:automation", "helpers:1", "settlers", "item:iron-plate:200".</summary>
+/// <summary>What a bot is trying to achieve. Parse from strings like "tech:automation", "helpers:1", "settlers", "item:siderite-plate:200".</summary>
 public abstract record Goal
 {
     /// <summary>Whether the goal has been achieved in the given world.</summary>
@@ -10,7 +10,7 @@ public abstract record Goal
     /// <summary>Human-readable description of the goal, using display names from the content.</summary>
     public abstract string Describe(ContentDb c);
 
-    /// <summary>Parses a goal spec such as <c>tech:automation</c>, <c>helpers:1</c> or <c>item:iron-plate:200</c>.</summary>
+    /// <summary>Parses a goal spec such as <c>tech:automation</c>, <c>helpers:1</c> or <c>item:siderite-plate:200</c>.</summary>
     /// <param name="spec">The goal specification string.</param>
     /// <exception cref="ArgumentException">The spec is not in a recognised form.</exception>
     public static Goal Parse(string spec)

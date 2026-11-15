@@ -19,20 +19,20 @@ public static class WorldGen
         Func<string, ResourceDef> R = (string id) => content.Resources[id];
 
         // Guaranteed starter patches near the lander, then extras scattered around the planet.
-        // Lead is deliberately far away: it is the first reason to build a railway.
+        // Galena is deliberately far away: it is the first reason to build a railway.
         Blob(p, rng, Near(rng, p, center, 9, 14), 6, Terrain.Water);
-        Patch(p, rng, Near(rng, p, center, 10, 16), R("iron"), 6, 900);
-        Patch(p, rng, Near(rng, p, center, 10, 16), R("copper"), 5, 800);
-        Patch(p, rng, Near(rng, p, center, 10, 18), R("coal"), 5, 800);
-        Patch(p, rng, Near(rng, p, center, 10, 18), R("stone"), 4, 700);
-        Patch(p, rng, Near(rng, p, center, 34, 46), R("lead"), 6, 1000);
+        Patch(p, rng, Near(rng, p, center, 10, 16), R("siderite"), 6, 900);
+        Patch(p, rng, Near(rng, p, center, 10, 16), R("cuprite"), 5, 800);
+        Patch(p, rng, Near(rng, p, center, 10, 18), R("carbon"), 5, 800);
+        Patch(p, rng, Near(rng, p, center, 10, 18), R("regolith"), 4, 700);
+        Patch(p, rng, Near(rng, p, center, 34, 46), R("galena"), 6, 1000);
 
         for (int i = 0; i < 3; i++)
         {
             Blob(p, rng, Far(rng, p, center, 25), rng.Range(4, 9), Terrain.Water);
         }
 
-        foreach (string? id in new[] { "iron", "copper", "coal", "stone", "lead" })
+        foreach (string? id in new[] { "siderite", "cuprite", "carbon", "regolith", "galena" })
         {
             for (int i = 0; i < 2; i++)
             {
@@ -65,7 +65,7 @@ public static class WorldGen
                         continue;
                     }
 
-                    p.SetResource(t, R("tree"), rng.Range(20, 40));
+                    p.SetResource(t, R("xylo"), rng.Range(20, 40));
                 }
             }
         }
