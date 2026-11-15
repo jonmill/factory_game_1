@@ -28,6 +28,8 @@ public sealed class TechDef
     public string Age { get; init; } = "salvage";
     /// <summary>Shown in the tree but not yet researchable (placeholder for future content).</summary>
     public bool ComingSoon { get; init; }
+    /// <summary>True for infinite research: it can be researched again and again, costing more each level.</summary>
+    public bool Repeatable { get; init; }
     /// <summary><see cref="UnitCost"/> as an id-sorted list, for deterministic iteration.</summary>
     [JsonIgnore] public ItemAmount[] UnitCostList { get; internal set; } = [];
 }

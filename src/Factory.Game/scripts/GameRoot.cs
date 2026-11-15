@@ -869,7 +869,7 @@ public partial class GameRoot : Node2D
         }
 
         string? demo = System.Environment.GetEnvironmentVariable("FACTORY_DEMO");
-        if ((_demoDone == false) && (demo is "1" or "2" or "3" or "4" or "5"))
+        if ((_demoDone == false) && (demo is "1" or "2" or "3" or "4" or "5" or "6"))
         {
             _demoDone = true;
             Int2 l = World.Get<Building>(Planet.LanderId)!.Origin;
@@ -888,7 +888,7 @@ public partial class GameRoot : Node2D
             }
 
             Send(new PlaceBuilding("rail-stop", new Int2(l.X + 7, l.Y + 5), SimDir.South));
-            if (demo is "2" or "3" or "4" or "5")
+            if (demo is "2" or "3" or "4" or "5" or "6")
             {
                 // Dev only: skip ahead to the late game (unlock everything, stock the lander) to show the
                 // robot bay, terraformers and uplink. Not a replayable game.
@@ -917,6 +917,26 @@ public partial class GameRoot : Node2D
                     Send(new PlaceBuilding("kerogen-generator", new Int2(l.X, l.Y + 9), SimDir.North));
                     Send(new PlaceBuilding("lattice-pylon", new Int2(l.X + 3, l.Y + 10), SimDir.North));
                     Send(new PlaceBuilding("launch-pad", new Int2(l.X + 5, l.Y + 9), SimDir.North));
+                }
+
+                if (demo == "6")
+                {
+                    // The Stellar Age set: fusion, the space elevator, a climate engine, a collector and plasma machines.
+                    foreach (string item in new[] { "titanium-plate", "osmiridium-ingot", "promethium-lattice", "photonic-wafer", "polymer-resin", "cupral-filament" })
+                    {
+                        lander.Inv.AddUnchecked(item, 200);
+                    }
+
+                    Send(new PlaceBuilding("fusion-reactor", new Int2(l.X - 11, l.Y - 12), SimDir.North));
+                    Send(new PlaceBuilding("space-elevator", new Int2(l.X - 6, l.Y - 13), SimDir.North));
+                    Send(new PlaceBuilding("climate-engine", new Int2(l.X, l.Y - 12), SimDir.North));
+                    Send(new PlaceBuilding("orbital-collector", new Int2(l.X + 5, l.Y - 11), SimDir.North));
+                    Send(new PlaceBuilding("plasma-smelter", new Int2(l.X + 9, l.Y - 10), SimDir.North));
+                    Send(new PlaceBuilding("plasma-drill", new Int2(l.X + 12, l.Y - 11), SimDir.North));
+                    for (int x = l.X - 12; x <= l.X + 14; x += 6)
+                    {
+                        Send(new PlaceBuilding("power-pole", new Int2(x, l.Y - 7), SimDir.North));
+                    }
                 }
 
                 if (demo == "5")
@@ -953,6 +973,35 @@ public partial class GameRoot : Node2D
             }
 
             World.Run(60 * 60);
+            if (demo == "6")
+            {
+                foreach (Int2 stop in new[] { new Int2(l.X - 6, l.Y - 7), new Int2(l.X + 6, l.Y - 7) })
+                {
+                    Send(new WalkTo(Leader.Id, stop));
+                    World.Run(60 * 90);
+                }
+
+                if (Planet.Buildings.FirstOrDefault(b => b.Def.Id == "fusion-reactor") is { } reactor)
+                {
+                    reactor.Inv.AddUnchecked("fusion-cell", 10);
+                }
+
+                if (Planet.Buildings.FirstOrDefault(b => b.Def.Id == "orbital-collector") is { } collector)
+                {
+                    Send(new SetRecipe(collector.Id, "collect-helium-3"));
+                }
+
+                if (Planet.Buildings.FirstOrDefault(b => b.Def.Id == "climate-engine") is { } climate)
+                {
+                    Send(new SetRecipe(climate.Id, "climate-atmosphere"));
+                    climate.Inv.AddUnchecked("catalyst-pack", 4);
+                    climate.Inv.AddUnchecked("helium-3", 4);
+                }
+
+                Send(new WalkTo(Leader.Id, new Int2(l.X - 2, l.Y - 8)));
+                World.Run(60 * 10);
+            }
+
             if (demo == "5")
             {
                 // Walk the commander past the Clean Age ghosts so it builds them.
@@ -1036,6 +1085,12 @@ public partial class GameRoot : Node2D
             SelectedId = Planet.Trains.FirstOrDefault()?.Id ?? Planet.LanderId;
             _hud.ToggleHelp();
             Zoom = 1.4f;
+            if (demo == "6")
+            {
+                SelectedId = 0;
+                Zoom = 0.9f;
+            }
+
             if ((demo == "5") && (Planet.Buildings.FirstOrDefault(b => b.Def.IsStation) is { } station))
             {
                 SelectedId = station.Id;

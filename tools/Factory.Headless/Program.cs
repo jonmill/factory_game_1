@@ -90,7 +90,7 @@ if (command == "trace")
         s.Run(_ => false, every);
         Planet p = s.World.Planets[0];
         Console.WriteLine($"[{s.World.Tick / 60}s] research={s.World.Research.Current ?? "-"} {s.World.Research.UnitsDone} done=[{string.Join(",", s.World.Research.Completed)}] sites={p.Sites.Count}");
-        foreach (Building? b in p.Buildings.Where(b => (b.Def.Energy == EnergyKind.Electric) || (b.Def.Kind is BuildingKind.SteamEngine or BuildingKind.Furnace)))
+        foreach (Building? b in p.Buildings.Where(b => (b.Def.Energy == EnergyKind.Electric) || (b.Def.Kind is BuildingKind.SteamEngine or BuildingKind.Furnace or BuildingKind.LaunchPad or BuildingKind.Ferry)))
         {
             Console.WriteLine($"    {b.Def.Id,-14} {b.Status,-10} power={b.Satisfaction / 10}% inv=[{string.Join(",", b.Inv.Items.Select(kv => kv.Key + "=" + kv.Value))}] out=[{string.Join(",", b.Out.Items.Select(kv => kv.Key + "=" + kv.Value))}]");
         }

@@ -54,4 +54,6 @@ public enum BuildingKind
     LogisticsStation,
     /// <summary>An orbital logistics station: drones on its own planet, and vessels to orbital stations on other planets.</summary>
     OrbitalStation,
+    /// <summary>A cable to orbit: free launches and faster orbital work on its planet.</summary>
+    SpaceElevator,
 }

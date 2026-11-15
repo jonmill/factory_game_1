@@ -81,7 +81,8 @@ public sealed partial class Planet
                 if (n > 0)
                 {
                     int orbits = System.Math.Abs(Def.Orbit - p.Def.Orbit);
-                    Send(from, to, item, n, true, (VesselBaseSeconds + (orbits * VesselSecondsPerOrbit)) * (long)World.TicksPerSecond);
+                    long ticks = (VesselBaseSeconds + (orbits * VesselSecondsPerOrbit)) * (long)World.TicksPerSecond;
+                    Send(from, to, item, n, true, HasSpaceElevator ? ticks / 2 : ticks);
                 }
             }
         }

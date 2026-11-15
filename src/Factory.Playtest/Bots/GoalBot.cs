@@ -556,9 +556,12 @@ public sealed class GoalBot : IBot
         [BuildingKind.Lab, BuildingKind.Furnace, BuildingKind.SteamEngine, BuildingKind.Pole, BuildingKind.Chest, BuildingKind.RobotBay, BuildingKind.Terraformer, BuildingKind.Uplink,
             BuildingKind.LaunchPad, BuildingKind.PayloadLauncher];
 
-    /// <summary>The terraformers and the uplink, the buildings the settlers goal needs.</summary>
+    /// <summary>
+    /// The terraformers and the uplink, the buildings the settlers goal needs. Only the first terraformers,
+    /// each with its own fixed recipe: the late climate engine is a speed-up, not part of the route.
+    /// </summary>
     private IEnumerable<BuildingDef> TerraformBuildings() => C.BuildingList.Where(b =>
-        (b.Kind is BuildingKind.Terraformer or BuildingKind.Uplink) || ((b.Kind == BuildingKind.PayloadLauncher) && RemoteTargets().Any()));
+        ((b.Kind == BuildingKind.Terraformer) && (b.Recipe is not null)) || (b.Kind == BuildingKind.Uplink) || ((b.Kind == BuildingKind.PayloadLauncher) && RemoteTargets().Any()));
 
     /// <summary>Settler targets other than the start planet: terraformed from here with a payload launcher.</summary>
     private IEnumerable<Planet> RemoteTargets() => _w.SettlerTargets.Where(p => p != P);
@@ -967,9 +970,10 @@ public sealed class GoalBot : IBot
 
         Dictionary<string, long> stock = WorldProbe.StorageTotals(P);
         // Cargo back from an expedition waits on the launch pad until it's hauled in: it counts too.
+        // (Not the rocket and its fuel: those are already set aside for the trip.)
         foreach (Building pad in P.Buildings.Where(b => b.Def.Kind == BuildingKind.LaunchPad))
         {
-            foreach ((string item, int n) in pad.Inv.Items)
+            foreach ((string item, int n) in pad.Inv.Items.Where(kv => (kv.Key != pad.Def.Vessel) && pad.Def.LaunchFuel.ContainsKey(kv.Key) == false))
             {
                 stock[item] = stock.GetValueOrDefault(item) + n;
             }
@@ -1053,7 +1057,9 @@ public sealed class GoalBot : IBot
 
             Int2 beside = P.Torus.Wrap(m.Origin + new Int2(0, m.H));
             bool atMachine = P.InLeaderReach(leader, m.Origin);
-            if ((m.RecipeId != r.Id) && (m.Crafting == false))
+            // A collector never stops (its recipes take nothing), so switch it once its product isn't wanted.
+            bool idleOrSurplus = (m.Crafting == false) || ((m.Recipe is { Inputs.Length: 0 } cur) && (plan.CraftDeficit.ContainsKey(cur.Outputs[0].Item) == false));
+            if ((m.RecipeId != r.Id) && idleOrSurplus)
             {
                 if (atMachine && m.Out.IsEmpty)
                 {
@@ -1149,7 +1155,9 @@ public sealed class GoalBot : IBot
             return;
         }
 
-        if (WorldProbe.ResourceFor(C, item) is { } res)
+        // Gas-giant and asteroid resources lie on no planet's surface: an orbital collector makes them.
+        bool orbitalOnly = (WorldProbe.ResourceFor(C, item) is { } raw) && (_w.Planets.Any(p => p.HasResource(raw.Id)) == false) && (WorldProbe.RecipeFor(C, item) is not null);
+        if ((WorldProbe.ResourceFor(C, item) is { } res) && (orbitalOnly == false))
         {
             plan.RawDeficit[res.Id] = plan.RawDeficit.GetValueOrDefault(res.Id) + d;
 

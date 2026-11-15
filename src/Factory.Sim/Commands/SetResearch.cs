@@ -24,7 +24,7 @@ public sealed record SetResearch(string? TechId) : Command
             return $"{t.Name} isn't available in this playtest";
         }
 
-        if (w.Research.Completed.Contains(TechId))
+        if (w.Research.Completed.Contains(TechId) && (t.Repeatable == false))
         {
             return "Already researched";
         }

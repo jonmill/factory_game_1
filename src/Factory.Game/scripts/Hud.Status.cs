@@ -85,7 +85,7 @@ public partial class Hud
             _researchName.AddThemeColorOverride("font_color", HudStyle.Orange);
             _researchBar.Value = W.Research.UnitsDone / (double)System.Math.Max(1, tech.Units);
             int labs = P.Buildings.Count(b => (b.Def.Kind == BuildingKind.Lab) && (b.Status == MachineStatus.Working));
-            _researchUnits.Text = $"{W.Research.UnitsDone} / {tech.Units} units   ·   {labs} lab{(labs == 1 ? "" : "s")} working";
+            _researchUnits.Text = $"{W.Research.UnitsDone} / {W.Research.UnitsFor(tech)} units   ·   {labs} lab{(labs == 1 ? "" : "s")} working";
         }
         else
         {

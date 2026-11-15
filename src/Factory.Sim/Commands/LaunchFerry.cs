@@ -32,7 +32,7 @@ public sealed record LaunchFerry(int UnitId, int PadId, int ToPlanet, int[] Pass
             return $"Load a {w.Content.Items[pad.Def.Vessel!].Name} first";
         }
 
-        foreach (ItemAmount f in pad.Def.LaunchFuelList.Where(f => pad.Inv.Count(f.Item) < f.Count))
+        foreach (ItemAmount f in pad.Planet.LaunchFuel(pad).Where(f => pad.Inv.Count(f.Item) < f.Count))
         {
             return $"Needs {f.Count} {w.Content.Items[f.Item].Name} to launch";
         }

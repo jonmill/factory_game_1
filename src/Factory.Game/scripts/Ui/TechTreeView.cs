@@ -144,9 +144,12 @@ public partial class TechTreeView : Control
         foreach (TechDef t in Content.TechList)
         {
             Rect2 r = _cards[t.Id];
-            bool done = rs.Completed.Contains(t.Id);
+            // Repeatable research is never "done": it shows its level and stays available.
+            bool done = rs.Completed.Contains(t.Id) && (t.Repeatable == false);
+            int need = rs.UnitsFor(t);
             bool current = rs.Current == t.Id;
             bool available = (done == false) && (t.ComingSoon == false) && t.Prereqs.All(rs.Completed.Contains);
+            string name = t.Repeatable && (rs.Level(t.Id) > 0) ? $"{t.Name}  (level {rs.Level(t.Id)})" : t.Name;
             int units = rs.Progress.GetValueOrDefault(t.Id);
             Color border = current ? HudStyle.Orange : done ? HudStyle.Good : available ? HudStyle.LineBright : HudStyle.Line;
             Color fill = current ? new Color(0.14f, 0.09f, 0.04f, 0.95f) : done ? new Color(0.04f, 0.1f, 0.08f, 0.95f) : HudStyle.Well;
@@ -165,16 +168,16 @@ public partial class TechTreeView : Control
             }
 
             Vector2 text = r.Position + new Vector2(62, 24);
-            DrawString(font, text, t.Name, HorizontalAlignment.Left, CardW - 70, 13, (done || available || current) ? HudStyle.Text : HudStyle.TextDim);
-            string state = done ? "Researched" : current ? $"Researching  {units}/{t.Units}" : t.ComingSoon ? "Coming soon" :
-                available ? (units > 0 ? $"Available  {units}/{t.Units}" : "Available") : "Locked";
+            DrawString(font, text, name, HorizontalAlignment.Left, CardW - 70, 13, (done || available || current) ? HudStyle.Text : HudStyle.TextDim);
+            string state = done ? "Researched" : current ? $"Researching  {units}/{need}" : t.ComingSoon ? "Coming soon" :
+                available ? (units > 0 ? $"Available  {units}/{need}" : "Available") : "Locked";
             Color sc = done ? HudStyle.Good : current ? HudStyle.Orange : available ? HudStyle.Header : HudStyle.TextDim;
             DrawString(font, text + new Vector2(0, 18), state, HorizontalAlignment.Left, CardW - 70, 11, sc);
             if ((units > 0) && (done == false))
             {
                 Rect2 bar = new Rect2(r.Position + new Vector2(62, CardH - 14), new Vector2(CardW - 74, 4));
                 DrawRect(bar, new Color(0, 0, 0, 0.5f));
-                DrawRect(new Rect2(bar.Position, new Vector2(bar.Size.X * units / System.Math.Max(1, t.Units), bar.Size.Y)), HudStyle.Orange);
+                DrawRect(new Rect2(bar.Position, new Vector2(bar.Size.X * units / System.Math.Max(1, need), bar.Size.Y)), HudStyle.Orange);
             }
         }
     }

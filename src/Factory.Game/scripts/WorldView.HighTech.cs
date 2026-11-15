@@ -16,8 +16,16 @@ public partial class WorldView
     private void DrawHighTech(Building b, Rect2 r, bool working)
     {
         Color accent = Hex(b.Def.Color);
+        if ((b.Def.AgeId == "stellar") && DrawStellar(b, r, accent, working))
+        {
+            return;
+        }
+
         switch (b.Def.Kind)
         {
+            case BuildingKind.Assembler when b.Def.Categories.Contains("orbital"):
+                DrawCollector(b, r, accent, working);
+                break;
             case BuildingKind.Lander:
                 DrawLander(r, accent);
                 break;

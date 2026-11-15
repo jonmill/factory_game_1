@@ -285,7 +285,7 @@ public partial class Hud
             into.AddChild(HudStyle.Button("Open replicator  [C]", () => Toggle(HudWindow.Replicator)));
         }
 
-        if (b.Def.Kind is BuildingKind.Assembler or BuildingKind.RobotBay)
+        if ((b.Def.Kind is BuildingKind.Assembler or BuildingKind.RobotBay) || ((b.Def.Kind == BuildingKind.Terraformer) && (b.Def.Recipe is null)))
         {
             OptionButton opt = new OptionButton { FocusMode = Control.FocusModeEnum.None };
             List<RecipeDef> recipes = C.RecipeList.Where(r => b.Def.Categories.Contains(r.Category) && W.Research.Unlocked.Contains(r.Id)).ToList();

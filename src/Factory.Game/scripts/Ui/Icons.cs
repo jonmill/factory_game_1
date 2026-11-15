@@ -113,6 +113,36 @@ public static class Icons
             return;
         }
 
+        if (id == "promethium-lattice")
+        {
+            // A glowing crystal lattice: nodes joined in a diamond grid.
+            Vector2[] nodes = [m + new Vector2(0, -s * 0.3f), m + new Vector2(s * 0.26f, 0), m + new Vector2(0, s * 0.3f), m + new Vector2(-s * 0.26f, 0), m];
+            for (int k = 0; k < 4; k++)
+            {
+                ci.DrawLine(nodes[k], nodes[(k + 1) % 4], c.Lightened(0.2f), Mathf.Max(1, s * 0.04f), true);
+                ci.DrawLine(nodes[k], nodes[4], c, Mathf.Max(1, s * 0.03f), true);
+            }
+
+            foreach (Vector2 n in nodes)
+            {
+                ci.DrawCircle(n, s * 0.07f, c.Lightened(0.45f));
+            }
+
+            return;
+        }
+
+        if (id == "fusion-cell")
+        {
+            // A capsule with a magenta plasma window and gold caps.
+            Rect2 body = new Rect2(m - new Vector2(s * 0.14f, s * 0.3f), new Vector2(s * 0.28f, s * 0.6f));
+            ci.DrawRect(body, new Color(0.18f, 0.16f, 0.24f));
+            ci.DrawRect(new Rect2(body.Position + new Vector2(s * 0.05f, s * 0.12f), new Vector2(s * 0.18f, s * 0.36f)), c);
+            ci.DrawRect(new Rect2(body.Position - new Vector2(0, s * 0.04f), new Vector2(body.Size.X, s * 0.08f)), new Color(0.95f, 0.78f, 0.38f));
+            ci.DrawRect(new Rect2(body.Position + new Vector2(0, body.Size.Y - (s * 0.04f)), new Vector2(body.Size.X, s * 0.08f)), new Color(0.95f, 0.78f, 0.38f));
+
+            return;
+        }
+
         if (id == "seed-pod")
         {
             ci.DrawCircle(m + new Vector2(0, s * 0.06f), s * 0.24f, c.Darkened(0.35f));
@@ -154,7 +184,7 @@ public static class Icons
                 ci.DrawPolyline([.. p, p[0]], c.Darkened(0.45f), 1, true);
             }
         }
-        else if (id.EndsWith("-bar", System.StringComparison.Ordinal))
+        else if (id.EndsWith("-bar", System.StringComparison.Ordinal) || id.EndsWith("-ingot", System.StringComparison.Ordinal))
         {
             // Stacked ingots: a trapezoid cross-section with a bright top face.
             for (int i = 0; i < 3; i++)
@@ -248,6 +278,21 @@ public static class Icons
         Vector2 m = r.GetCenter();
         float s = Mathf.Min(r.Size.X, r.Size.Y);
         Rect2 body = new Rect2(m - new Vector2(s * 0.34f, s * 0.34f), new Vector2(s * 0.68f, s * 0.68f));
+        if (def.AgeId == "stellar")
+        {
+            // Stellar Age: an obsidian block with a gold rim and a violet plasma core.
+            ci.DrawRect(body, new Color(0.13f, 0.11f, 0.18f));
+            ci.DrawRect(body, new Color(0.95f, 0.78f, 0.38f), false, Mathf.Max(1.5f, s * 0.04f));
+            ci.DrawCircle(m, s * 0.18f, _glass);
+            ci.DrawCircle(m, s * 0.1f, accent);
+            if (def.Kind == BuildingKind.SpaceElevator)
+            {
+                ci.DrawLine(m, new Vector2(m.X, r.Position.Y), new Color(0.95f, 0.78f, 0.38f), Mathf.Max(1.5f, s * 0.05f));
+            }
+
+            return;
+        }
+
         if (def.Look == VisualStyle.HighTech)
         {
             Hull(ci, body, accent);

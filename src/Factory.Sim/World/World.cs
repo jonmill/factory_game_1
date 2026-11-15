@@ -173,6 +173,12 @@ public sealed partial class World
             h.Add(u);
         }
 
+        foreach ((string k, int v) in Research.Levels)
+        {
+            h.Add(k);
+            h.Add(v);
+        }
+
         h.Add(SettlersCalled);
         foreach (Planet p in Planets)
         {

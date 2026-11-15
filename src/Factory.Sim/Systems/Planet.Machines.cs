@@ -13,7 +13,7 @@ public sealed partial class Planet
     {
         ContentDb c = World.Content;
         int Cap(int max) => System.Math.Clamp(max - b.Inv.Count(item), 0, b.Inv.SpaceFor(item));
-        bool burner = b.Def.Energy == EnergyKind.Burner;
+        bool burner = (b.Def.Energy == EnergyKind.Burner) && ((b.Def.Fuels.Length == 0) || b.Def.Fuels.Contains(item));
 
         switch (b.Def.Kind)
         {
@@ -75,6 +75,9 @@ public sealed partial class Planet
     /// <summary>The inventory others take products from.</summary>
     public static Inventory OutputOf(Building b) => b.Out;
 
+    /// <summary>True while a powered space elevator stands on this planet.</summary>
+    public bool HasSpaceElevator => Buildings.Any(b => (b.Def.Kind == BuildingKind.SpaceElevator) && (b.Satisfaction > 0));
+
     private TechDef? CurrentTech => World.Research.Current is { } id ? World.Content.Techs[id] : null;
 
     /// <summary>Whether an electric building wants power this tick (drives network demand).</summary>
@@ -92,7 +95,7 @@ public sealed partial class Planet
                 return b.Crafting || (NextPayload(b) is not null);
             case BuildingKind.Sorter:
                 return b.Progress < b.Def.Period * 100L;
-            case BuildingKind.LogisticsStation or BuildingKind.OrbitalStation:
+            case BuildingKind.LogisticsStation or BuildingKind.OrbitalStation or BuildingKind.SpaceElevator:
                 return true;
             default:
                 return false;
@@ -107,7 +110,7 @@ public sealed partial class Planet
             string? fuel = null;
             foreach ((string? k, int _) in b.Inv.Items)
             {
-                if (c.IsFuel(k) == false)
+                if ((c.IsFuel(k) == false) || ((b.Def.Fuels.Length > 0) && (b.Def.Fuels.Contains(k) == false)))
                 {
                     continue;
                 }
@@ -188,6 +191,9 @@ public sealed partial class Planet
                 break;
             case BuildingKind.LogisticsStation or BuildingKind.OrbitalStation:
                 UpdateStation(b);
+                break;
+            case BuildingKind.SpaceElevator:
+                b.Status = EnergyFactor(b) > 0 ? MachineStatus.Working : MachineStatus.NoPower;
                 break;
         }
     }
@@ -393,8 +399,9 @@ public sealed partial class Planet
         }
 
         b.Status = MachineStatus.Working;
-        b.Progress += b.Def.Speed * f / 1000;
         RecipeDef r = b.Recipe!;
+        int speed = (r.Category == "orbital") && HasSpaceElevator ? 2 * b.Def.Speed : b.Def.Speed;
+        b.Progress += speed * f / 1000;
         if (b.Progress < r.Ticks * 100L)
         {
             return;

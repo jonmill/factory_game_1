@@ -45,13 +45,18 @@ public sealed partial class Planet
     internal string? VesselOf(BuildingDef ferry) =>
         World.Content.BuildingList.FirstOrDefault(b => (b.Kind == BuildingKind.LaunchPad) && (b.LandsAs == ferry.Id))?.Vessel;
 
+    /// <summary>The fuel a launch from this pad burns: none while a space elevator stands on the planet.</summary>
+    /// <param name="pad">The launch pad.</param>
+    /// <returns>Fuel items and counts.</returns>
+    public ItemAmount[] LaunchFuel(Building pad) => HasSpaceElevator ? [] : pad.Def.LaunchFuelList;
+
     /// <summary>Flies a launch pad's ferry to another planet with the leader, passengers and all the pad's cargo.</summary>
     internal Building Launch(Building pad, Planet to, Unit leader, IReadOnlyList<Unit> passengers)
     {
         ContentDb c = World.Content;
         pad.Inv.Remove(pad.Def.Vessel!, 1);
         World.Stats.Record(ItemFlow.Launched, pad.Def.Vessel!, 1);
-        foreach (ItemAmount f in pad.Def.LaunchFuelList)
+        foreach (ItemAmount f in LaunchFuel(pad))
         {
             pad.Inv.Remove(f.Item, f.Count);
             World.Stats.Record(ItemFlow.Fuel, f.Item, f.Count);

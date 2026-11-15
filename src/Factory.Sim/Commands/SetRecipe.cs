@@ -11,9 +11,10 @@ public sealed record SetRecipe(int BuildingId, string? RecipeId) : Command
     public override string? Validate(World w)
     {
         Building? b = w.Get<Building>(BuildingId);
-        if ((b is null) || ((b.Def.Kind is BuildingKind.Assembler or BuildingKind.RobotBay) == false))
+        bool takesRecipe = (b is not null) && ((b.Def.Kind is BuildingKind.Assembler or BuildingKind.RobotBay) || ((b.Def.Kind == BuildingKind.Terraformer) && (b.Def.Recipe is null)));
+        if ((b is null) || (takesRecipe == false))
         {
-            return "Only fabricators and robot bays take a recipe";
+            return "Only fabricators, robot bays and climate engines take a recipe";
         }
 
         if (RecipeId is null)

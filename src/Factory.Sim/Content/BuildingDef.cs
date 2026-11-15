@@ -66,6 +66,8 @@ public sealed class BuildingDef
     public Dictionary<string, int> LaunchFuel { get; init; } = new();
     /// <summary>Launch pads: the building the vessel becomes once it lands (a landed ferry).</summary>
     public string? LandsAs { get; init; }
+    /// <summary>Burner buildings: the only fuels it takes, or empty for any fuel.</summary>
+    public string[] Fuels { get; init; } = [];
     /// <summary>Logistics stations: how many drones fly its supplies around the planet.</summary>
     public int Drones { get; init; }
     /// <summary>Logistics stations: items one drone carries.</summary>

@@ -43,7 +43,8 @@ dotnet run --project tests/Factory.Sim.Tests    # tests (TUnit runs as an execut
 Debug/automation env vars for the client: `FACTORY_DEMO=1` (queues a sample base and fast-forwards
 via normal commands; `FACTORY_DEMO=2` also unlocks everything and stocks the lander to show the late-game
 buildings, so it is not a replayable game; `3` adds the Combustion Age set and a loaded launch pad, `4` also
-flies the ferry to Rime, `5` adds the Clean Age set: solar, wind, a payload launcher, a hover module, belts and logistics stations), `FACTORY_PLANET=<planet id>` (view another planet), `FACTORY_SCREENSHOT=/path.png` (saves a frame after 3 s and quits),
+flies the ferry to Rime, `5` adds the Clean Age set: solar, wind, a payload launcher, a hover module, belts and logistics stations,
+`6` the Stellar Age set: fusion, the space elevator, a climate engine, an orbital collector and plasma machines), `FACTORY_PLANET=<planet id>` (view another planet), `FACTORY_SCREENSHOT=/path.png` (saves a frame after 3 s and quits),
 `FACTORY_SEED=<n>` (pins the map seed), `FACTORY_WINDOW=inventory|replicator|tech|help|victory|system` and
 `FACTORY_CATEGORY=<1-7>` (open a HUD window or build category), `FACTORY_SELECT=<building id>` (selects the
 nearest building of that type, e.g. `burner-smelter`, or `helper` for a helper bot), `FACTORY_REPLAY=/path.replay.json`
@@ -113,9 +114,9 @@ Included: a star system of fixed planets with seeded variation (Kepler's Rest, t
 plus Cinder, Rime, Dune, the gas giant Vesper and the Shards belt), each with its own biomes and its own
 share of the raw resources (siderite, cuprite, carbon, regolith, galena, xylo trees, kerogen, brimstone,
 titanium, silica, lanthanide, deuterium, hafnium, tantalite, helium-3, osmiridium); a System map (M) to
-view them; four tech **ages** (Salvage, Combustion and the start of Clean are playable, Stellar is shown as
-"coming soon"); research paid in **Cores** (Survey Cores in the Salvage Age, Analysis Cores from the
-Combustion Age, Synthesis Cores, which need Dune's silica, from the Clean Age). The commander (hand-mining, builds ghosts in reach, 2 module slots, +2 from research) and
+view them; four tech **ages** (Salvage, Combustion, Clean and Stellar); research paid in **Cores** (Survey Cores in the
+Salvage Age, Analysis Cores from the Combustion Age, Synthesis Cores, which need Dune's silica, from the Clean
+Age, and Stellar Cores, from Cinder's titanium and hafnium plus orbital helium-3 and osmiridium). The commander (hand-mining, builds ghosts in reach, 2 module slots, +2 from research) and
 2 Helper Bot Mk1s (1 slot; Gather / Haul, with Build and Operate train taught by modules), 5 modules
 (construction, servo, cargo, rail operator, mining laser), a Robot Assembly Bay for Mk1 and Mk2 (3 slots)
 helper bots, lander fabricator, burner drills and smelters, steam engines, poles, charge cell banks,
@@ -127,7 +128,10 @@ and cargo to the other planets (a landed ferry always flies home); in the Clean 
 Wind Turbines (scaled by its atmosphere), a Hover Module (float over water and lava) and a Payload Launcher that
 terraforms another planet from home, Conveyor Belts (sorter arms load and unload them), Planetary Logistics
 Stations (drones carry supplied items to stations that demand them) and Orbital Logistics Stations (vessels
-between planets); terraformers (Atmosphere Processor, Hydrosphere Seeder, Bio Incubator), a system readiness meter
+between planets); in the Stellar Age an Orbital Collector (helium-3 from the gas giant Vesper, osmiridium from
+the Shards), Plasma Smelters and Drills, a Fusion Reactor (12 MW on Fusion Cells), the Space Elevator (free
+launches, faster collectors and vessels), the Climate Engine (fast terraforming) and Vein Utilization, infinite
+research that makes deposits last longer; terraformers (Atmosphere Processor, Hydrosphere Seeder, Bio Incubator), a system readiness meter
 and the Settler Uplink to win.
 
 Settler targets: Kepler's Rest and Rime (terraformed from home with the Payload Launcher).

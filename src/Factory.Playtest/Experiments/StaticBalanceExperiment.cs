@@ -199,7 +199,7 @@ public sealed class StaticBalanceExperiment : IExperiment
         foreach (BuildingDef? g in c.BuildingList.Where(b => b.Kind == BuildingKind.SteamEngine))
         {
             double kjPerMin = g.OutputKw * 60.0 * 100 / g.Efficiency;
-            foreach (ResourceDef? res in c.ResourceList.Where(x => c.Items[x.Item].FuelKj > 0))
+            foreach (ResourceDef? res in c.ResourceList.Where(x => (c.Items[x.Item].FuelKj > 0) && ((g.Fuels.Length == 0) || g.Fuels.Contains(x.Item))))
             {
                 double items = kjPerMin / c.Items[res.Item].FuelKj;
                 double followers = items / (3600.0 / res.HandTicks);

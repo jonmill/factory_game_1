@@ -92,7 +92,7 @@ public sealed partial class Planet
                     else
                     {
                         _ = CreateBuildingRotated(def, s.Origin, s.Rot);
-                        World.Emit($"{builder.Name} finished building a {def.Name}", Id, s.Origin);
+                        World.Emit($"{builder.Name} finished building {("AEIOU".Contains(def.Name[0], StringComparison.Ordinal) ? "an" : "a")} {def.Name}", Id, s.Origin);
                         PushOutOfSolids();
                     }
 
@@ -243,6 +243,7 @@ public sealed partial class Planet
         LaunchFuel = d.LaunchFuel,
         LaunchFuelList = d.LaunchFuelList,
         LandsAs = d.LandsAs,
+        Fuels = d.Fuels,
         Drones = d.Drones,
         DroneLoad = d.DroneLoad,
         Vessels = d.Vessels,

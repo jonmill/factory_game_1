@@ -96,7 +96,7 @@ public partial class Hud
         }
 
         TechDef t = C.Techs[id];
-        bool done = rs.Completed.Contains(id);
+        bool done = rs.Completed.Contains(id) && (t.Repeatable == false);
         bool current = rs.Current == id;
         bool available = (done == false) && (t.ComingSoon == false) && t.Prereqs.All(rs.Completed.Contains);
         int units = rs.Progress.GetValueOrDefault(id);
@@ -130,12 +130,12 @@ public partial class Hud
         }
 
         _techDetail.AddChild(HudStyle.Divider());
-        _techDetail.AddChild(HudStyle.Title($"Cost  ·  {t.Units} units × {t.UnitTicks / World.TicksPerSecond}s"));
+        _techDetail.AddChild(HudStyle.Title($"Cost  ·  {W.Research.UnitsFor(t)} units × {t.UnitTicks / World.TicksPerSecond}s"));
         HBoxContainer cost = new HBoxContainer();
         foreach (ItemAmount c in t.UnitCostList)
         {
             Slot s = ItemSlot(c.Item, c.Count, 40);
-            s.TooltipText = $"{ItemName(c.Item)} ×{c.Count} per unit ({c.Count * t.Units} total)";
+            s.TooltipText = $"{ItemName(c.Item)} ×{c.Count} per unit ({c.Count * W.Research.UnitsFor(t)} total)";
             cost.AddChild(s);
         }
 
@@ -144,9 +144,9 @@ public partial class Hud
         {
             ProgressBar bar = HudStyle.Bar(320);
             HudStyle.Tint(bar, HudStyle.Orange);
-            bar.Value = units / (double)System.Math.Max(1, t.Units);
+            bar.Value = units / (double)System.Math.Max(1, W.Research.UnitsFor(t));
             _techDetail.AddChild(bar);
-            _techDetail.AddChild(HudStyle.Caption($"{units} / {t.Units} units done", HudStyle.TextDim, 11));
+            _techDetail.AddChild(HudStyle.Caption($"{units} / {W.Research.UnitsFor(t)} units done", HudStyle.TextDim, 11));
         }
 
         if (t.Unlocks.Length > 0)

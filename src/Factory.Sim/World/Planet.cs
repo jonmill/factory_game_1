@@ -138,6 +138,11 @@ public sealed partial class Planet
     internal void SetOccupant(Int2 t, int id) => _occupant[Index(t)] = id;
 
     /// <summary>Removes one unit of resource from a tile. Returns the item id mined or null.</summary>
+    /// <summary>The repeatable tech that makes deposits last longer.</summary>
+    public const string VeinUtilization = "vein-utilization";
+
+    private int _veinCredit;
+
     internal string? MineOne(Int2 t, ItemFlow flow)
     {
         int i = Index(t);
@@ -147,7 +152,16 @@ public sealed partial class Planet
         }
 
         ResourceDef res = World.Content.ResourceList[_resource[i] - 1];
-        _amount[i]--;
+        // Vein Utilization: each level stretches a deposit by another tenth, so with level L only
+        // 100 of every 100 + 10L items mined use it up. A running credit keeps it exact and deterministic.
+        int stretch = 100 + (10 * World.Research.Level(VeinUtilization));
+        _veinCredit += 100;
+        if (_veinCredit >= stretch)
+        {
+            _veinCredit -= stretch;
+            _amount[i]--;
+        }
+
         if (_amount[i] <= 0)
         {
             _resource[i] = 0;
@@ -383,6 +397,7 @@ public sealed partial class Planet
     internal void Hash(StateHasher h)
     {
         h.Add(Id);
+        h.Add(_veinCredit);
         foreach ((string stat, int points) in Stats)
         {
             h.Add(stat);
