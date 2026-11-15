@@ -126,11 +126,40 @@ public class CoreTests
     [Test]
     public async Task Content_DrawsShipAndElectricTechAsHighTechAndEverythingElseAsIndustrial()
     {
-        string[] highTech = ["arc-smelter", "assembler", "atmo-processor", "bio-incubator", "climate-engine", "conveyor-belt", "electric-drill", "fusion-reactor", "hydro-seeder", "lab", "lander", "logistics-station", "orbital-collector", "orbital-station", "payload-launcher", "plasma-drill", "plasma-smelter", "robot-bay", "settler-uplink", "solar-panel", "sorter", "space-elevator", "wind-turbine"];
+        string[] highTech = ["arc-smelter", "assembler", "assembler-mk2", "assembler-mk3", "atmo-processor", "bio-incubator", "climate-engine", "conveyor-belt", "electric-drill", "fusion-reactor", "hydro-seeder", "lab", "lander", "logistics-station", "orbital-collector", "orbital-station", "payload-launcher", "plasma-drill", "plasma-smelter", "robot-bay", "settler-uplink", "solar-panel", "sorter", "space-elevator", "wind-turbine"];
 
         string[] actual = TestWorld.Content.BuildingList.Where(b => b.Look == VisualStyle.HighTech).Select(b => b.Id).Order(StringComparer.Ordinal).ToArray();
 
         await Assert.That(actual).IsEquivalentTo(highTech);
         await Assert.That(TestWorld.Content.Vehicles.Values.All(v => v.Look == VisualStyle.Industrial)).IsTrue();
+    }
+
+    [Test]
+    public async Task Mining_HelpersAreSlowest_AndEveryDrillTierIsFaster()
+    {
+        ContentDb c = TestWorld.Content;
+        ResourceDef iron = c.Resources["siderite"];
+        static double PerMin(BuildingDef d) => 3600.0 * d.Speed / 100 / d.MiningTicks;
+        double helper = c.Robots.Values.Where(r => r.Id != c.Start.CommanderRobot).Max(r => 3600.0 * r.MiningPct / 100 / iron.HandTicks);
+        double commander = 3600.0 * c.Robots[c.Start.CommanderRobot].MiningPct / 100 / iron.HandTicks;
+        double[] drills = c.BuildingList.Where(b => b.Kind == BuildingKind.Drill).OrderBy(b => c.AgeIndex(b.AgeId)).Select(PerMin).ToArray();
+        await Assert.That(helper < commander).IsTrue();
+        await Assert.That(helper < drills[0]).IsTrue().Because("helper bots are the slowest way to mine");
+        for (int i = 1; i < drills.Length; i++)
+        {
+            await Assert.That(drills[i] > drills[i - 1]).IsTrue();
+        }
+
+        double[] fabs = c.BuildingList.Where(b => (b.Kind is BuildingKind.Assembler or BuildingKind.Lander) && b.Categories.Contains("crafting")).OrderBy(b => b.Speed).Select(b => (double)b.Speed).ToArray();
+        await Assert.That(fabs.Distinct().Count()).IsEqualTo(fabs.Length).Because("each fabricator tier is a step up");
+    }
+
+    [Test]
+    public async Task KerogenFuel_IsWorthRefining()
+    {
+        ContentDb c = TestWorld.Content;
+        RecipeDef refine = c.Recipes["kerogen-fuel"];
+        double perCrude = c.Items["kerogen-fuel"].FuelKj * refine.Out["kerogen-fuel"] / (double)refine.In["crude-kerogen"];
+        await Assert.That(perCrude >= 2 * c.Items["compacted-carbon"].FuelKj).IsTrue();
     }
 }

@@ -28,7 +28,7 @@
     { "id": "helium-3",        "name": "Helium-3",        "stack": 100, "mass": 0, "color": "#ffe0a0" },
     { "id": "osmiridium-ore",  "name": "Osmiridium Ore",  "stack": 50, "mass": 3, "color": "#8aa0b8" },
 
-    { "id": "kerogen-fuel",    "name": "Kerogen Fuel",    "stack": 50, "mass": 2, "fuelKj": 16000, "color": "#c08030" },
+    { "id": "kerogen-fuel",    "name": "Kerogen Fuel",    "stack": 50, "mass": 2, "fuelKj": 36000, "color": "#c08030" },
     { "id": "polymer-resin",   "name": "Polymer Resin",   "stack": 100, "mass": 1, "color": "#e0c890" },
     { "id": "ferry-rocket",    "name": "Ferry Rocket",    "stack": 1, "mass": 40, "color": "#e0e0e8" },
 
@@ -169,7 +169,7 @@
 
     { "id": "burner-drill", "name": "Burner Drill", "kind": "Drill", "w": 2, "h": 2,
       "cost": { "drive-cog": 3, "siderite-plate": 3, "sintered-brick": 5 }, "buildTicks": 90,
-      "energy": "Burner", "powerKw": 150, "slots": 1, "outSlots": 1, "miningTicks": 100, "color": "#ffb347",
+      "energy": "Burner", "powerKw": 150, "slots": 1, "outSlots": 1, "miningTicks": 80, "color": "#ffb347",
       "description": "Mines the deposit underneath and pushes ore out its front. Burns biomass or compacted carbon." },
 
     { "id": "burner-smelter", "name": "Burner Smelter", "kind": "Furnace", "w": 2, "h": 2,
@@ -200,6 +200,14 @@
       "cost": { "siderite-plate": 9, "drive-cog": 5, "logic-board": 3 }, "buildTicks": 120,
       "energy": "Electric", "powerKw": 75, "slots": 6, "outSlots": 2, "speed": 75, "categories": ["crafting"], "color": "#5ac8ff",
       "description": "Automatically crafts the selected recipe. Needs power." },
+    { "id": "assembler-mk2", "name": "Precision Fabricator", "kind": "Assembler", "look": "HighTech", "age": "clean", "w": 3, "h": 3,
+      "cost": { "siderite-plate": 10, "drive-cog": 10, "logic-board": 10, "photonic-wafer": 6 }, "buildTicks": 150,
+      "energy": "Electric", "powerKw": 200, "slots": 6, "outSlots": 2, "speed": 150, "categories": ["crafting"], "color": "#50e0c0",
+      "description": "Crafts the selected recipe twice as fast as a Fabricator. Needs power." },
+    { "id": "assembler-mk3", "name": "Plasma Fabricator", "kind": "Assembler", "look": "HighTech", "age": "stellar", "w": 3, "h": 3,
+      "cost": { "titanium-plate": 15, "promethium-lattice": 3, "logic-board": 15, "drive-cog": 10 }, "buildTicks": 180,
+      "energy": "Electric", "powerKw": 600, "slots": 8, "outSlots": 3, "speed": 300, "categories": ["crafting"], "color": "#c080ff",
+      "description": "Crafts the selected recipe twice as fast again, in contained plasma. Needs power." },
 
     { "id": "rail", "name": "Rail", "kind": "Rail", "cost": { "siderite-plate": 1, "biomass": 1 }, "buildTicks": 15, "color": "#a8b0c0",
       "description": "Track for carts and locomotives. Adjacent rails connect automatically." },
@@ -219,7 +227,7 @@
 
     { "id": "electric-drill", "name": "Electric Drill", "kind": "Drill", "look": "HighTech", "w": 2, "h": 2,
       "cost": { "logic-board": 3, "drive-cog": 5, "siderite-plate": 10 }, "buildTicks": 120,
-      "energy": "Electric", "powerKw": 90, "outSlots": 1, "miningTicks": 60, "color": "#40e0ff",
+      "energy": "Electric", "powerKw": 90, "outSlots": 1, "miningTicks": 40, "color": "#40e0ff",
       "description": "Faster, fuel-free mining. Needs power." },
 
     { "id": "arc-smelter", "name": "Arc Smelter", "kind": "Furnace", "look": "HighTech", "age": "combustion", "w": 2, "h": 2,
@@ -285,7 +293,7 @@
       "description": "Smelts ore in contained plasma, twice as fast as an arc smelter. Needs power." },
     { "id": "plasma-drill", "name": "Plasma Drill", "kind": "Drill", "look": "HighTech", "age": "stellar", "w": 3, "h": 3,
       "cost": { "titanium-plate": 15, "logic-board": 10, "promethium-lattice": 2, "drive-cog": 10 }, "buildTicks": 180,
-      "energy": "Electric", "powerKw": 360, "outSlots": 2, "miningTicks": 24, "color": "#c080ff",
+      "energy": "Electric", "powerKw": 360, "outSlots": 2, "miningTicks": 15, "color": "#c080ff",
       "description": "Cuts ore with plasma across a 3 × 3 area, more than twice as fast as an electric drill. Needs power." },
     { "id": "fusion-reactor", "name": "Fusion Reactor", "kind": "SteamEngine", "look": "HighTech", "age": "stellar", "w": 4, "h": 4,
       "cost": { "titanium-plate": 40, "osmiridium-ingot": 20, "logic-board": 30, "promethium-lattice": 10, "charge-cell": 20 }, "buildTicks": 600,
@@ -434,6 +442,9 @@
       "description": "A launcher that terraforms other planets from home.",
       "unitCost": { "survey-core": 1, "analysis-core": 1, "synthesis-core": 1 }, "units": 30, "unitTicks": 600,
       "unlocks": ["payload-launcher", "launch-catalyst", "launch-hydro", "launch-seeds"] },
+    { "id": "precision-fabrication", "name": "Precision Fabrication", "age": "clean", "prereqs": ["synthesis-cores", "automation"],
+      "description": "Precision Fabricators craft twice as fast as Fabricators.",
+      "unitCost": { "survey-core": 1, "analysis-core": 1, "synthesis-core": 1 }, "units": 30, "unitTicks": 600, "unlocks": ["assembler-mk2"] },
     { "id": "conveyor-belts", "name": "Conveyor Belts", "age": "clean", "prereqs": ["synthesis-cores", "mechanical-arms"],
       "description": "Belts carry items between machines, loaded and unloaded by sorter arms.",
       "unitCost": { "survey-core": 1, "analysis-core": 1, "synthesis-core": 1 }, "units": 30, "unitTicks": 600, "unlocks": ["conveyor-belt"] },
@@ -454,6 +465,9 @@
     { "id": "plasma-smelting", "name": "Plasma Smelting", "age": "stellar", "prereqs": ["stellar-cores", "arc-smelting"],
       "description": "Smelters driven by contained plasma.",
       "unitCost": { "survey-core": 1, "analysis-core": 1, "synthesis-core": 1, "stellar-core": 1 }, "units": 40, "unitTicks": 600, "unlocks": ["plasma-smelter"] },
+    { "id": "plasma-fabrication", "name": "Plasma Fabrication", "age": "stellar", "prereqs": ["stellar-cores", "precision-fabrication"],
+      "description": "Plasma Fabricators craft twice as fast as Precision Fabricators.",
+      "unitCost": { "survey-core": 1, "analysis-core": 1, "synthesis-core": 1, "stellar-core": 1 }, "units": 40, "unitTicks": 600, "unlocks": ["assembler-mk3"] },
     { "id": "plasma-mining", "name": "Plasma Mining", "age": "stellar", "prereqs": ["plasma-smelting", "electric-mining"],
       "description": "Plasma drills that cut a 3 × 3 area.",
       "unitCost": { "survey-core": 1, "analysis-core": 1, "synthesis-core": 1, "stellar-core": 1 }, "units": 40, "unitTicks": 600, "unlocks": ["plasma-drill"] },
@@ -582,11 +596,11 @@
   },
 
   "robots": [
-    { "id": "commander", "name": "Commander", "moduleSlots": 2, "speed": 130, "carrySlots": 20, "buildReach": 8,
+    { "id": "commander", "name": "Commander", "moduleSlots": 2, "speed": 130, "carrySlots": 20, "buildReach": 8, "miningPct": 120,
       "description": "Sent ahead by the settlers. Builds ghosts within reach by itself and supplies them from its pockets." },
-    { "id": "helper-mk1", "name": "Helper Bot Mk1", "moduleSlots": 1, "speed": 90, "carrySlots": 4,
+    { "id": "helper-mk1", "name": "Helper Bot Mk1", "moduleSlots": 1, "speed": 90, "carrySlots": 4, "miningPct": 50,
       "description": "A simple tracked worker. Gathers and hauls; modules teach it more." },
-    { "id": "helper-mk2", "name": "Helper Bot Mk2", "moduleSlots": 3, "speed": 110, "carrySlots": 6,
+    { "id": "helper-mk2", "name": "Helper Bot Mk2", "moduleSlots": 3, "speed": 110, "carrySlots": 6, "miningPct": 75,
       "description": "A faster helper bot with three module slots." }
   ],
 

@@ -38,6 +38,20 @@ public partial class WorldView
             case BuildingKind.SteamEngine:
                 DrawFusionReactor(b, r, accent, working);
                 return true;
+            case BuildingKind.Assembler when b.Def.Categories.Contains("crafting"):
+                StellarHull(r.Grow(-T * 0.06f), working);
+                PlasmaCore(r.GetCenter(), T * 0.6f, accent, working, b.Id);
+                // Four manipulator arms reaching into the plasma, nodding while it works.
+                for (int i = 0; i < 4; i++)
+                {
+                    float a = (i * Mathf.Pi / 2f) + (Mathf.Pi / 4f);
+                    float reach = T * (0.95f + (working ? 0.12f * Mathf.Sin((Time * 4f) + i + b.Id) : 0));
+                    Vector2 dir = new Vector2(Mathf.Cos(a), Mathf.Sin(a));
+                    DrawLine(r.GetCenter() + (dir * T * 1.3f), r.GetCenter() + (dir * ((T * 1.3f) - reach + (T * 0.6f))), _gold.Darkened(0.15f), Mathf.Max(1.5f, T * 0.09f));
+                    DrawCircle(r.GetCenter() + (dir * T * 1.3f), T * 0.13f, _obsidianLight);
+                }
+
+                return true;
             case BuildingKind.SpaceElevator:
                 DrawSpaceElevator(b, r, accent, working);
                 return true;

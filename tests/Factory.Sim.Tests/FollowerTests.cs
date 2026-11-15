@@ -10,7 +10,7 @@ public class FollowerTests
         tw.Ore("siderite", l.X + 8, l.Y, 3, 3, 1000);
         int before = tw.Lander.Inv.Count("siderite-ore");
         tw.Do(new AssignJob(tw.Followers[0].Id, new Job(JobKind.Gather, Resource: "siderite")));
-        tw.RunUntil(() => tw.Lander.Inv.Count("siderite-ore") >= before + 25, 60 * 60, "a batch of iron ore");
+        tw.RunUntil(() => tw.Lander.Inv.Count("siderite-ore") >= before + 25, 60 * 120, "a batch of iron ore");
     }
 
     [Test]

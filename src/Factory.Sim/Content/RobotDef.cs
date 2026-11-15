@@ -11,6 +11,8 @@ public sealed class RobotDef
     public int ModuleSlots { get; init; } = 1;
     /// <summary>Walking speed in sub-units per tick before modules.</summary>
     public int Speed { get; init; } = 90;
+    /// <summary>Hand-mining speed in percent of a resource's hand time: helper bots dig slower than any drill.</summary>
+    public int MiningPct { get; init; } = 100;
     /// <summary>Stack slots in the robot's cargo hold (the commander's pockets) before modules.</summary>
     public int CarrySlots { get; init; } = 4;
     /// <summary>How far, in tiles, the robot builds ghosts by itself as it goes; 0 for none.</summary>

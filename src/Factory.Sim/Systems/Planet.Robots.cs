@@ -33,8 +33,14 @@ public sealed partial class Planet
     /// <returns>The module's item, if any.</returns>
     public ItemDef? ModuleForJob(JobKind kind) => World.Content.ItemList.FirstOrDefault(i => i.Module?.Jobs.Contains(kind) == true);
 
+    /// <summary>Ticks a robot takes to hand-mine one item of a resource, after its model and modules.</summary>
+    /// <param name="u">The robot.</param>
+    /// <param name="res">The resource.</param>
+    /// <returns>Ticks per item.</returns>
+    public int HandMiningTicks(Unit u, ResourceDef res) => MiningTicks(u, res.HandTicks);
+
     /// <summary>Ticks a robot takes for a hand-mining step that normally takes <paramref name="baseTicks"/>.</summary>
-    private int MiningTicks(Unit u, int baseTicks) => System.Math.Max(1, baseTicks * 100 / (100 + ModulesOf(u).Sum(m => m.MiningPct)));
+    private int MiningTicks(Unit u, int baseTicks) => System.Math.Max(1, baseTicks * 100 / System.Math.Max(1, u.Robot.MiningPct + ModulesOf(u).Sum(m => m.MiningPct)));
 
     /// <summary>Recomputes a robot's speed and cargo space from its model and modules.</summary>
     internal void RefreshRobot(Unit u)

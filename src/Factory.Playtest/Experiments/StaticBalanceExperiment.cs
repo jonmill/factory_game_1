@@ -126,6 +126,21 @@ public sealed class StaticBalanceExperiment : IExperiment
     {
         List<(ResourceDef Res, ItemDef Item, double PerTick)> fuels = c.ResourceList.Where(x => c.Items[x.Item].FuelKj > 0)
             .Select(x => (Res: x, Item: c.Items[x.Item], PerTick: c.Items[x.Item].FuelKj / (double)x.HandTicks)).OrderByDescending(x => x.PerTick).ToList();
+        // Refined fuels made straight from raw resources, per tick of gathering their inputs by hand.
+        foreach (RecipeDef rec in c.RecipeList.Where(x => (x.Outputs.Length == 1) && (c.Items[x.Outputs[0].Item].FuelKj > 0) && (x.Inputs.Length > 0)))
+        {
+            ResourceDef?[] raws = rec.Inputs.Select(i => c.ResourceList.FirstOrDefault(x => x.Item == i.Item)).ToArray();
+            if (raws.Any(x => x is null))
+            {
+                continue;
+            }
+
+            ItemDef fuel = c.Items[rec.Outputs[0].Item];
+            long ticks = rec.Inputs.Zip(raws).Sum(p => (long)p.First.Count * p.Second!.HandTicks);
+            fuels.Add((raws[0]!, fuel, fuel.FuelKj * rec.Outputs[0].Count / (double)ticks));
+        }
+
+        fuels = fuels.OrderByDescending(x => x.PerTick).ToList();
         Table table = new Table("Fuel economics (hand-gathered)", ["Fuel", "kJ/item", "Gather ticks", "kJ per follower-tick", "Mass kg"], []);
         foreach ((ResourceDef Res, ItemDef Item, double PerTick) f in fuels)
         {
@@ -173,24 +188,62 @@ public sealed class StaticBalanceExperiment : IExperiment
             table.Rows.Add([furnace.Name, $"{furnaceOrePerMin:F1} ore/min", ""]);
         }
 
-        foreach (ResourceDef? res in c.ResourceList.Where(x => x.IsTree == false))
+        ResourceDef? iron = c.ResourceList.FirstOrDefault(x => x.Id == "siderite");
+        foreach (RobotDef robot in c.Robots.Values.OrderBy(x => x.MiningPct))
         {
-            table.Rows.Add([$"Follower on {res.Name}", $"{3600.0 / res.HandTicks:F1} ore/min", "before walking"]);
+            if (iron is not null)
+            {
+                table.Rows.Add([$"{robot.Name} on {iron.Name}", $"{HandRate(iron, robot):F1} ore/min", "by hand, before walking"]);
+            }
         }
 
         r.Tables.Add(table);
 
         BuildingDef? burner = c.BuildingList.FirstOrDefault(b => (b.Kind == BuildingKind.Drill) && (b.Energy == EnergyKind.Burner));
-        ResourceDef? iron = c.ResourceList.FirstOrDefault(x => x.Id == "siderite");
-        if ((burner is not null) && (iron is not null))
+        RobotDef? helper = c.Robots.Values.Where(x => x.Id != c.Start.CommanderRobot).OrderByDescending(x => x.MiningPct).FirstOrDefault();
+        if ((burner is not null) && (iron is not null) && (helper is not null))
         {
-            double drill = 3600.0 * burner.Speed / 100 / burner.MiningTicks, hand = 3600.0 / iron.HandTicks;
-            if (drill < hand)
+            double drill = 3600.0 * burner.Speed / 100 / burner.MiningTicks, hand = HandRate(iron, helper);
+            if (drill <= hand)
             {
-                r.Add(new Finding(Severity.Low, "machines", $"{burner.Name} is slower than a follower mining by hand",
-                    $"{drill:F0} vs {hand:F0} ore/min. Drills still win long-term (unlimited count, no walking), but early on they feel weak."));
+                r.Add(new Finding(Severity.Medium, "machines", $"{burner.Name} is no faster than a {helper.Name} mining by hand",
+                    $"{drill:F0} vs {hand:F0} ore/min. Helper bots should be the slowest way to mine."));
             }
         }
+
+        Tiers(c, r);
+    }
+
+    private static double HandRate(ResourceDef res, RobotDef robot) => 3600.0 * robot.MiningPct / 100 / res.HandTicks;
+
+    /// <summary>Each tier of a machine a tech unlocks must be faster than the one before it.</summary>
+    private static void Tiers(ContentDb c, Report r)
+    {
+        int AgeIndex(BuildingDef b) => c.AgeIndex(b.AgeId);
+        double Rate(BuildingDef b) => b.Kind == BuildingKind.Drill ? b.Speed / (double)b.MiningTicks : b.Speed;
+        Table table = new Table("Machine tiers (each must beat the last)", ["Line", "Tiers, slowest first"], []);
+        IEnumerable<IGrouping<string, BuildingDef>> lines = c.BuildingList.Where(b => b.Buildable && (b.Kind is BuildingKind.Drill or BuildingKind.Furnace or BuildingKind.Assembler))
+            .GroupBy(b => b.Kind == BuildingKind.Drill ? "drill" : string.Join("+", b.Categories));
+        foreach (IGrouping<string, BuildingDef> line in lines.OrderBy(g => g.Key, StringComparer.Ordinal))
+        {
+            List<BuildingDef> tiers = line.OrderBy(AgeIndex).ThenBy(Rate).ToList();
+            if (tiers.Count < 2)
+            {
+                continue;
+            }
+
+            table.Rows.Add([line.Key, string.Join(" < ", tiers.Select(t => $"{t.Name} ({Rate(t) / Rate(tiers[0]):0.##}x)"))]);
+            for (int i = 1; i < tiers.Count; i++)
+            {
+                if (Rate(tiers[i]) <= Rate(tiers[i - 1]))
+                {
+                    r.Add(new Finding(Severity.Medium, "machines", $"{tiers[i].Name} is no faster than {tiers[i - 1].Name}",
+                        "A later tier of the same machine should always be a speed step up."));
+                }
+            }
+        }
+
+        r.Tables.Add(table);
     }
 
     private static void Power(ContentDb c, Report r)

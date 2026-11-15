@@ -131,7 +131,7 @@ public partial class WorldView
         Color warm = new Color(1f, 0.78f, 0.35f);
         Rect2 r = new Rect2(S(t), new Vector2(T, T));
         Brackets(r, A(warm, 0.9f));
-        int need = System.Math.Max(1, res.HandTicks * 2 / 3);
+        int need = P.HandMiningTicks(leader, res);
         float f = Mathf.Clamp(leader.MiningProgress / (float)need, 0, 1);
         if (f > 0)
         {

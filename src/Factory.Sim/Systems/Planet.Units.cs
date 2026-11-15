@@ -165,7 +165,7 @@ public sealed partial class Planet
         }
 
         u.Status = $"Mining {res.Name}";
-        if (++u.MiningProgress < MiningTicks(u, res.HandTicks * 2 / 3))
+        if (++u.MiningProgress < MiningTicks(u, res.HandTicks))
         {
             return;
         }
