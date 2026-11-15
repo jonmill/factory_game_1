@@ -41,5 +41,11 @@ public enum BuildingKind
     /// <summary>A launch pad: holds a ferry rocket, its fuel and cargo, and flies them to another planet.</summary>
     LaunchPad,
     /// <summary>A ferry that has landed on another planet: storage for its cargo, and the way home.</summary>
-    Ferry
+    Ferry,
+    /// <summary>A solar panel: power from sunlight, scaled by the planet's sunlight.</summary>
+    SolarPanel,
+    /// <summary>A wind turbine: power from wind, which grows with the planet's atmosphere.</summary>
+    WindTurbine,
+    /// <summary>Fires terraforming payloads at another planet.</summary>
+    PayloadLauncher
 }

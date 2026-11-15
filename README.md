@@ -43,7 +43,7 @@ dotnet run --project tests/Factory.Sim.Tests    # tests (TUnit runs as an execut
 Debug/automation env vars for the client: `FACTORY_DEMO=1` (queues a sample base and fast-forwards
 via normal commands; `FACTORY_DEMO=2` also unlocks everything and stocks the lander to show the late-game
 buildings, so it is not a replayable game; `3` adds the Combustion Age set and a loaded launch pad, `4` also
-flies the ferry to Rime), `FACTORY_PLANET=<planet id>` (view another planet), `FACTORY_SCREENSHOT=/path.png` (saves a frame after 3 s and quits),
+flies the ferry to Rime, `5` adds the Clean Age set: solar, wind, a payload launcher and a hover module), `FACTORY_PLANET=<planet id>` (view another planet), `FACTORY_SCREENSHOT=/path.png` (saves a frame after 3 s and quits),
 `FACTORY_SEED=<n>` (pins the map seed), `FACTORY_WINDOW=inventory|replicator|tech|help|victory|system` and
 `FACTORY_CATEGORY=<1-7>` (open a HUD window or build category), `FACTORY_SELECT=<building id>` (selects the
 nearest building of that type, e.g. `burner-smelter`, or `helper` for a helper bot), `FACTORY_REPLAY=/path.replay.json`
@@ -113,9 +113,9 @@ Included: a star system of fixed planets with seeded variation (Kepler's Rest, t
 plus Cinder, Rime, Dune, the gas giant Vesper and the Shards belt), each with its own biomes and its own
 share of the raw resources (siderite, cuprite, carbon, regolith, galena, xylo trees, kerogen, brimstone,
 titanium, silica, lanthanide, deuterium, hafnium, tantalite, helium-3, osmiridium); a System map (M) to
-view them; four tech **ages** (Salvage → Combustion are playable, Clean and Stellar are shown as
+view them; four tech **ages** (Salvage, Combustion and the start of Clean are playable, Stellar is shown as
 "coming soon"); research paid in **Cores** (Survey Cores in the Salvage Age, Analysis Cores from the
-Combustion Age). The commander (hand-mining, builds ghosts in reach, 2 module slots, +2 from research) and
+Combustion Age, Synthesis Cores, which need Dune's silica, from the Clean Age). The commander (hand-mining, builds ghosts in reach, 2 module slots, +2 from research) and
 2 Helper Bot Mk1s (1 slot; Gather / Haul, with Build and Operate train taught by modules), 5 modules
 (construction, servo, cargo, rail operator, mining laser), a Robot Assembly Bay for Mk1 and Mk2 (3 slots)
 helper bots, lander fabricator, burner drills and smelters, steam engines, poles, charge cell banks,
@@ -123,10 +123,13 @@ research stations; in the Combustion Age electric drills, arc smelters, rails, r
 hand-pump carts (need an operator, 1500 kg pull limit), steam locomotives (water + fuel, 12 t pull), mine
 carts, a Kerogen Refinery (Kerogen Fuel, Polymer Resin), Kerogen Generators (no water, 80% efficient),
 Lattice Pylons (20-tile reach), a Launch Pad and reusable Ferry Rocket to fly the commander, helper bots
-and cargo to the other planets (a landed ferry always flies home), terraformers (Atmosphere Processor, Hydrosphere Seeder, Bio Incubator), a system readiness meter
+and cargo to the other planets (a landed ferry always flies home); in the Clean Age Solar Panels (scaled by each planet's sunlight),
+Wind Turbines (scaled by its atmosphere), a Hover Module (float over water and lava) and a Payload Launcher that
+terraforms another planet from home; terraformers (Atmosphere Processor, Hydrosphere Seeder, Bio Incubator), a system readiness meter
 and the Settler Uplink to win.
 
-Not yet: belts (shown as "coming soon" tech), automated logistics between planets (the ferry is by hand,
-so only the start planet counts toward readiness for now), rail signals
+Settler targets: Kepler's Rest and Rime (terraformed from home with the Payload Launcher).
+
+Not yet: belts (shown as "coming soon" tech), automated logistics between planets (the ferry is by hand), rail signals
 (trains just block each other), train collision avoidance on single track, snapshot saves, audio,
 sprite art, multiplayer transport.

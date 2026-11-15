@@ -15,10 +15,10 @@ public partial class Hud
     [
         ("Logistics", [BuildingKind.Chest, BuildingKind.Sorter]),
         ("Production", [BuildingKind.Drill, BuildingKind.Furnace, BuildingKind.Assembler]),
-        ("Power", [BuildingKind.SteamEngine, BuildingKind.Pole, BuildingKind.Battery]),
+        ("Power", [BuildingKind.SteamEngine, BuildingKind.SolarPanel, BuildingKind.WindTurbine, BuildingKind.Pole, BuildingKind.Battery]),
         ("Science", [BuildingKind.Lab, BuildingKind.RobotBay]),
         ("Transport", [BuildingKind.Rail, BuildingKind.RailStop, BuildingKind.WaterTower, BuildingKind.LaunchPad]),
-        ("Terraform", [BuildingKind.Terraformer, BuildingKind.Uplink]),
+        ("Terraform", [BuildingKind.Terraformer, BuildingKind.PayloadLauncher, BuildingKind.Uplink]),
         ("Tools", []),
     ];
 

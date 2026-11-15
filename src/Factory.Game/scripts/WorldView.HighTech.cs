@@ -45,6 +45,15 @@ public partial class WorldView
             case BuildingKind.Uplink:
                 DrawUplink(b, r, accent, working);
                 break;
+            case BuildingKind.SolarPanel:
+                DrawSolarPanel(b, r, accent, working);
+                break;
+            case BuildingKind.WindTurbine:
+                DrawWindTurbine(b, r, accent, working);
+                break;
+            case BuildingKind.PayloadLauncher:
+                DrawPayloadLauncher(b, r, accent, working);
+                break;
             default:
                 Hull(r.Grow(-T * 0.06f), accent, working);
                 break;

@@ -176,7 +176,7 @@ public sealed partial class Planet
             {
                 Int2 tile = new Int2(tx, ty);
                 Int2 corner = new Int2(tx * Fixed.One, ty * Fixed.One);
-                if (TerrainAt(tile) != Terrain.Ground)
+                if ((TerrainAt(tile) != Terrain.Ground) && (_hoverWalk == false))
                 {
                     solids.Add(new Box(corner.X, corner.Y, corner.X + Fixed.One, corner.Y + Fixed.One));
                 }

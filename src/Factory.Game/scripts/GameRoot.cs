@@ -850,7 +850,7 @@ public partial class GameRoot : Node2D
         }
 
         string? demo = System.Environment.GetEnvironmentVariable("FACTORY_DEMO");
-        if ((_demoDone == false) && (demo is "1" or "2" or "3" or "4"))
+        if ((_demoDone == false) && (demo is "1" or "2" or "3" or "4" or "5"))
         {
             _demoDone = true;
             Int2 l = World.Get<Building>(Planet.LanderId)!.Origin;
@@ -869,7 +869,7 @@ public partial class GameRoot : Node2D
             }
 
             Send(new PlaceBuilding("rail-stop", new Int2(l.X + 7, l.Y + 5), SimDir.South));
-            if (demo is "2" or "3" or "4")
+            if (demo is "2" or "3" or "4" or "5")
             {
                 // Dev only: skip ahead to the late game (unlock everything, stock the lander) to show the
                 // robot bay, terraformers and uplink. Not a replayable game.
@@ -890,7 +890,7 @@ public partial class GameRoot : Node2D
                 Send(new PlaceBuilding("bio-incubator", new Int2(l.X + 4, l.Y - 5), SimDir.North));
                 Send(new PlaceBuilding("settler-uplink", new Int2(l.X + 9, l.Y - 2), SimDir.North));
                 Send(new PlaceBuilding("robot-bay", new Int2(l.X - 9, l.Y - 3), SimDir.North));
-                if (demo is "3" or "4")
+                if (demo is "3" or "4" or "5")
                 {
                     // The Combustion Age set: refinery, generator, pylons and a launch pad.
                     lander.Inv.AddUnchecked("crude-kerogen", 100);
@@ -898,6 +898,22 @@ public partial class GameRoot : Node2D
                     Send(new PlaceBuilding("kerogen-generator", new Int2(l.X, l.Y + 9), SimDir.North));
                     Send(new PlaceBuilding("lattice-pylon", new Int2(l.X + 3, l.Y + 10), SimDir.North));
                     Send(new PlaceBuilding("launch-pad", new Int2(l.X + 5, l.Y + 9), SimDir.North));
+                }
+
+                if (demo == "5")
+                {
+                    // The Clean Age set: solar panels, a wind turbine, a payload launcher and a hover module.
+                    foreach (string item in new[] { "photonic-wafer", "polymer-resin", "cupral-filament" })
+                    {
+                        lander.Inv.AddUnchecked(item, 100);
+                    }
+
+                    Send(new PlaceBuilding("solar-panel", new Int2(l.X - 9, l.Y + 9), SimDir.North));
+                    Send(new PlaceBuilding("solar-panel", new Int2(l.X - 7, l.Y + 9), SimDir.North));
+                    Send(new PlaceBuilding("wind-turbine", new Int2(l.X - 9, l.Y + 12), SimDir.North));
+                    Send(new PlaceBuilding("payload-launcher", new Int2(l.X - 5, l.Y + 12), SimDir.North));
+                    Leader.Carry.AddUnchecked("hover-module", 1);
+                    Send(new InstallModule(Leader.Id, Leader.Id, "hover-module"));
                 }
             }
 
@@ -928,7 +944,7 @@ public partial class GameRoot : Node2D
                 World.Run(60 * 15);
             }
 
-            if ((demo is "3" or "4") && (Planet.Buildings.FirstOrDefault(b => b.Def.Kind == BuildingKind.LaunchPad) is { } pad))
+            if ((demo is "3" or "4" or "5") && (Planet.Buildings.FirstOrDefault(b => b.Def.Kind == BuildingKind.LaunchPad) is { } pad))
             {
                 pad.Inv.AddUnchecked("ferry-rocket", 1);
                 pad.Inv.AddUnchecked("kerogen-fuel", 20);
@@ -940,6 +956,12 @@ public partial class GameRoot : Node2D
                 if (Planet.Buildings.FirstOrDefault(b => b.Def.Id == "kerogen-refinery") is { } refinery)
                 {
                     Send(new SetRecipe(refinery.Id, "kerogen-fuel"));
+                }
+
+                if ((demo == "5") && (Planet.Buildings.FirstOrDefault(b => b.Def.Kind == BuildingKind.PayloadLauncher) is { } launcher))
+                {
+                    launcher.Inv.AddUnchecked("catalyst-pack", 5);
+                    Send(new SetLaunchTarget(launcher.Id, World.Planets.First(p => p.Def.Id == "rime").Id));
                 }
 
                 World.Run(60 * 5);

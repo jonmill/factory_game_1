@@ -20,7 +20,9 @@ public class TerraformTests
         await Assert.That(tw.P.Stats["atmosphere"]).IsEqualTo(8);
         await Assert.That(tw.P.Stats["biosphere"]).IsEqualTo(0);
         await Assert.That(tw.P.Readiness).IsEqualTo((8 + 15 + 0) / 3);
-        await Assert.That(tw.W.SystemReadiness).IsEqualTo(tw.P.Readiness);
+        Planet rime = tw.W.Planets.Single(p => p.Def.Id == "rime");
+        await Assert.That(rime.Readiness).IsEqualTo((5 + 60 + 0) / 3).Because("Rime starts with its own stats");
+        await Assert.That(tw.W.SystemReadiness).IsEqualTo((tw.P.Readiness + rime.Readiness) / 2);
         await Assert.That(tw.W.AllPlanetsReady).IsFalse();
     }
 
@@ -64,6 +66,14 @@ public class TerraformTests
         tw.P.Stats["atmosphere"] = 100;
         tw.P.Stats["hydrosphere"] = 100;
         tw.P.Stats["biosphere"] = 100;
+        await Assert.That(tw.W.AllPlanetsReady).IsFalse().Because("Rime must be terraformed too");
+        foreach (Planet p in tw.W.SettlerTargets)
+        {
+            p.Stats["atmosphere"] = 100;
+            p.Stats["hydrosphere"] = 100;
+            p.Stats["biosphere"] = 100;
+        }
+
         await Assert.That(tw.W.AllPlanetsReady).IsTrue();
         tw.RunUntil(() => tw.W.SettlersCalled, 1800 + 120, "the settlers to be called");
         await Assert.That(tw.W.Events.Any(e => e.Message.Contains("You win"))).IsTrue();

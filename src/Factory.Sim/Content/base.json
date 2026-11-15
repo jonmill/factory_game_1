@@ -32,8 +32,11 @@
     { "id": "polymer-resin",   "name": "Polymer Resin",   "stack": 100, "mass": 1, "color": "#e0c890" },
     { "id": "ferry-rocket",    "name": "Ferry Rocket",    "stack": 1, "mass": 40, "color": "#e0e0e8" },
 
+    { "id": "photonic-wafer",  "name": "Photonic Wafer",  "stack": 100, "mass": 0, "color": "#7ae0f0" },
+
     { "id": "survey-core",   "name": "Survey Core",   "stack": 200, "mass": 1, "color": "#ff8a4a" },
     { "id": "analysis-core", "name": "Analysis Core", "stack": 200, "mass": 1, "color": "#4ad8a0" },
+    { "id": "synthesis-core", "name": "Synthesis Core", "stack": 200, "mass": 1, "color": "#5ab8ff" },
 
     { "id": "construction-module", "name": "Construction Module", "stack": 10, "mass": 5, "color": "#ffc040",
       "module": { "fits": "Helper", "jobs": ["Build"], "description": "Lets a helper bot take the Build job: fetch materials and construct ghosts anywhere." } },
@@ -45,6 +48,8 @@
       "module": { "fits": "Helper", "jobs": ["OperateTrain"], "description": "Lets a helper bot take the Operate train job." } },
     { "id": "mining-module", "name": "Mining Laser Module", "stack": 10, "mass": 5, "color": "#ff60a0",
       "module": { "fits": "Any", "miningPct": 60, "description": "+60% hand-mining and gathering speed." } },
+    { "id": "hover-module", "name": "Hover Module", "stack": 10, "mass": 4, "color": "#50e0d0",
+      "module": { "fits": "Any", "hover": true, "speedPct": 20, "description": "Floats over water and lava, and +20% speed." } },
 
     { "id": "catalyst-pack", "name": "Atmospheric Catalyst", "stack": 50, "mass": 2, "color": "#9fd8ff" },
     { "id": "hydro-cartridge", "name": "Hydro Cartridge",    "stack": 50, "mass": 3, "color": "#4a90ff" },
@@ -81,6 +86,8 @@
     { "id": "logic-board", "name": "Logic Board",  "category": "crafting", "in": { "siderite-plate": 1, "cupral-filament": 3 }, "out": { "logic-board": 1 }, "ticks": 60 },
     { "id": "charge-cell",  "name": "Charge Cell", "category": "crafting", "in": { "ballast-plate": 1, "cupral-bar": 1 }, "out": { "charge-cell": 1 }, "ticks": 120 },
     { "id": "survey-core",   "name": "Survey Core",   "category": "crafting", "in": { "cupral-bar": 1, "drive-cog": 1 }, "out": { "survey-core": 1 }, "ticks": 300 },
+    { "id": "photonic-wafer", "name": "Photonic Wafer", "category": "smelting", "in": { "silica-sand": 2 }, "out": { "photonic-wafer": 1 }, "ticks": 240 },
+    { "id": "synthesis-core", "name": "Synthesis Core", "category": "crafting", "in": { "photonic-wafer": 1, "polymer-resin": 2, "logic-board": 2 }, "out": { "synthesis-core": 1 }, "ticks": 600 },
     { "id": "analysis-core", "name": "Analysis Core", "category": "crafting", "in": { "logic-board": 1, "ballast-plate": 1, "charge-cell": 1 }, "out": { "analysis-core": 1 }, "ticks": 420 },
 
     { "id": "kerogen-fuel",  "name": "Kerogen Fuel",  "category": "refining", "in": { "crude-kerogen": 2 }, "out": { "kerogen-fuel": 1 }, "ticks": 120 },
@@ -99,6 +106,9 @@
     { "id": "mining-module", "name": "Mining Laser Module", "category": "crafting",
       "in": { "logic-board": 5, "cupral-bar": 6, "charge-cell": 2 }, "out": { "mining-module": 1 }, "ticks": 300 },
 
+    { "id": "hover-module", "name": "Hover Module", "category": "crafting",
+      "in": { "photonic-wafer": 2, "charge-cell": 4, "logic-board": 5, "polymer-resin": 5 }, "out": { "hover-module": 1 }, "ticks": 300 },
+
     { "id": "catalyst-pack", "name": "Atmospheric Catalyst", "category": "crafting",
       "in": { "compacted-carbon": 3, "cupral-filament": 2, "siderite-plate": 1 }, "out": { "catalyst-pack": 1 }, "ticks": 120 },
     { "id": "hydro-cartridge", "name": "Hydro Cartridge", "category": "crafting",
@@ -112,6 +122,12 @@
       "in": { "hydro-cartridge": 1 }, "out": {}, "ticks": 600, "effect": "terraform:hydrosphere:2" },
     { "id": "seed-biosphere", "name": "Seed Biosphere", "category": "biosphere",
       "in": { "seed-pod": 1 }, "out": {}, "ticks": 600, "effect": "terraform:biosphere:2" },
+    { "id": "launch-catalyst", "name": "Launch Catalyst Payload", "category": "payload",
+      "in": { "catalyst-pack": 1 }, "out": {}, "ticks": 300, "effect": "payload:atmosphere:2" },
+    { "id": "launch-hydro", "name": "Launch Hydro Payload", "category": "payload",
+      "in": { "hydro-cartridge": 1 }, "out": {}, "ticks": 300, "effect": "payload:hydrosphere:2" },
+    { "id": "launch-seeds", "name": "Launch Seed Payload", "category": "payload",
+      "in": { "seed-pod": 1 }, "out": {}, "ticks": 300, "effect": "payload:biosphere:2" },
     { "id": "call-settlers", "name": "Call the Settlers", "category": "uplink",
       "in": { "logic-board": 40, "charge-cell": 20, "cupral-filament": 40 }, "out": {}, "ticks": 1800, "effect": "call-settlers" },
 
@@ -212,6 +228,21 @@
       "slots": 16, "color": "#e0e0e8",
       "description": "Your ferry, landed. Its hold is storage. Fly home from here at any time: it carries return fuel and recalls your helper bots." },
 
+    { "id": "solar-panel", "name": "Solar Panel", "kind": "SolarPanel", "look": "HighTech", "w": 2, "h": 2,
+      "cost": { "photonic-wafer": 6, "siderite-plate": 5, "cupral-filament": 5 }, "buildTicks": 90,
+      "outputKw": 90, "color": "#3a8ad0",
+      "description": "Clean power from sunlight: 90 kW at Kepler's Rest's distance from the sun; more nearer the sun, less farther out." },
+
+    { "id": "wind-turbine", "name": "Wind Turbine", "kind": "WindTurbine", "look": "HighTech", "w": 2, "h": 2,
+      "cost": { "siderite-plate": 20, "drive-cog": 10, "polymer-resin": 10, "cupral-bar": 5 }, "buildTicks": 150,
+      "outputKw": 300, "color": "#d0e8f0",
+      "description": "Clean power from the wind: up to 300 kW. Thin air gives little wind, so it grows as the Atmosphere is terraformed." },
+
+    { "id": "payload-launcher", "name": "Payload Launcher", "kind": "PayloadLauncher", "look": "HighTech", "w": 3, "h": 3,
+      "cost": { "siderite-plate": 30, "photonic-wafer": 10, "logic-board": 15, "polymer-resin": 20, "sintered-brick": 20 }, "buildTicks": 360,
+      "energy": "Electric", "powerKw": 400, "slots": 6, "speed": 100, "categories": ["payload"], "color": "#50e0d0",
+      "description": "Fires terraforming catalysts, hydro cartridges and seed pods at another planet, terraforming it from here. Pick a target. Needs power." },
+
     { "id": "robot-bay", "name": "Robot Assembly Bay", "kind": "RobotBay", "look": "HighTech", "w": 3, "h": 3,
       "cost": { "logic-board": 15, "sintered-brick": 10, "siderite-plate": 20, "drive-cog": 10 }, "buildTicks": 300,
       "energy": "Electric", "powerKw": 200, "slots": 6, "speed": 100, "categories": ["robotics"], "color": "#ff60ff",
@@ -255,7 +286,7 @@
       "description": "Patched-together burners that run on biomass and carbon. Research with Survey Cores." },
     { "id": "combustion", "name": "Combustion Age", "core": "analysis-core", "color": "#d0b050",
       "description": "Grid power, electric machines and railways. Research with Analysis Cores." },
-    { "id": "clean", "name": "Clean Age", "color": "#50d0c0",
+    { "id": "clean", "name": "Clean Age", "core": "synthesis-core", "color": "#50d0c0",
       "description": "Clean power, conveyor belts, hover drones and the first ships between planets." },
     { "id": "stellar", "name": "Stellar Age", "color": "#b080ff",
       "description": "Plasma machines, fusion and industry in orbit." }
@@ -329,12 +360,26 @@
       "description": "A reusable rocket that carries you, your helper bots and cargo to the other planets.",
       "unitCost": { "survey-core": 1, "analysis-core": 1 }, "units": 30, "unitTicks": 600, "unlocks": ["launch-pad", "ferry-rocket"] },
 
-    { "id": "conveyor-belts", "name": "Conveyor Belts", "age": "clean", "prereqs": ["mechanical-arms", "rail-logistics"], "comingSoon": true,
+    { "id": "synthesis-cores", "name": "Synthesis Cores", "age": "combustion", "prereqs": ["orbital-ferry"],
+      "description": "Photonic wafers from Dune's silica sand make Synthesis Cores, the key to the Clean Age.",
+      "unitCost": { "survey-core": 1, "analysis-core": 1 }, "units": 30, "unitTicks": 600, "unlocks": ["photonic-wafer", "synthesis-core"] },
+
+    { "id": "solar-power", "name": "Solar Power", "age": "clean", "prereqs": ["synthesis-cores", "long-range-power"],
+      "description": "Photonic solar panels: power with no fuel at all.",
+      "unitCost": { "survey-core": 1, "analysis-core": 1, "synthesis-core": 1 }, "units": 20, "unitTicks": 600, "unlocks": ["solar-panel"] },
+    { "id": "wind-power", "name": "Wind Power", "age": "clean", "prereqs": ["synthesis-cores", "combustion-engines"],
+      "description": "Turbines that grow stronger as the atmosphere thickens.",
+      "unitCost": { "survey-core": 1, "analysis-core": 1, "synthesis-core": 1 }, "units": 20, "unitTicks": 600, "unlocks": ["wind-turbine"] },
+    { "id": "hover-modules", "name": "Hover Modules", "age": "clean", "prereqs": ["synthesis-cores", "chassis-expansion"],
+      "description": "Robots float over water and lava.",
+      "unitCost": { "survey-core": 1, "analysis-core": 1, "synthesis-core": 1 }, "units": 25, "unitTicks": 600, "unlocks": ["hover-module"] },
+    { "id": "orbital-terraforming", "name": "Orbital Terraforming", "age": "clean", "prereqs": ["synthesis-cores", "bio-engineering"],
+      "description": "A launcher that terraforms other planets from home.",
+      "unitCost": { "survey-core": 1, "analysis-core": 1, "synthesis-core": 1 }, "units": 30, "unitTicks": 600,
+      "unlocks": ["payload-launcher", "launch-catalyst", "launch-hydro", "launch-seeds"] },
+    { "id": "conveyor-belts", "name": "Conveyor Belts", "age": "clean", "prereqs": ["synthesis-cores", "mechanical-arms"], "comingSoon": true,
       "description": "Continuous item transport. (Not in this playtest.)",
-      "unitCost": { "survey-core": 1, "analysis-core": 1 }, "units": 30, "unitTicks": 600, "unlocks": [] },
-    { "id": "hover-modules", "name": "Hover Modules", "age": "clean", "prereqs": ["chassis-expansion"], "comingSoon": true,
-      "description": "Robots float over water and buildings. (Not in this playtest.)",
-      "unitCost": { "survey-core": 1, "analysis-core": 1 }, "units": 30, "unitTicks": 600, "unlocks": [] },
+      "unitCost": { "survey-core": 1, "analysis-core": 1, "synthesis-core": 1 }, "units": 30, "unitTicks": 600, "unlocks": [] },
     { "id": "plasma-smelting", "name": "Plasma Smelting", "age": "stellar", "prereqs": ["arc-smelting"], "comingSoon": true,
       "description": "Smelters and miners driven by contained plasma. (Not in this playtest.)",
       "unitCost": { "survey-core": 1, "analysis-core": 1 }, "units": 50, "unitTicks": 600, "unlocks": [] }
@@ -389,7 +434,7 @@
         { "resource": "kerogen",  "patches": 2, "minRadius": 4, "maxRadius": 6, "richness": 1600, "minDistance": 28, "biome": "fen" }
       ] },
 
-    { "id": "cinder", "name": "Cinder", "type": "Volcanic world", "settlerTarget": false, "orbit": 6, "size": 112, "color": "#c0603a",
+    { "id": "cinder", "name": "Cinder", "type": "Volcanic world", "settlerTarget": false, "orbit": 6, "sunlight": 160, "size": 112, "color": "#c0603a",
       "description": "Hot, young and restless. Lava flows and vents; brimstone, titanium and hafnium geodes.",
       "biomes": [ { "biome": "basalt", "weight": 4 }, { "biome": "ash", "weight": 3 }, { "biome": "vents", "weight": 2 } ],
       "lakes": 1, "lavaFlows": 7,
@@ -402,7 +447,7 @@
         { "resource": "hafnium",   "patches": 2, "minRadius": 3, "maxRadius": 5, "richness": 1200, "biome": "ash" }
       ] },
 
-    { "id": "rime", "name": "Rime", "type": "Ice world", "settlerTarget": false, "orbit": 18, "size": 112, "color": "#a8c8e8",
+    { "id": "rime", "name": "Rime", "type": "Ice world", "settlerTarget": true, "orbit": 18, "sunlight": 55, "size": 112, "color": "#a8c8e8",
       "description": "Cold and bright. Frozen seas hold deuterium; copper and carbon lie under the snow.",
       "biomes": [ { "biome": "snow", "weight": 4 }, { "biome": "glacier", "weight": 3 }, { "biome": "tundra", "weight": 2 } ],
       "lakes": 6, "frozenWater": true,
@@ -414,7 +459,7 @@
         { "resource": "deuterium", "patches": 4, "minRadius": 5, "maxRadius": 8, "richness": 1800, "biome": "glacier" }
       ] },
 
-    { "id": "dune", "name": "Dune", "type": "Arid world", "settlerTarget": false, "orbit": 14, "size": 112, "color": "#d0a060",
+    { "id": "dune", "name": "Dune", "type": "Arid world", "settlerTarget": false, "orbit": 14, "sunlight": 75, "size": 112, "color": "#d0a060",
       "description": "Dry and windswept. Silica and lanthanide sands, tantalite in the mesas, a few oases.",
       "biomes": [ { "biome": "dunes", "weight": 4 }, { "biome": "salt", "weight": 2 }, { "biome": "mesa", "weight": 3 } ],
       "lakes": 2,

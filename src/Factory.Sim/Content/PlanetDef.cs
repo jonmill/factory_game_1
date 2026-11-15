@@ -25,6 +25,8 @@ public sealed class PlanetDef
     public int Orbit { get; init; } = 10;
     /// <summary>Width and height of the surface in tiles (the start planet uses the world settings instead).</summary>
     public int Size { get; init; } = 112;
+    /// <summary>Sunlight in percent of the start planet's: scales solar panel output.</summary>
+    public int Sunlight { get; init; } = 100;
     /// <summary>Colour of the planet on the system map (hex).</summary>
     public string Color { get; init; } = "#88aacc";
     /// <summary>Biomes covering the surface, with their relative shares.</summary>

@@ -243,9 +243,9 @@ public partial class Hud
             sb.AppendLine(b.NetworkId == 0 ? "Not connected to power" : $"Power: {b.Satisfaction / 10}%");
         }
 
-        if (b.Def.Kind == BuildingKind.SteamEngine)
+        if (b.Def.IsGenerator)
         {
-            sb.AppendLine($"Output: {b.LastOutputJ * World.TicksPerSecond / 1000} kW");
+            sb.AppendLine($"Output: {b.LastOutputJ * World.TicksPerSecond / 1000} kW of {P.GenCapacityJ(b) * World.TicksPerSecond / 1000} kW");
         }
 
         if (b.Def.Kind == BuildingKind.Battery)
@@ -314,6 +314,11 @@ public partial class Hud
         if (b.Def.Kind == BuildingKind.LaunchPad)
         {
             BuildLaunchActions(into, b);
+        }
+
+        if (b.Def.Kind == BuildingKind.PayloadLauncher)
+        {
+            BuildLauncherTarget(into, b);
         }
 
         if (b.Def.Kind == BuildingKind.Ferry)

@@ -27,7 +27,15 @@ public sealed partial class Planet
     /// <param name="tile">The tile.</param>
     /// <returns>Whether the tile's centre is free.</returns>
     public bool IsWalkable(Int2 tile) =>
-        (TerrainAt(tile) == Terrain.Ground) && (BuildingAt(tile) is null) && (ResourceAt(tile) is not { IsTree: true });
+        (_hoverWalk || (TerrainAt(tile) == Terrain.Ground)) && (BuildingAt(tile) is null) && (ResourceAt(tile) is not { IsTree: true });
+
+    /// <summary>True while moving a robot with a hover module, which floats over water and lava.</summary>
+    private bool _hoverWalk;
+
+    /// <summary>Whether a robot floats over water and lava (it has a hover module).</summary>
+    /// <param name="u">The robot.</param>
+    /// <returns>True if it hovers.</returns>
+    public bool IsHovering(Unit u) => ModulesOf(u).Any(m => m.Hover);
 
     /// <summary>
     /// Walks a person toward a target along a planned path, colliding as they go. Returns true once
@@ -126,13 +134,51 @@ public sealed partial class Planet
         {
             // Planning keeps failing from this spot (wedged in a gap narrower than a person): step to a
             // free neighbouring tile first, then plan again from there.
-            u.Path.Add(Fixed.TileCenter(escape));
+            // Plan on from that tile straight away, or the unit would head for the target in a straight
+            // line and wedge itself in the same spot again.
+            Int2 step = Fixed.TileCenter(escape);
+            u.Path.Add(step);
+            Straighten(step, FindPath(step, targetSub, stopDist).Select(Fixed.TileCenter).ToList(), u.Path);
 
             return;
         }
 
         List<Int2> tiles = FindPath(u.Pos, targetSub, stopDist);
         Straighten(u.Pos, tiles.Select(Fixed.TileCenter).ToList(), u.Path);
+        if ((u.Path.Count > 0) && (ClearLine(u.Pos, u.Path[0]) == false) && (StepOntoGrid(u.Pos, u.Path[0]) is { } onto))
+        {
+            // The path is planned tile to tile, but the unit can stand off-centre, e.g. squeezed between a
+            // building's corner and the shore. Step onto a tile centre it can reach first, so it doesn't
+            // cut the corner and wedge itself.
+            u.Path.Insert(0, onto);
+        }
+    }
+
+    /// <summary>The centre of the unit's own tile or of a neighbour it can walk straight to, nearest the next waypoint.</summary>
+    private Int2? StepOntoGrid(Int2 from, Int2 next)
+    {
+        Int2 at = Fixed.ToTile(from);
+        Int2? best = null;
+        long bestD = long.MaxValue;
+        for (int dy = -1; dy <= 1; dy++)
+        {
+            for (int dx = -1; dx <= 1; dx++)
+            {
+                Int2 t = Torus.Wrap(at + new Int2(dx, dy));
+                Int2 c = from + SubTorus.Delta(from, Fixed.TileCenter(t));
+                if (IsWalkable(t) && ClearLine(from, c))
+                {
+                    long d = SubTorus.DistSq(c, next);
+                    if (d < bestD)
+                    {
+                        best = SubTorus.Wrap(c);
+                        bestD = d;
+                    }
+                }
+            }
+        }
+
+        return best;
     }
 
     /// <summary>

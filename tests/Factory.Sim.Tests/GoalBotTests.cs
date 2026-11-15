@@ -168,7 +168,7 @@ public class GoalBotTests
     {
         World w = new World(TestWorld.Content, new WorldSettings { Seed = 1 });
         GoalBot bot = new GoalBot(new SettlersGoal());
-        for (int i = 0; (i < 60 * 60 * 120) && (w.SettlersCalled == false); i++)
+        for (int i = 0; (i < 60 * 60 * 300) && (w.SettlersCalled == false); i++)
         {
             bot.Tick(w);
             w.Step();

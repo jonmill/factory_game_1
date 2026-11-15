@@ -75,7 +75,7 @@ public sealed partial class Planet
                 continue;
             }
 
-            bool electric = (b.Def.Energy == EnergyKind.Electric) || (b.Def.Kind is BuildingKind.SteamEngine or BuildingKind.Battery);
+            bool electric = (b.Def.Energy == EnergyKind.Electric) || b.Def.IsGenerator || (b.Def.Kind == BuildingKind.Battery);
             b.NetworkId = 0;
             if (electric == false)
             {
@@ -91,7 +91,7 @@ public sealed partial class Planet
 
                 PowerNetwork net = Networks[poles[Find(i)].Id];
                 b.NetworkId = net.Id;
-                if (b.Def.Kind == BuildingKind.SteamEngine)
+                if (b.Def.IsGenerator)
                 {
                     net.Generators.Add(b);
                 }
@@ -109,9 +109,28 @@ public sealed partial class Planet
         }
     }
 
+    /// <summary>Wind in percent of a turbine's full output: a thin atmosphere gives little, a terraformed one all of it.</summary>
+    public int WindPct =>
+        World.Content.Terraform.Stats.FirstOrDefault(s => s.Id == "atmosphere") is { } atmo ? 20 + (StatPercent(atmo) * 80 / 100) : 100;
+
+    /// <summary>The most a generator can deliver per tick right now (renewables scale with sun and wind).</summary>
+    /// <param name="g">A generator.</param>
+    /// <returns>Joules per tick.</returns>
+    public long GenCapacityJ(Building g) => g.Def.Kind switch
+    {
+        BuildingKind.SolarPanel => PerTickJ(g.Def.OutputKw) * Def.Sunlight / 100,
+        BuildingKind.WindTurbine => PerTickJ(g.Def.OutputKw) * WindPct / 100,
+        _ => PerTickJ(g.Def.OutputKw),
+    };
+
     private bool EngineCanRun(Building e)
     {
-        if (IsAdjacentToWater(e.Origin, e.W, e.H) == false)
+        if (e.Def.IsRenewable)
+        {
+            return true;
+        }
+
+        if (e.Def.NeedsWater && (IsAdjacentToWater(e.Origin, e.W, e.H) == false))
         {
             e.Status = MachineStatus.NoWater;
 
@@ -138,7 +157,7 @@ public sealed partial class Planet
                 b.Satisfaction = 0;
             }
 
-            if (b.Def.Kind == BuildingKind.SteamEngine)
+            if (b.Def.IsGenerator)
             {
                 b.LastOutputJ = 0;
             }
@@ -162,7 +181,7 @@ public sealed partial class Planet
                 if (EngineCanRun(g))
                 {
                     running.Add(g);
-                    genCap += PerTickJ(g.Def.OutputKw);
+                    genCap += GenCapacityJ(g);
                 }
             }
 
@@ -183,10 +202,18 @@ public sealed partial class Planet
             long remaining = fromGen + chargeIn;
             foreach (Building g in running)
             {
-                long produce = System.Math.Min(remaining, PerTickJ(g.Def.OutputKw));
+                long produce = System.Math.Min(remaining, GenCapacityJ(g));
                 if (produce <= 0)
                 {
                     g.Status = MachineStatus.Idle;
+                    continue;
+                }
+
+                if (g.Def.IsRenewable)
+                {
+                    g.LastOutputJ = produce;
+                    g.Status = MachineStatus.Working;
+                    remaining -= produce;
                     continue;
                 }
 

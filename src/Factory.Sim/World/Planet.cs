@@ -405,6 +405,7 @@ public sealed partial class Planet
             h.Add(b.Crafting);
             h.Add(b.HomePadId);
             h.Add(b.HomePlanetId);
+            h.Add(b.TargetPlanetId);
             b.Inv.Hash(h);
             if (b.Def.IsStorage == false)
             {

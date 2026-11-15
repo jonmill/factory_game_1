@@ -86,6 +86,11 @@ public partial class WorldView
         bool walking = (workTile is null) && ((u.Phase is UnitPhase.MoveTo or UnitPhase.Deliver or UnitPhase.Seek) || (u.IsLeader && (u.MoveIntent != Int2.Zero)));
         Vector2? strike = workTile is { } wt ? S(tilePos) + (Root.WrapDelta(tilePos, wt) * T) : null;
         Vector2 labelAt;
+        if (P.IsHovering(u))
+        {
+            DrawHoverGlow(u, S(tilePos));
+        }
+
         if (u.IsLeader)
         {
             labelAt = DrawCommander(u, S(tilePos), face, walking, strike);

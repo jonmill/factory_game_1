@@ -43,6 +43,8 @@ public sealed partial class Planet
                 }
             case BuildingKind.Drill or BuildingKind.SteamEngine:
                 return burner && c.IsFuel(item) ? Cap(MaxFuelStock) : 0;
+            case BuildingKind.PayloadLauncher:
+                return c.RecipeList.FirstOrDefault(r => b.Def.Categories.Contains(r.Category) && r.In.ContainsKey(item)) is { } payload ? Cap(payload.In[item] * 10) : 0;
             case BuildingKind.Assembler or BuildingKind.RobotBay or BuildingKind.Terraformer or BuildingKind.Uplink:
                 {
                     RecipeDef? r = b.Recipe;
@@ -84,6 +86,8 @@ public sealed partial class Planet
                 return b.Crafting || ((b.Recipe is { } r) && b.Inv.Has(r.Inputs) && b.Out.CanAddAll(r.Outputs));
             case BuildingKind.Lab:
                 return b.Crafting || ((CurrentTech is { } t) && b.Inv.Has(t.UnitCostList));
+            case BuildingKind.PayloadLauncher:
+                return b.Crafting || (NextPayload(b) is not null);
             case BuildingKind.Sorter:
                 return b.Progress < b.Def.Period * 100L;
             default:
@@ -166,7 +170,7 @@ public sealed partial class Planet
             case BuildingKind.Drill:
                 UpdateDrill(b);
                 break;
-            case BuildingKind.Furnace or BuildingKind.Assembler or BuildingKind.RobotBay or BuildingKind.Terraformer or BuildingKind.Uplink or BuildingKind.Lander:
+            case BuildingKind.Furnace or BuildingKind.Assembler or BuildingKind.RobotBay or BuildingKind.Terraformer or BuildingKind.Uplink or BuildingKind.Lander or BuildingKind.PayloadLauncher:
                 UpdateCrafter(b);
                 break;
             case BuildingKind.Lab:
@@ -286,6 +290,19 @@ public sealed partial class Planet
 
             r = c.Recipes[b.CraftQueue[0]];
         }
+        else if (b.Def.Kind == BuildingKind.PayloadLauncher)
+        {
+            r = NextPayload(b);
+            if (r is null)
+            {
+                b.Status = (b.TargetPlanetId < 0) || (b.TargetPlanetId >= World.Planets.Count) ? MachineStatus.NoTarget
+                    : PayloadsFor(b).Any(p => b.Inv.Has(p.Inputs)) ? MachineStatus.Complete : MachineStatus.NoInput;
+
+                return false;
+            }
+
+            b.RecipeId = r.Id;
+        }
         else if (b.Def.Kind == BuildingKind.Furnace)
         {
             r = (b.Recipe is { } cur) && b.Inv.Has(cur.Inputs) ? cur
@@ -310,7 +327,7 @@ public sealed partial class Planet
             }
         }
 
-        if (EffectBlocked(r) is { } blocked)
+        if (EffectBlocked(b, r) is { } blocked)
         {
             b.Status = blocked;
 

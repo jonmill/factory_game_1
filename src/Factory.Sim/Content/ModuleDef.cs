@@ -14,6 +14,8 @@ public sealed class ModuleDef
     public int MiningPct { get; init; }
     /// <summary>Extra cargo (pocket) stack slots.</summary>
     public int CarrySlots { get; init; }
+    /// <summary>Whether the robot floats over water and lava.</summary>
+    public bool Hover { get; init; }
     /// <summary>Jobs a helper bot can take only with this module installed.</summary>
     public JobKind[] Jobs { get; init; } = [];
     /// <summary>What the module does, for tooltips.</summary>

@@ -27,4 +27,6 @@ public enum MachineStatus
     Complete,
     /// <summary>A Settler Uplink is waiting for every planet to be ready.</summary>
     NotReady,
+    /// <summary>A payload launcher with no target planet picked.</summary>
+    NoTarget,
 }

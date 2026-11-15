@@ -74,6 +74,10 @@ public sealed class BuildingDef
     [JsonIgnore] public ItemAmount[] CostList { get; internal set; } = [];
     /// <summary>True for buildings whose inventory is general storage (lander, chest, rail stop), so input and output share one inventory.</summary>
     [JsonIgnore] public bool IsStorage => Kind is BuildingKind.Lander or BuildingKind.Chest or BuildingKind.RailStop or BuildingKind.Ferry or BuildingKind.LaunchPad;
+    /// <summary>True for buildings that feed power into a grid.</summary>
+    [JsonIgnore] public bool IsGenerator => Kind is BuildingKind.SteamEngine or BuildingKind.SolarPanel or BuildingKind.WindTurbine;
+    /// <summary>True for generators that burn nothing.</summary>
+    [JsonIgnore] public bool IsRenewable => Kind is BuildingKind.SolarPanel or BuildingKind.WindTurbine;
     /// <summary>True for general stores (lander, crates, a landed ferry): helper bots deliver to them and construction draws from them.</summary>
     [JsonIgnore] public bool IsDepot => Kind is BuildingKind.Lander or BuildingKind.Chest or BuildingKind.Ferry;
     /// <summary><see cref="LaunchFuel"/> as an id-sorted list, for deterministic iteration.</summary>

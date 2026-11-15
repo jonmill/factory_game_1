@@ -38,6 +38,8 @@ public sealed class Building : Entity
     public int HomePadId { get; internal set; }
     /// <summary>Landed ferries: the planet it flew from, where it returns.</summary>
     public int HomePlanetId { get; internal set; }
+    /// <summary>Payload launchers: the planet it fires at (an index into the world's planets), or -1 for none.</summary>
+    public int TargetPlanetId { get; internal set; } = -1;
     /// <summary>Generation actually delivered last tick (W), for UI.</summary>
     public long LastOutputJ { get; internal set; }
 

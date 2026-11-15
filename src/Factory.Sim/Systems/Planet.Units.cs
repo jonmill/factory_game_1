@@ -53,6 +53,13 @@ public sealed partial class Planet
 
     private void UpdateUnit(Unit u)
     {
+        _hoverWalk = IsHovering(u);
+        UpdateUnitJob(u);
+        _hoverWalk = false;
+    }
+
+    private void UpdateUnitJob(Unit u)
+    {
         switch (u.Job.Kind)
         {
             case JobKind.Manual:

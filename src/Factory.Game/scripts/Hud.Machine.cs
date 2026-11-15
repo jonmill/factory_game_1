@@ -26,7 +26,7 @@ public partial class Hud
     /// <summary>Buildings that hold items get the machine window; the rest keep the plain inspector.</summary>
     private static bool HasMachineWindow(Building b) =>
         b.Def.IsStorage || (b.Def.Energy == EnergyKind.Burner) ||
-        (b.Def.Kind is BuildingKind.Furnace or BuildingKind.Assembler or BuildingKind.Lab or BuildingKind.Drill or BuildingKind.RobotBay or BuildingKind.Terraformer or BuildingKind.Uplink);
+        (b.Def.Kind is BuildingKind.Furnace or BuildingKind.Assembler or BuildingKind.Lab or BuildingKind.Drill or BuildingKind.RobotBay or BuildingKind.Terraformer or BuildingKind.Uplink or BuildingKind.PayloadLauncher);
 
     private PanelContainer BuildMachine()
     {
@@ -254,7 +254,7 @@ public partial class Hud
                 .DefaultIfEmpty(EmptyMachineSlot(b, reach, null))));
         }
 
-        if (b.Def.Kind is BuildingKind.Furnace or BuildingKind.Assembler or BuildingKind.Lab or BuildingKind.RobotBay or BuildingKind.Terraformer or BuildingKind.Uplink)
+        if (b.Def.Kind is BuildingKind.Furnace or BuildingKind.Assembler or BuildingKind.Lab or BuildingKind.RobotBay or BuildingKind.Terraformer or BuildingKind.Uplink or BuildingKind.PayloadLauncher)
         {
             List<Control> inputs = Stacks(b.Inv).Where(s => (burner == false) || (C.IsFuel(s.Item) == false))
                 .Select(s => (Control)MachineItemSlot(b, s.Item, s.Count, InventoryPart.Input, reach, acceptsDrops: true)).ToList();
@@ -290,6 +290,13 @@ public partial class Hud
     /// <summary>The recipe's ingredients, or a lab's research costs, for drawing empty input slots.</summary>
     private ItemAmount[] RecipeInputs(Building b)
     {
+        if (b.Def.Kind == BuildingKind.PayloadLauncher)
+        {
+            // A launcher takes any of its payload packs; show each one it doesn't hold.
+            return C.RecipeList.Where(r => b.Def.Categories.Contains(r.Category) && W.Research.Unlocked.Contains(r.Id)).SelectMany(r => r.Inputs)
+                .DistinctBy(i => i.Item).ToArray();
+        }
+
         if (b.Recipe is { } r)
         {
             return r.Inputs;

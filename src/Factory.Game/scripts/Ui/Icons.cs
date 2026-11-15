@@ -97,6 +97,22 @@ public static class Icons
             return;
         }
 
+        if (id == "photonic-wafer")
+        {
+            // A round wafer with a grid of dies and an iridescent sheen.
+            ci.DrawCircle(m, s * 0.34f, c.Darkened(0.35f));
+            ci.DrawCircle(m, s * 0.3f, c);
+            for (int i = -1; i <= 1; i++)
+            {
+                ci.DrawLine(m + new Vector2(i * s * 0.12f, -s * 0.26f), m + new Vector2(i * s * 0.12f, s * 0.26f), c.Darkened(0.3f), 1);
+                ci.DrawLine(m + new Vector2(-s * 0.26f, i * s * 0.12f), m + new Vector2(s * 0.26f, i * s * 0.12f), c.Darkened(0.3f), 1);
+            }
+
+            ci.DrawArc(m, s * 0.22f, Mathf.Pi * 1.05f, Mathf.Pi * 1.5f, 10, new Color(1, 1, 1, 0.55f), Mathf.Max(1.5f, s * 0.05f), true);
+
+            return;
+        }
+
         if (id == "seed-pod")
         {
             ci.DrawCircle(m + new Vector2(0, s * 0.06f), s * 0.24f, c.Darkened(0.35f));
@@ -293,6 +309,33 @@ public static class Icons
                 ci.DrawCircle(m, s * 0.22f, _glass);
                 ci.DrawCircle(m, s * 0.15f, accent.Darkened(0.2f));
                 ci.DrawCircle(m - new Vector2(s * 0.04f, s * 0.04f), s * 0.07f, accent.Lightened(0.35f));
+                break;
+            case BuildingKind.SolarPanel:
+                ci.DrawRect(body.Grow(-s * 0.04f), new Color(0.1f, 0.24f, 0.42f));
+                for (int i = 1; i < 3; i++)
+                {
+                    float x = body.Position.X + (body.Size.X * i / 3f), y = body.Position.Y + (body.Size.Y * i / 3f);
+                    ci.DrawLine(new Vector2(x, body.Position.Y), new Vector2(x, body.End.Y), _hullShade, 1);
+                    ci.DrawLine(new Vector2(body.Position.X, y), new Vector2(body.End.X, y), _hullShade, 1);
+                }
+
+                ci.DrawLine(body.Position + new Vector2(s * 0.1f, s * 0.04f), body.Position + new Vector2(s * 0.04f, s * 0.2f), new Color(1, 1, 1, 0.6f), Mathf.Max(1.5f, s * 0.04f));
+                break;
+            case BuildingKind.WindTurbine:
+                for (int i = 0; i < 3; i++)
+                {
+                    float a = (-Mathf.Pi / 2) + (i * Mathf.Tau / 3f);
+                    ci.DrawLine(m, m + (new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * s * 0.38f), new Color(0.95f, 0.97f, 1f), Mathf.Max(2, s * 0.08f), true);
+                }
+
+                ci.DrawCircle(m, s * 0.08f, _glass);
+                ci.DrawCircle(m, s * 0.04f, accent);
+                break;
+            case BuildingKind.PayloadLauncher:
+                ci.DrawCircle(m, s * 0.22f, _glass);
+                ci.DrawLine(m + new Vector2(-s * 0.06f, s * 0.04f), m + new Vector2(s * 0.2f, -s * 0.28f), new Color(0.92f, 0.94f, 0.97f), Mathf.Max(1.5f, s * 0.05f), true);
+                ci.DrawLine(m + new Vector2(s * 0.04f, s * 0.1f), m + new Vector2(s * 0.3f, -s * 0.2f), new Color(0.92f, 0.94f, 0.97f), Mathf.Max(1.5f, s * 0.05f), true);
+                ci.DrawCircle(m, s * 0.08f, accent);
                 break;
             case BuildingKind.Uplink:
                 ci.DrawCircle(m, s * 0.2f, _hullShade);
