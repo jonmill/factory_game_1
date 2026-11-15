@@ -53,7 +53,7 @@ internal static class LedgerAnalysis
             int drillPct = Pct(drill, drill + hand);
             int craftPct = Pct(machineCrafts, machineCrafts + landerCrafts);
             t.Rows.Add([seed.ToString(), $"{drillPct}% ({drill} of {drill + hand})", $"{craftPct}% ({machineCrafts} of {machineCrafts + landerCrafts})", smelted.ToString(), machines.ToString(), planets.ToString()]);
-            bool automationResearched = w.Research.Completed.Contains("automation");
+            bool automationResearched = HeldFor(w, "automation", GraceTicks);
             if (automationResearched && (drillPct < AutomatedPct))
             {
                 report.Add(new Finding(Severity.High, "automation", $"Only {drillPct}% of ore was mined by drills",
@@ -69,6 +69,13 @@ internal static class LedgerAnalysis
 
         report.Tables.Add(t);
     }
+
+    /// <summary>How long a run must go on after a tech before the ledger judges how it was used.</summary>
+    private const long GraceTicks = 60L * 3600;
+
+    /// <summary>Whether a tech was researched at least this many ticks before the run ended.</summary>
+    private static bool HeldFor(World w, string tech, long ticks) =>
+        w.Stats.ResearchLines.Any(r => (r.Tech == tech) && (w.Tick - r.FirstTick >= ticks));
 
     private static int Pct(long part, long whole) => whole == 0 ? 0 : (int)(part * 100 / whole);
 
@@ -161,13 +168,15 @@ internal static class LedgerAnalysis
 
         report.Tables.Add(t);
 
-        // Each planet with resources of its own should have been put to work.
-        foreach (Planet p in first.Planets.Where(p => (p.Id != 0) && p.Def.Resources.Length > 0))
+        // Each planet with resources of its own should have been put to work, in runs that reached outposts.
+        string? outposts = c.TechList.FirstOrDefault(tech => tech.Unlocks.Contains("orbital-station"))?.Id;
+        List<World> stellar = worlds.Select(w => w.World).Where(w => (outposts is not null) && HeldFor(w, outposts, GraceTicks * 2)).ToList();
+        foreach (Planet p in first.Planets.Where(p => (p.Id != 0) && (p.Def.Resources.Length > 0)))
         {
-            int seedsUsed = worlds.Count(w => w.World.Stats.BuildingLines.Any(l => (l.Planet == p.Id) && (c.Buildings[l.Def].Kind is not (BuildingKind.Ferry or BuildingKind.Lander))));
-            if (seedsUsed < worlds.Count)
+            int seedsUsed = stellar.Count(w => w.Stats.BuildingLines.Any(l => (l.Planet == p.Id) && (c.Buildings[l.Def].Kind is not (BuildingKind.Ferry or BuildingKind.Lander))));
+            if (seedsUsed < stellar.Count)
             {
-                report.Add(new Finding(Severity.Medium, "planets", $"Nothing was built on {p.Name} in {worlds.Count - seedsUsed} of {worlds.Count} runs",
+                report.Add(new Finding(Severity.Medium, "planets", $"Nothing was built on {p.Name} in {stellar.Count - seedsUsed} of {stellar.Count} runs that reached the Stellar Age",
                     $"{p.Name} has {string.Join(", ", p.Def.Resources.Select(r => c.Resources[r.Resource].Name).Distinct())}. Players are meant to set up outposts there."));
             }
         }
