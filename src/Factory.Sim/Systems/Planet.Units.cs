@@ -12,7 +12,8 @@ public sealed partial class Planet
     /// <summary>How far, in tiles, mining looks for the next tile of the same deposit when one runs out.</summary>
     private const int NextTileSearch = 4;
     private const int GatherBatch = 25;
-    private const int TileReach = 700;
+    /// <summary>How close a gatherer gets to a resource tile: near enough to work it from the next tile over, as trees are solid.</summary>
+    private const int TileReach = Fixed.One + 100;
 
     internal static int ReachFor(Building b) => (System.Math.Max(b.W, b.H) * Fixed.Half) + Fixed.Half + 200;
 
@@ -42,21 +43,11 @@ public sealed partial class Planet
         }
     }
 
-    /// <summary>Moves toward a sub-unit target; returns true once within stopDist.</summary>
-    private bool MoveTowards(Unit u, Int2 targetSub, int stopDist)
-    {
-        Int2 d = SubTorus.Delta(u.Pos, targetSub);
-        long dist = Fixed.ISqrt(((long)d.X * d.X) + ((long)d.Y * d.Y));
-        if (dist <= stopDist)
-        {
-            return true;
-        }
-
-        long step = System.Math.Min(u.Speed, dist - stopDist);
-        u.Pos = SubTorus.Wrap(u.Pos + new Int2((int)(d.X * step / dist), (int)(d.Y * step / dist)));
-
-        return dist - step <= stopDist;
-    }
+    /// <summary>
+    /// Moves toward a sub-unit target; returns true once within stopDist. Everyone path-finds around
+    /// buildings, water and trees and collides with them (see <see cref="WalkTowards"/>).
+    /// </summary>
+    private bool MoveTowards(Unit u, Int2 targetSub, int stopDist) => WalkTowards(u, targetSub, stopDist);
 
     /// <summary>True if the tile's center is within the leader's reach of the unit.</summary>
     public bool InLeaderReach(Unit u, Int2 tile) =>
@@ -104,7 +95,7 @@ public sealed partial class Planet
         {
             int dx = System.Math.Sign(u.MoveIntent.X), dy = System.Math.Sign(u.MoveIntent.Y);
             int s = (dx != 0) && (dy != 0) ? u.Speed * 181 / 256 : u.Speed;
-            u.Pos = SubTorus.Wrap(u.Pos + new Int2(dx * s, dy * s));
+            MoveWithCollision(u, new Int2(dx * s, dy * s));
         }
 
         SupplyFromPockets(u);

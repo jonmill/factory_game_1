@@ -48,6 +48,16 @@ public sealed class Unit : Entity
     /// <summary>Leader: ticks of progress toward the next hand-mined item.</summary>
     public int MiningProgress { get; internal set; }
 
+    // Walking
+    /// <summary>Waypoints (sub-unit positions) of the path being walked, next one first; empty when walking straight.</summary>
+    public List<Int2> Path { get; } = [];
+    /// <summary>Where the current path leads, so a moved target triggers a new one.</summary>
+    internal Int2 PathGoal { get; set; }
+    /// <summary>How close the current path needs to get, so a changed reach triggers a new one.</summary>
+    internal int PathStop { get; set; } = -1;
+    /// <summary>Ticks in a row the unit has been blocked while walking; enough of them triggers a new path.</summary>
+    internal int StuckTicks { get; set; }
+
     /// <summary>Tile the unit is standing on.</summary>
     public Int2 Tile => Fixed.ToTile(Pos);
 }

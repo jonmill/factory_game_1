@@ -187,8 +187,10 @@ public partial class TerrainChunk : Node2D
                     continue;
                 }
 
+                // The trunk stands where the sim puts its collision box; the canopy sits just above it.
                 uint h = Hash(t.X, t.Y, 13);
-                Vector2 c = Local(t) + new Vector2(T * (0.35f + ((h & 7) / 24f)), T * (0.3f + (((h >> 3) & 7) / 24f)));
+                Int2 trunk = Planet.TreeTrunkOffset(Planet.Torus.Wrap(t));
+                Vector2 c = Local(t) + (new Vector2(trunk.X, trunk.Y) * T / Fixed.One) - new Vector2(0, T * 0.08f);
                 float r = T * (0.38f + (((h >> 6) & 3) * 0.04f));
                 Color leaf = WorldView.Hex(res.Color).Lerp(new Color(0.25f, 0.32f, 0.12f), 0.55f);
 
