@@ -3,7 +3,7 @@ namespace Factory.Sim;
 /// <summary>
 /// Terraforming: each planet has stats (atmosphere, hydrosphere, biosphere) that terraformer buildings
 /// raise a point at a time by consuming products. A planet's readiness is the average of its stats'
-/// progress toward their targets; once every planet in the system reaches the bar, a Settler Uplink can
+/// progress toward their targets; once enough planets in the system reach the bar, a Settler Uplink can
 /// call the settlers, which wins the game.
 /// </summary>
 public sealed partial class Planet
@@ -80,7 +80,7 @@ public sealed partial class Planet
     private RecipeDef? NextPayload(Building b) =>
         TargetOf(b) is { } target ? PayloadsFor(b).FirstOrDefault(r => b.Inv.Has(r.Inputs) && (PayloadEffect(r.Effect) is { } e) && (target.StatComplete(e.Stat) == false)) : null;
 
-    /// <summary>Whether a recipe with this effect can start now: terraformers stop at their stat's target and the uplink waits for every planet.</summary>
+    /// <summary>Whether a recipe with this effect can start now: terraformers stop at their stat's target and the uplink waits for enough planets.</summary>
     private MachineStatus? EffectBlocked(Building b, RecipeDef r)
     {
         if ((TerraformEffect(r.Effect) is { } t) && StatComplete(t.Stat))
@@ -101,7 +101,7 @@ public sealed partial class Planet
             }
         }
 
-        if ((r.Effect == CallSettlersEffect) && ((World.AllPlanetsReady == false) || World.SettlersCalled))
+        if ((r.Effect == CallSettlersEffect) && ((World.EnoughPlanetsReady == false) || World.SettlersCalled))
         {
             return MachineStatus.NotReady;
         }
@@ -144,7 +144,7 @@ public sealed partial class Planet
 
         if ((wasReady == false) && IsReady)
         {
-            World.Emit(World.AllPlanetsReady ? "Every planet is ready. Call the settlers from a Settler Uplink!" : $"{Name} is ready for settlers", Id, at);
+            World.Emit(World.EnoughPlanetsReady ? "Enough planets are ready. Call the settlers from a Settler Uplink!" : $"{Name} is ready for settlers ({World.ReadyPlanetCount} of {World.PlanetsNeeded})", Id, at);
         }
     }
 }

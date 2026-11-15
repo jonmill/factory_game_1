@@ -563,8 +563,12 @@ public sealed class GoalBot : IBot
     private IEnumerable<BuildingDef> TerraformBuildings() => C.BuildingList.Where(b =>
         ((b.Kind == BuildingKind.Terraformer) && (b.Recipe is not null)) || (b.Kind == BuildingKind.Uplink) || ((b.Kind == BuildingKind.PayloadLauncher) && RemoteTargets().Any()));
 
-    /// <summary>Settler targets other than the start planet: terraformed from here with a payload launcher.</summary>
-    private IEnumerable<Planet> RemoteTargets() => _w.SettlerTargets.Where(p => p != P);
+    /// <summary>
+    /// The other planets the bot terraforms from here with a payload launcher: as many as the settlers need
+    /// besides the home planet, picking those already closest to ready.
+    /// </summary>
+    private IEnumerable<Planet> RemoteTargets() => _w.TerraformablePlanets.Where(p => p != P)
+        .OrderByDescending(p => p.Readiness).ThenBy(p => p.Id).Take(System.Math.Max(0, _w.PlanetsNeeded - 1));
 
     /// <summary>Terraforming points a stat still needs across the remote targets.</summary>
     private int RemotePointsLeft(string stat)

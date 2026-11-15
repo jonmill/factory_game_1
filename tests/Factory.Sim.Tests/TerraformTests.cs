@@ -22,8 +22,7 @@ public class TerraformTests
         await Assert.That(tw.P.Readiness).IsEqualTo((8 + 15 + 0) / 3);
         Planet rime = tw.W.Planets.Single(p => p.Def.Id == "rime");
         await Assert.That(rime.Readiness).IsEqualTo((5 + 60 + 0) / 3).Because("Rime starts with its own stats");
-        await Assert.That(tw.W.SystemReadiness).IsEqualTo((tw.P.Readiness + rime.Readiness) / 2);
-        await Assert.That(tw.W.AllPlanetsReady).IsFalse();
+        await Assert.That(tw.W.EnoughPlanetsReady).IsFalse();
     }
 
     [Test]
@@ -50,7 +49,7 @@ public class TerraformTests
     }
 
     [Test]
-    public async Task Uplink_WaitsForEveryPlanet_ThenCallsTheSettlers()
+    public async Task Uplink_WaitsForThreePlanets_ThenCallsTheSettlers()
     {
         (TestWorld tw, Building _) = Powered();
         Building uplink = tw.Build("settler-uplink", 13, 9);
@@ -66,15 +65,18 @@ public class TerraformTests
         tw.P.Stats["atmosphere"] = 100;
         tw.P.Stats["hydrosphere"] = 100;
         tw.P.Stats["biosphere"] = 100;
-        await Assert.That(tw.W.AllPlanetsReady).IsFalse().Because("Rime must be terraformed too");
-        foreach (Planet p in tw.W.SettlerTargets)
+        await Assert.That(tw.W.EnoughPlanetsReady).IsFalse().Because("two more planets must be terraformed");
+        Planet[] others = tw.W.TerraformablePlanets.Where(p => p != tw.P).ToArray();
+        for (int i = 0; i < 2; i++)
         {
-            p.Stats["atmosphere"] = 100;
-            p.Stats["hydrosphere"] = 100;
-            p.Stats["biosphere"] = 100;
+            await Assert.That(tw.W.EnoughPlanetsReady).IsFalse();
+            others[i].Stats["atmosphere"] = 100;
+            others[i].Stats["hydrosphere"] = 100;
+            others[i].Stats["biosphere"] = 100;
         }
 
-        await Assert.That(tw.W.AllPlanetsReady).IsTrue();
+        await Assert.That(tw.W.ReadyPlanetCount).IsEqualTo(3);
+        await Assert.That(tw.W.EnoughPlanetsReady).IsTrue().Because("any three of the four will do");
         tw.RunUntil(() => tw.W.SettlersCalled, 1800 + 120, "the settlers to be called");
         await Assert.That(tw.W.Events.Any(e => e.Message.Contains("You win"))).IsTrue();
     }

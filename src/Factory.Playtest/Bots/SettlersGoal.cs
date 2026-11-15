@@ -2,7 +2,7 @@ using Factory.Sim;
 
 namespace Factory.Playtest.Bots;
 
-/// <summary>The whole game: terraform every planet until it is ready, then call the settlers.</summary>
+/// <summary>The whole game: terraform enough planets until they are ready, then call the settlers.</summary>
 public sealed record SettlersGoal : Goal
 {
     /// <inheritdoc />

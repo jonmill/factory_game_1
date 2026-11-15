@@ -15,7 +15,7 @@ public partial class Hud
     private PanelContainer BuildSystem()
     {
         PanelContainer win = MakeWindow(HudWindow.System, "Star system", "M", out VBoxContainer body);
-        body.AddChild(HudStyle.Caption("Every planet marked as a settler target must reach the readiness bar before the settlers can be called.", HudStyle.TextDim, 11));
+        body.AddChild(HudStyle.Caption("Any three of the four terraformable planets must reach the readiness bar before the settlers can be called.", HudStyle.TextDim, 11));
         GridContainer grid = new GridContainer { Columns = 3 };
         grid.AddThemeConstantOverride("h_separation", 10);
         grid.AddThemeConstantOverride("v_separation", 10);
@@ -89,9 +89,9 @@ public partial class Hud
         foreach ((Planet planet, Label status, Button view) in _systemRows)
         {
             bool here = Root.Leader.Planet == planet;
-            string target = planet.Def.SettlerTarget ? $"Settler target · readiness {planet.Readiness}%" : "Not yet a settler target";
+            string target = planet.Def.Terraformable ? (planet.IsReady ? "Ready for settlers" : $"Terraformable · readiness {planet.Readiness}%") : "Can't be terraformed";
             status.Text = (here ? "Commander here  ·  " : "") + target;
-            status.AddThemeColorOverride("font_color", planet.IsReady && planet.Def.SettlerTarget ? HudStyle.Good : here ? HudStyle.Orange : HudStyle.Text);
+            status.AddThemeColorOverride("font_color", planet.IsReady && planet.Def.Terraformable ? HudStyle.Good : here ? HudStyle.Orange : HudStyle.Text);
             view.Disabled = Root.PlanetId == planet.Id;
             view.Text = Root.PlanetId == planet.Id ? "Viewing" : "View";
         }

@@ -19,8 +19,8 @@ public sealed class PlanetDef
     public string Description { get; init; } = "";
     /// <summary>True for the planet the commander lands on.</summary>
     public bool Start { get; init; }
-    /// <summary>True if this planet must be made ready before the settlers can be called.</summary>
-    public bool SettlerTarget { get; init; }
+    /// <summary>True if this planet can be terraformed for the settlers (gas giants and belts can't).</summary>
+    public bool Terraformable { get; init; }
     /// <summary>Distance from the star in tenths of the home planet's orbit; sets travel times.</summary>
     public int Orbit { get; init; } = 10;
     /// <summary>Width and height of the surface in tiles (the start planet uses the world settings instead).</summary>

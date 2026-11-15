@@ -71,12 +71,14 @@ public class PlanetTests
     }
 
     [Test]
-    public async Task OnlySettlerTargets_CountTowardReadiness()
+    public async Task SystemReadiness_AveragesTheThreeMostReadyTerraformablePlanets()
     {
         World w = new World(TestWorld.Content, new WorldSettings { Seed = 1, OtherPlanetSize = 64 });
 
-        await Assert.That(w.SettlerTargets.Select(p => p.Def.Id)).IsEquivalentTo(TestWorld.Content.PlanetList.Where(d => d.SettlerTarget).Select(d => d.Id));
-        await Assert.That(w.SystemReadiness).IsEqualTo(w.SettlerTargets.Sum(p => p.Readiness) / w.SettlerTargets.Count());
+        await Assert.That(w.TerraformablePlanets.Select(p => p.Def.Id)).IsEquivalentTo(["keplers-rest", "cinder", "rime", "dune"]);
+        await Assert.That(w.PlanetsNeeded).IsEqualTo(3);
+        int[] top = w.TerraformablePlanets.Select(p => p.Readiness).OrderDescending().Take(3).ToArray();
+        await Assert.That(w.SystemReadiness).IsEqualTo(top.Sum() / 3);
     }
 
     [Test]

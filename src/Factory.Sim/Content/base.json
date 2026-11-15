@@ -502,7 +502,7 @@
   ],
 
   "planets": [
-    { "id": "keplers-rest", "name": "Kepler's Rest", "type": "Temperate world", "start": true, "settlerTarget": true,
+    { "id": "keplers-rest", "name": "Kepler's Rest", "type": "Temperate world", "start": true, "terraformable": true,
       "orbit": 10, "color": "#6a9a5a",
       "description": "Mild and wet, with forests and every Salvage-age ore close to the landing site.",
       "biomes": [ { "biome": "meadow", "weight": 4 }, { "biome": "forest", "weight": 3 }, { "biome": "fen", "weight": 2 }, { "biome": "highland", "weight": 2 } ],
@@ -521,7 +521,7 @@
         { "resource": "kerogen",  "patches": 2, "minRadius": 4, "maxRadius": 6, "richness": 1600, "minDistance": 28, "biome": "fen" }
       ] },
 
-    { "id": "cinder", "name": "Cinder", "type": "Volcanic world", "settlerTarget": false, "orbit": 6, "sunlight": 160, "size": 112, "color": "#c0603a",
+    { "id": "cinder", "name": "Cinder", "type": "Volcanic world", "terraformable": true, "orbit": 6, "sunlight": 160, "size": 112, "color": "#c0603a",
       "description": "Hot, young and restless. Lava flows and vents; brimstone, titanium and hafnium geodes.",
       "biomes": [ { "biome": "basalt", "weight": 4 }, { "biome": "ash", "weight": 3 }, { "biome": "vents", "weight": 2 } ],
       "lakes": 1, "lavaFlows": 7,
@@ -534,7 +534,7 @@
         { "resource": "hafnium",   "patches": 2, "minRadius": 3, "maxRadius": 5, "richness": 1200, "biome": "ash" }
       ] },
 
-    { "id": "rime", "name": "Rime", "type": "Ice world", "settlerTarget": true, "orbit": 18, "sunlight": 55, "size": 112, "color": "#a8c8e8",
+    { "id": "rime", "name": "Rime", "type": "Ice world", "terraformable": true, "orbit": 18, "sunlight": 55, "size": 112, "color": "#a8c8e8",
       "description": "Cold and bright. Frozen seas hold deuterium; copper and carbon lie under the snow.",
       "biomes": [ { "biome": "snow", "weight": 4 }, { "biome": "glacier", "weight": 3 }, { "biome": "tundra", "weight": 2 } ],
       "lakes": 6, "frozenWater": true,
@@ -546,7 +546,7 @@
         { "resource": "deuterium", "patches": 4, "minRadius": 5, "maxRadius": 8, "richness": 1800, "biome": "glacier" }
       ] },
 
-    { "id": "dune", "name": "Dune", "type": "Arid world", "settlerTarget": false, "orbit": 14, "sunlight": 75, "size": 112, "color": "#d0a060",
+    { "id": "dune", "name": "Dune", "type": "Arid world", "terraformable": true, "orbit": 14, "sunlight": 75, "size": 112, "color": "#d0a060",
       "description": "Dry and windswept. Silica and lanthanide sands, tantalite in the mesas, a few oases.",
       "biomes": [ { "biome": "dunes", "weight": 4 }, { "biome": "salt", "weight": 2 }, { "biome": "mesa", "weight": 3 } ],
       "lakes": 2,
@@ -570,6 +570,7 @@
 
   "terraform": {
     "readyBar": 100,
+    "planetsNeeded": 3,
     "stats": [
       { "id": "atmosphere", "name": "Atmosphere", "target": 100, "initial": 8, "color": "#9fd8ff",
         "description": "How thick and breathable the air is." },

@@ -175,7 +175,7 @@ public class GoalBotTests
         }
 
         await Assert.That(w.SettlersCalled).IsTrue();
-        await Assert.That(w.AllPlanetsReady).IsTrue();
+        await Assert.That(w.EnoughPlanetsReady).IsTrue();
     }
 
     [Test]

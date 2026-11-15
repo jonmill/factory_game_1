@@ -3,7 +3,7 @@
 2D factory automation game: Factorio-style depth, DSP-style shine. You are a robot commander sent ahead
 of human settlers. With a few simple helper bots you build up a base on a wrap-around planet, upgrade
 yourself and your bots with modules, build more bots, and terraform the system (atmosphere, hydrosphere,
-biosphere) until every planet is ready. Then you call the settlers.
+biosphere) until any three of the four terraformable planets are ready. Then you call the settlers.
 
 ## Layout
 
@@ -134,7 +134,7 @@ launches, faster collectors and vessels), the Climate Engine (fast terraforming)
 research that makes deposits last longer; terraformers (Atmosphere Processor, Hydrosphere Seeder, Bio Incubator), a system readiness meter
 and the Settler Uplink to win.
 
-Settler targets: Kepler's Rest and Rime (terraformed from home with the Payload Launcher).
+Win condition: any 3 of the 4 terraformable planets (Kepler's Rest, Cinder, Rime, Dune) ready; the others are terraformed from home with the Payload Launcher.
 
 Not yet: splitters and underground belts, rail signals
 (trains just block each other), train collision avoidance on single track, snapshot saves, audio,

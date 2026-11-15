@@ -40,7 +40,7 @@ public partial class Hud
 
     private static readonly (string Title, string Text)[] _helpRight =
     [
-        ("Goal", "You are a robot sent ahead of human settlers. Terraform the system: raise every planet's Atmosphere, Hydrosphere and Biosphere until it is ready, then call the settlers from a Settler Uplink."),
+        ("Goal", "You are a robot sent ahead of human settlers. Terraform the system: raise the Atmosphere, Hydrosphere and Biosphere of any three of the four terraformable planets until they are ready, then call the settlers from a Settler Uplink."),
         ("Building", "You build every ghost within reach by yourself, using materials from your pockets or a lander or crate nearby. Helper bots with a Construction Module build anywhere."),
         ("Helper bots", "Give each helper bot a job in the left panel: Gather a resource or Haul between two buildings. Modules teach them more: Build, Operate train. Click a bot to fit modules."),
         ("Research", "Craft Survey Cores and feed them to a Research Station. Analytical Engines unlocks Analysis Cores and the Combustion Age: electric machines, railways, robotics and terraforming."),

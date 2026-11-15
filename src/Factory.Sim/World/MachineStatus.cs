@@ -25,7 +25,7 @@ public enum MachineStatus
     NoResearch,
     /// <summary>A terraformer's stat has reached its target, so there is nothing left for it to do.</summary>
     Complete,
-    /// <summary>A Settler Uplink is waiting for every planet to be ready.</summary>
+    /// <summary>A Settler Uplink is waiting for enough planets to be ready.</summary>
     NotReady,
     /// <summary>A payload launcher with no target planet picked.</summary>
     NoTarget,

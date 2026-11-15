@@ -30,14 +30,24 @@ public sealed partial class World
     /// <summary>True once the settlers have been called: the game is won.</summary>
     public bool SettlersCalled { get; internal set; }
 
-    /// <summary>The planets the settlers are waiting on: every one must reach the readiness bar.</summary>
-    public IEnumerable<Planet> SettlerTargets => Planets.Where(p => p.Def.SettlerTarget);
+    /// <summary>The planets that can be terraformed for the settlers.</summary>
+    public IEnumerable<Planet> TerraformablePlanets => Planets.Where(p => p.Def.Terraformable);
 
-    /// <summary>The system-wide readiness meter: the average readiness of the settler target planets, 0 to 100.</summary>
-    public int SystemReadiness => SettlerTargets.Any() ? SettlerTargets.Sum(p => p.Readiness) / SettlerTargets.Count() : 0;
+    /// <summary>How many planets must be ready to call the settlers (never more than there are).</summary>
+    public int PlanetsNeeded => System.Math.Min(Content.Terraform.PlanetsNeeded, TerraformablePlanets.Count());
 
-    /// <summary>True once every settler target planet has reached the readiness bar.</summary>
-    public bool AllPlanetsReady => SettlerTargets.All(p => p.IsReady);
+    /// <summary>How many terraformable planets have reached the readiness bar.</summary>
+    public int ReadyPlanetCount => TerraformablePlanets.Count(p => p.IsReady);
+
+    /// <summary>
+    /// The system-wide readiness meter, 0 to 100: the average readiness of the most terraformed planets, as
+    /// many as the settlers need. It reaches 100 exactly when enough planets are ready.
+    /// </summary>
+    public int SystemReadiness => PlanetsNeeded == 0 ? 0 :
+        TerraformablePlanets.Select(p => p.Readiness).OrderByDescending(r => r).Take(PlanetsNeeded).Sum() / PlanetsNeeded;
+
+    /// <summary>True once enough terraformable planets have reached the readiness bar to call the settlers.</summary>
+    public bool EnoughPlanetsReady => ReadyPlanetCount >= PlanetsNeeded;
 
     /// <summary>Extra module slots the commander has gained from research.</summary>
     public int CommanderBonusSlots => Research.Completed.Sum(id => Content.Techs.TryGetValue(id, out TechDef? t) ? t.CommanderSlots : 0);
@@ -70,7 +80,7 @@ public sealed partial class World
         List<PlanetDef> surfaces = content.PlanetList.Where(d => d.Kind == PlanetKind.Surface).OrderBy(d => d.Start ? 0 : 1).ToList();
         if (surfaces.Count == 0)
         {
-            surfaces.Add(new PlanetDef { Id = "home", Name = "Kepler's Rest", Start = true, SettlerTarget = true });
+            surfaces.Add(new PlanetDef { Id = "home", Name = "Kepler's Rest", Start = true, Terraformable = true });
         }
 
         foreach (PlanetDef def in surfaces)
