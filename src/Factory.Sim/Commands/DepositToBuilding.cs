@@ -6,20 +6,22 @@ namespace Factory.Sim;
 /// <param name="UnitId">Entity id of the issuing player's leader.</param>
 /// <param name="BuildingId">Entity id of the receiving building.</param>
 /// <param name="Item">Item id to deposit, or null to deposit everything the building accepts.</param>
-public sealed record DepositToBuilding(int UnitId, int BuildingId, string? Item = null) : Command
+/// <param name="Count">Most of each item to deposit; by default as many as the building accepts.</param>
+public sealed record DepositToBuilding(int UnitId, int BuildingId, string? Item = null, int Count = int.MaxValue) : Command
 {
     /// <summary>Checks the leader and building exist and the building is within the leader's reach.</summary>
     public override string? Validate(World w)
     {
         Unit? u = Leader(w, UnitId);
         Building? b = w.Get<Building>(BuildingId);
-        if ((u is null) || (b is null))
+        if ((u is null) || (b is null) || (Count < 1))
         {
             return "Invalid";
         }
 
         return u.Planet.InLeaderReach(u, b.Origin) ? null : "Too far away";
     }
+
     /// <summary>Moves as many carried items as the building will accept into its inventory.</summary>
     public override void Apply(World w)
     {
@@ -32,7 +34,7 @@ public sealed record DepositToBuilding(int UnitId, int BuildingId, string? Item 
                 continue;
             }
 
-            int m = System.Math.Min(n, b.Planet.AcceptAmount(b, item));
+            int m = System.Math.Min(System.Math.Min(n, Count), b.Planet.AcceptAmount(b, item));
             if (m > 0)
             {
                 u.Carry.Remove(item, m);

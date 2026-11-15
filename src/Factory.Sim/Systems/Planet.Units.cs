@@ -413,6 +413,37 @@ public sealed partial class Planet
         return StoragesByDistance(u.Pos).FirstOrDefault(st => missing.Any(m => st.Inv.Count(m.Item) > 0));
     }
 
+    /// <summary>
+    /// The commander, if their pockets hold something the site still needs: builders fetch from the
+    /// commander's pockets as well as from storage, as construction does from a player inventory.
+    /// </summary>
+    private Unit? LeaderWithAny(Unit u, ConstructionSite s)
+    {
+        Unit? leader = Units.FirstOrDefault(x => x.IsLeader);
+        if ((leader is null) || (leader == u) || leader.Carry.IsEmpty)
+        {
+            return null;
+        }
+
+        return s.Missing().Any(m => (m.Count > u.Carry.Count(m.Item)) && (leader.Carry.Count(m.Item) > 0)) ? leader : null;
+    }
+
+    /// <summary>The nearest place to fetch a site's missing materials from: storage first, then the commander.</summary>
+    private Entity? SupplierFor(Unit u, ConstructionSite s) => (Entity?)StorageWithAny(u, s) ?? LeaderWithAny(u, s);
+
+    private string WaitingStatus()
+    {
+        ConstructionSite? site = Sites.FirstOrDefault(s => s.MaterialsComplete == false);
+        if (site is null)
+        {
+            return "Waiting for materials";
+        }
+
+        string need = string.Join(", ", site.Missing().Take(3).Select(m => $"{m.Count} {World.Content.Item(m.Item).Name}"));
+
+        return $"Waiting for materials: {SiteLabel(site)} needs {need}";
+    }
+
     private ConstructionSite? PickSite(Unit u)
     {
         foreach (ConstructionSite s in Sites)
@@ -443,7 +474,7 @@ public sealed partial class Planet
                 return s;
             }
 
-            if (StorageWithAny(u, s) is not null)
+            if (SupplierFor(u, s) is not null)
             {
                 return s;
             }
@@ -477,7 +508,7 @@ public sealed partial class Planet
                             return;
                         }
 
-                        u.Status = Sites.Count == 0 ? "Waiting for construction orders" : "Waiting for materials";
+                        u.Status = Sites.Count == 0 ? "Waiting for construction orders" : WaitingStatus();
 
                         return;
                     }
@@ -491,13 +522,14 @@ public sealed partial class Planet
 
                     site.ClaimedBy = u.Id;
                     u.TargetEntity = site.Id;
-                    if ((site.Kind == SiteKind.Deconstruct) || site.MaterialsComplete || (StorageWithAny(u, site) is null))
+                    Entity? supplier = (site.Kind == SiteKind.Deconstruct) || site.MaterialsComplete ? null : SupplierFor(u, site);
+                    if (supplier is null)
                     {
                         u.Phase = UnitPhase.Deliver;
                     }
                     else
                     {
-                        u.SourceEntity = StorageWithAny(u, site)!.Id;
+                        u.SourceEntity = supplier.Id;
                         u.Phase = UnitPhase.MoveTo;
                     }
 
@@ -506,17 +538,30 @@ public sealed partial class Planet
             case UnitPhase.MoveTo: // fetching materials
                 {
                     Building? store = World.Get<Building>(u.SourceEntity);
-                    if (store is null)
+                    Unit? leader = store is null ? World.Get<Unit>(u.SourceEntity) : null;
+                    Inventory? from = store?.Inv ?? leader?.Carry;
+                    if (from is null)
                     {
                         u.Phase = UnitPhase.Seek;
 
                         return;
                     }
 
-                    u.Status = $"Fetching materials from {store.Name}";
-                    if (MoveTowards(u, SubTorus.Wrap(store.CenterSub), ReachFor(store)) == false)
+                    if (store is not null)
                     {
-                        return;
+                        u.Status = $"Fetching materials from {store.Name}";
+                        if (MoveTowards(u, SubTorus.Wrap(store.CenterSub), ReachFor(store)) == false)
+                        {
+                            return;
+                        }
+                    }
+                    else
+                    {
+                        u.Status = $"Fetching materials from {leader!.Name}";
+                        if (MoveTowards(u, leader.Pos, Fixed.One) == false)
+                        {
+                            return;
+                        }
                     }
 
                     int took = 0;
@@ -525,7 +570,7 @@ public sealed partial class Planet
                         int want = m.Count - u.Carry.Count(m.Item);
                         if (want > 0)
                         {
-                            took += store.Inv.MoveTo(u.Carry, m.Item, want);
+                            took += from.MoveTo(u.Carry, m.Item, want);
                         }
                     }
 

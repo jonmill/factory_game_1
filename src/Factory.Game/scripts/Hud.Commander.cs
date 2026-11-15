@@ -52,7 +52,7 @@ public partial class Hud
         menu.AddThemeConstantOverride("separation", 4);
         foreach ((HudWindow w, string label, string key) in new[]
         {
-            (HudWindow.Inventory, "Inventory", "I"), (HudWindow.Replicator, "Replicator", "C"),
+            (HudWindow.Inventory, "Inventory", "E"), (HudWindow.Replicator, "Replicator", "C"),
             (HudWindow.Tech, "Tech", "T"), (HudWindow.Help, "Help", "H"),
         })
         {

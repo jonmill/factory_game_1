@@ -1,0 +1,45 @@
+using Factory.Game.Ui;
+using Godot;
+
+namespace Factory.Game;
+
+/// <summary>
+/// The game menu, opened with Esc once there is nothing else to close. The game pauses while it is
+/// open and picks up where it was (paused or running) when it closes.
+/// </summary>
+public partial class Hud
+{
+    private bool _pausedBeforeMenu;
+
+    private PanelContainer BuildMenu()
+    {
+        PanelContainer win = MakeWindow(HudWindow.Menu, "Paused", "Esc", out VBoxContainer body);
+        body.CustomMinimumSize = new Vector2(280, 0);
+        body.AddThemeConstantOverride("separation", 6);
+        Button MenuButton(string text, System.Action onPress)
+        {
+            Button b = HudStyle.Button(text, onPress);
+            b.CustomMinimumSize = new Vector2(0, 34);
+            body.AddChild(b);
+
+            return b;
+        }
+
+        MenuButton("Resume", () => ShowOnly(HudWindow.None));
+        MenuButton("Save game   [F5]", () =>
+        {
+            Root.QuickSave();
+            ShowOnly(HudWindow.None);
+        });
+        MenuButton("Load game   [F9]", () =>
+        {
+            ShowOnly(HudWindow.None);
+            Root.QuickLoad();
+        });
+        MenuButton("Controls and how to play   [H]", () => ShowOnly(HudWindow.Help));
+        body.AddChild(HudStyle.Divider());
+        MenuButton("Quit to desktop", () => Root.GetTree().Quit());
+
+        return win;
+    }
+}

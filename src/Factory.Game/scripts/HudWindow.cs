@@ -13,4 +13,8 @@ public enum HudWindow
     Tech,
     /// <summary>Controls and how to play.</summary>
     Help,
+    /// <summary>The selected building's slots beside the commander's pockets.</summary>
+    Machine,
+    /// <summary>The game menu: resume, save, load, controls, quit. Pauses the game while open.</summary>
+    Menu,
 }

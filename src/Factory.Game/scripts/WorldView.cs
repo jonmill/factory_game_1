@@ -77,7 +77,8 @@ public partial class WorldView : Node2D
             DrawTrain(t);
         }
 
-        foreach (Unit u in P.Units)
+        // Back to front, so nearer people overlap the ones behind them.
+        foreach (Unit u in P.Units.OrderBy(unit => unit.Pos.Y))
         {
             DrawUnit(u);
         }

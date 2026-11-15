@@ -445,15 +445,27 @@ public partial class GameRoot : Node2D
         }
         else if (k.IsAction("cancel"))
         {
-            // Esc steps back one level: the tool, then a window or build category, then the selection.
+            // Esc steps back one level: the tool, then a window or build category, then the selection,
+            // and with nothing left to close it opens the game menu.
             if (Tool != ToolKind.Select)
             {
                 SetTool(ToolKind.Select);
             }
             else if (_hud.BackOut() == false)
             {
-                SelectedId = 0;
+                if (SelectedId != 0)
+                {
+                    SelectedId = 0;
+                }
+                else
+                {
+                    _hud.Toggle(HudWindow.Menu);
+                }
             }
+        }
+        else if (k.IsAction("pipette"))
+        {
+            Pipette();
         }
         else if (k.IsAction("inventory"))
         {
@@ -508,6 +520,30 @@ public partial class GameRoot : Node2D
             _hud.BuildKey(9);
         }
     }
+
+    /// <summary>
+    /// Q: picks the building type under the cursor as the thing to place, facing the same way, or clears
+    /// the current tool when there is nothing to pick.
+    /// </summary>
+    private void Pipette()
+    {
+        BuildingDef? def = Planet.BuildingAt(HoverTile) is { } b ? b.Def : Planet.IsRail(HoverTile) ? Content.Buildings["rail"] : null;
+        if ((def is null) || (def.Buildable == false) || (World.Research.Unlocked.Contains(def.Id) == false))
+        {
+            SetTool(ToolKind.Select);
+
+            return;
+        }
+
+        SetTool(ToolKind.Place, def.Id);
+        if (Planet.BuildingAt(HoverTile) is { } picked)
+        {
+            PlaceRot = picked.Rot;
+        }
+    }
+
+    /// <summary>The entity under the mouse, or 0 when there is none or the mouse is over the HUD.</summary>
+    public int HoverEntityId => GetViewport().GuiGetHoveredControl() is null ? PickEntity(HoverTile) : 0;
 
     private void LeftClick()
     {
@@ -711,9 +747,9 @@ public partial class GameRoot : Node2D
     private int PickEntity(Int2 tile)
     {
         Vector2 mouse = ScreenToTileF(GetViewport().GetMousePosition());
-        foreach (Unit u in Planet.Units)
+        foreach (Unit u in Planet.Units.OrderByDescending(unit => unit.Pos.Y))
         {
-            if (WrapDelta(mouse, SubToTile(u.Pos)).Length() < 0.6f)
+            if (WorldView.FigureBounds.HasPoint(WrapDelta(SubToTile(u.Pos), mouse)))
             {
                 return u.Id;
             }
@@ -814,10 +850,17 @@ public partial class GameRoot : Node2D
             Zoom = 1.4f;
         }
 
-        // FACTORY_WINDOW=inventory|replicator|tech|help and FACTORY_CATEGORY=<1-6> open HUD panels for screenshots.
+        // FACTORY_WINDOW=inventory|replicator|tech|help and FACTORY_CATEGORY=<1-6> open HUD panels for screenshots;
+        // FACTORY_SELECT=<building id> selects the nearest building of that type to the commander.
         if ((_uiHooksDone == false) && (Clock > 0.5))
         {
             _uiHooksDone = true;
+            string? selectDef = System.Environment.GetEnvironmentVariable("FACTORY_SELECT");
+            if (Planet.Buildings.Where(b => b.Def.Id == selectDef).OrderBy(b => Planet.SubTorus.DistSq(Leader.Pos, b.CenterSub)).FirstOrDefault() is { } pick)
+            {
+                SelectedId = pick.Id;
+            }
+
             if (System.Enum.TryParse(System.Environment.GetEnvironmentVariable("FACTORY_WINDOW"), true, out HudWindow window))
             {
                 _hud.Toggle(window);
@@ -850,14 +893,16 @@ public partial class GameRoot : Node2D
 
     private const string SavePath = "user://quicksave.replay.json";
 
-    private void QuickSave()
+    /// <summary>Saves the game as a replay to the quicksave slot.</summary>
+    public void QuickSave()
     {
         using Godot.FileAccess f = Godot.FileAccess.Open(SavePath, Godot.FileAccess.ModeFlags.Write);
         f.StoreString(Replay.Capture(World).ToJson());
         Notify($"Saved ({ProjectSettings.GlobalizePath(SavePath)})", Colors.LightGreen);
     }
 
-    private void QuickLoad()
+    /// <summary>Loads the quicksave slot, replaying it from the start.</summary>
+    public void QuickLoad()
     {
         if (Godot.FileAccess.FileExists(SavePath) == false)
         {
@@ -893,10 +938,11 @@ public partial class GameRoot : Node2D
         Bind("move_left", Key.A, Key.Left);
         Bind("move_right", Key.D, Key.Right);
         Bind("rotate", Key.R);
-        Bind("cancel", Key.Escape, Key.Q);
+        Bind("cancel", Key.Escape);
+        Bind("pipette", Key.Q);
         Bind("deconstruct", Key.X);
         Bind("unload", Key.F);
-        Bind("inventory", Key.I, Key.Tab);
+        Bind("inventory", Key.E, Key.I, Key.Tab);
         Bind("replicator", Key.C);
         Bind("pause", Key.Space);
         Bind("speed_up", Key.Equal, Key.KpAdd);

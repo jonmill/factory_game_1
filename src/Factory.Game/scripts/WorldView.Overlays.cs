@@ -169,7 +169,7 @@ public partial class WorldView
         }
         else if (w.Get<Unit>(Root.SelectedId) is { } u)
         {
-            Brackets(new Rect2(S(GameRoot.SubToTile(u.Pos)) - new Vector2(T * 0.45f, T * 0.45f), new Vector2(T * 0.9f, T * 0.9f)), _highlight);
+            Brackets(new Rect2(S(GameRoot.SubToTile(u.Pos)) + (FigureBounds.Position * T), FigureBounds.Size * T), _highlight);
         }
         else if (w.Get<Train>(Root.SelectedId) is { } t)
         {

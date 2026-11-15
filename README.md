@@ -41,7 +41,8 @@ dotnet run --project tests/Factory.Sim.Tests    # tests (TUnit runs as an execut
 Debug/automation env vars for the client: `FACTORY_DEMO=1` (queues a sample base and fast-forwards
 via normal commands), `FACTORY_SCREENSHOT=/path.png` (saves a frame after 3 s and quits),
 `FACTORY_SEED=<n>` (pins the map seed), `FACTORY_WINDOW=inventory|replicator|tech|help` and
-`FACTORY_CATEGORY=<1-6>` (open a HUD window or build category), `FACTORY_REPLAY=/path.replay.json`
+`FACTORY_CATEGORY=<1-6>` (open a HUD window or build category), `FACTORY_SELECT=<building id>` (selects the
+nearest building of that type, e.g. `stone-furnace`), `FACTORY_REPLAY=/path.replay.json`
 (loads a headless replay and centres on the lander) and `FACTORY_ZOOM=<f>` (initial camera zoom,
 used with the replay).
 
@@ -52,8 +53,11 @@ used with the replay).
 | WASD | Walk |
 | Right-click (drag) | Mine ore or trees; the commander walks over and works through the deposit |
 | 1 – 6, then 1 – 0 | Open a build category, then pick a building; left-click places, R rotates |
-| X / Q / Esc | Dismantle tool / step back out of the tool, category or window |
-| I or Tab · C · T · H | Inventory · Replicator (lander crafting) · Tech tree · Help |
+| X · Q | Dismantle tool · pipette (pick the building under the cursor to place another) |
+| Esc | Step back out of the tool, category, window or selection; then the game menu |
+| E, I or Tab · C · T · H | Inventory (pockets + replicator + colony storage) · Replicator tab · Tech tree · Help |
+| Left-click a machine or crate | Opens it beside your pockets; hover anything for quick info |
+| Drag · Shift-click · Ctrl/Cmd-click · right-click | Move a stack between pockets and a machine or storage · one stack · all of that item · half |
 | F | Unload pockets into the nearest lander or crate |
 | Space · + / − · F5 / F9 | Pause · game speed · quicksave / quickload |
 

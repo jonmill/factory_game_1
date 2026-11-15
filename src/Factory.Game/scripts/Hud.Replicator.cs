@@ -5,9 +5,9 @@ using Godot;
 namespace Factory.Game;
 
 /// <summary>
-/// The replicator: queue crafts on the lander's fabricator from anywhere. Recipes on the left, the
-/// selected recipe's inputs (what the lander has, plus your pockets when you are close enough to feed
-/// it) on the right, and the queue with live progress along the bottom.
+/// The replicator tab of the character screen: queue crafts on the lander's fabricator from anywhere.
+/// Recipes on the left, the selected recipe's inputs (what the lander has, plus your pockets when you
+/// are close enough to feed it) on the right, and the queue with live progress along the bottom.
 /// </summary>
 public partial class Hud
 {
@@ -19,9 +19,10 @@ public partial class Hud
     private string? _replicatorSig;
     private Slot? _queueHead;
 
-    private PanelContainer BuildReplicator()
+    private VBoxContainer BuildReplicatorTab()
     {
-        PanelContainer win = MakeWindow(HudWindow.Replicator, "Replicator  ·  lander fabricator", "C", out VBoxContainer body);
+        VBoxContainer body = new VBoxContainer();
+        body.AddThemeConstantOverride("separation", 8);
         HBoxContainer cols = new HBoxContainer();
         cols.AddThemeConstantOverride("separation", 18);
         body.AddChild(cols);
@@ -32,7 +33,7 @@ public partial class Hud
         _recipeGrid.AddThemeConstantOverride("h_separation", 4);
         _recipeGrid.AddThemeConstantOverride("v_separation", 4);
         left.AddChild(_recipeGrid);
-        left.AddChild(HudStyle.Caption("Click: queue 1   ·   Right-click: queue 5   ·   Shift-click: queue 10", HudStyle.TextDim, 11));
+        left.AddChild(HudStyle.Caption("Click a recipe to see what it needs, then queue it on the right.", HudStyle.TextDim, 11));
         cols.AddChild(left);
 
         cols.AddChild(new ColorRect { Color = HudStyle.Line, CustomMinimumSize = new Vector2(1, 0) });
@@ -53,7 +54,7 @@ public partial class Hud
         _queueRow.AddThemeConstantOverride("separation", 4);
         body.AddChild(_queueRow);
 
-        return win;
+        return body;
     }
 
     private void UpdateReplicator()
@@ -73,7 +74,7 @@ public partial class Hud
         if (sig != _replicatorSig)
         {
             _replicatorSig = sig;
-            RebuildRecipes(lander, recipes);
+            RebuildRecipes(recipes);
             RebuildRecipeDetail(lander, reach);
             RebuildQueue(lander);
         }
@@ -90,7 +91,7 @@ public partial class Hud
             lander.Status == MachineStatus.NoInput ? "Waiting for ingredients" : lander.Status.ToString();
     }
 
-    private void RebuildRecipes(Building lander, List<RecipeDef> recipes)
+    private void RebuildRecipes(List<RecipeDef> recipes)
     {
         Clear(_recipeGrid);
         foreach (RecipeDef r in recipes)
@@ -104,14 +105,10 @@ public partial class Hud
                 Dim = unlocked == false,
                 TooltipText = unlocked ? $"{r.Name}\n{Costs(r.Inputs)} → {(r.Outputs.Length > 0 ? Costs(r.Outputs) : r.Effect)}" : $"{r.Name}\nNot researched yet",
             };
-            slot.Clicked += (button, shift) =>
+            // Clicking only selects; crafting starts from the Queue buttons beside the recipe.
+            slot.Clicked += (_, _) =>
             {
                 _selectedRecipe = recipe.Id;
-                if (unlocked)
-                {
-                    Root.Send(new QueueCraft(lander.Id, recipe.Id, button == MouseButton.Right ? 5 : shift ? 10 : 1));
-                }
-
                 _replicatorSig = null;
             };
             _recipeGrid.AddChild(slot);

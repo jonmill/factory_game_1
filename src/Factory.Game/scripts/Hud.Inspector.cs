@@ -39,13 +39,24 @@ public partial class Hud
 
     private void UpdateInspector()
     {
+        // With nothing selected, the panel shows whatever is under the mouse (read-only), as an entity
+        // info panel does; selecting something pins it and brings back its buttons.
         int id = Root.SelectedId;
+        bool hovered = false;
+        if ((id == 0) && (_open == HudWindow.None))
+        {
+            id = Root.HoverEntityId;
+            hovered = id != 0;
+        }
+
+        _inspActions.Visible = hovered == false;
         StringBuilder sb = new StringBuilder();
         string title = "";
         string sig = $"{id}";
         List<(string Title, Inventory Inv)> grids = [];
         Entity? e = W.Get<Building>(id) ?? W.Get<Unit>(id) ?? W.Get<Train>(id) ?? (Entity?)W.Get<ConstructionSite>(id);
-        if (e is null)
+        // A centred window takes over; the panel comes back when it closes.
+        if ((e is null) || (_open != HudWindow.None))
         {
             _inspector.Visible = false;
 
@@ -58,39 +69,8 @@ public partial class Hud
         {
             case Building b:
                 {
-                    title = b.Name == b.Def.Name ? b.Def.Name : $"{b.Name} ({b.Def.Name})";
-                    sb.AppendLine(b.Def.Description);
-                    sb.AppendLine($"Status: {b.Status}");
-                    if (b.Def.Energy == EnergyKind.Electric)
-                    {
-                        sb.AppendLine(b.NetworkId == 0 ? "Not connected to power" : $"Power: {b.Satisfaction / 10}%");
-                    }
-
-                    if (b.Def.Kind == BuildingKind.SteamEngine)
-                    {
-                        sb.AppendLine($"Output: {b.LastOutputJ * World.TicksPerSecond / 1000} kW");
-                    }
-
-                    if (b.Def.Kind == BuildingKind.Battery)
-                    {
-                        sb.AppendLine($"Charge: {b.StoredJ / 1000} / {b.Def.CapacityKj} kJ");
-                    }
-
-                    if ((b.Recipe is { } r) && (b.Def.Kind != BuildingKind.Lab))
-                    {
-                        sb.AppendLine($"Recipe: {r.Name}  ({Costs(r.Inputs)} → {(r.Outputs.Length > 0 ? Costs(r.Outputs) : r.Effect)})");
-                    }
-
-                    if ((b.Def.Kind == BuildingKind.Lander) && (b.CraftQueue.Count > 0))
-                    {
-                        sb.AppendLine("Queue: " + string.Join(", ", b.CraftQueue.GroupBy(x => x).Select(g => $"{C.Recipes[g.Key].Name} ×{g.Count()}")));
-                    }
-
-                    if ((b.Def.Kind == BuildingKind.Drill) && (P.FindMinable(b) is { } t))
-                    {
-                        sb.AppendLine($"Mining {P.ResourceAt(t)!.Name} ({P.AmountAt(t)} left on tile)");
-                    }
-
+                    title = BuildingTitle(b);
+                    sb.Append(DescribeBuilding(b));
                     if (b.Def.Slots > 0)
                     {
                         grids.Add((b.Def.IsStorage ? $"Contents  {b.Inv.UsedSlots}/{b.Inv.Slots}" : "Input and fuel", b.Inv));
@@ -101,11 +81,11 @@ public partial class Hud
                         grids.Add(("Output", b.Out));
                     }
 
-                    bool reach = P.InLeaderReach(Root.Leader, b.Origin);
-                    sig += $"|{b.RecipeId}|{reach}";
+                    sig += $"|{b.RecipeId}";
                     if (sig != _inspSig)
                     {
-                        BuildBuildingActions(b, reach);
+                        ClearActions();
+                        BuildBuildingActions(_inspActions, b);
                     }
 
                     break;
@@ -225,13 +205,72 @@ public partial class Hud
         }
     }
 
-    private void BuildBuildingActions(Building b, bool reach)
+    /// <summary>Turns an enum name like "NoFuel" into "No fuel".</summary>
+    private static string Spaced(string name)
     {
-        ClearActions();
-        Unit leader = Root.Leader;
+        StringBuilder sb = new StringBuilder();
+        foreach (char ch in name)
+        {
+            if (char.IsUpper(ch) && (sb.Length > 0))
+            {
+                sb.Append(' ').Append(char.ToLowerInvariant(ch));
+            }
+            else
+            {
+                sb.Append(ch);
+            }
+        }
+
+        return sb.ToString();
+    }
+
+    private static string BuildingTitle(Building b) => b.Name == b.Def.Name ? b.Def.Name : $"{b.Name} ({b.Def.Name})";
+
+    /// <summary>A building's description and live status lines, shared by the inspector and the machine window.</summary>
+    private string DescribeBuilding(Building b)
+    {
+        StringBuilder sb = new StringBuilder();
+        sb.AppendLine(b.Def.Description);
+        sb.AppendLine($"Status: {Spaced(b.Status.ToString())}");
+        if (b.Def.Energy == EnergyKind.Electric)
+        {
+            sb.AppendLine(b.NetworkId == 0 ? "Not connected to power" : $"Power: {b.Satisfaction / 10}%");
+        }
+
+        if (b.Def.Kind == BuildingKind.SteamEngine)
+        {
+            sb.AppendLine($"Output: {b.LastOutputJ * World.TicksPerSecond / 1000} kW");
+        }
+
+        if (b.Def.Kind == BuildingKind.Battery)
+        {
+            sb.AppendLine($"Charge: {b.StoredJ / 1000} / {b.Def.CapacityKj} kJ");
+        }
+
+        if ((b.Recipe is { } r) && (b.Def.Kind != BuildingKind.Lab))
+        {
+            sb.AppendLine($"Recipe: {r.Name}  ({Costs(r.Inputs)} → {(r.Outputs.Length > 0 ? Costs(r.Outputs) : r.Effect)})");
+        }
+
+        if ((b.Def.Kind == BuildingKind.Lander) && (b.CraftQueue.Count > 0))
+        {
+            sb.AppendLine("Queue: " + string.Join(", ", b.CraftQueue.GroupBy(x => x).Select(g => $"{C.Recipes[g.Key].Name} ×{g.Count()}")));
+        }
+
+        if ((b.Def.Kind == BuildingKind.Drill) && (P.FindMinable(b) is { } t))
+        {
+            sb.AppendLine($"Mining {P.ResourceAt(t)!.Name} ({P.AmountAt(t)} left on tile)");
+        }
+
+        return sb.ToString();
+    }
+
+    /// <summary>Controls for a building (recipe, rename, replicator, dismantle), added to the given container.</summary>
+    private void BuildBuildingActions(Container into, Building b)
+    {
         if (b.Def.Kind == BuildingKind.Lander)
         {
-            _inspActions.AddChild(HudStyle.Button("Open replicator  [C]", () => Toggle(HudWindow.Replicator)));
+            into.AddChild(HudStyle.Button("Open replicator  [C]", () => Toggle(HudWindow.Replicator)));
         }
 
         if (b.Def.Kind == BuildingKind.Assembler)
@@ -246,7 +285,7 @@ public partial class Hud
 
             opt.Select(b.RecipeId is null ? 0 : recipes.FindIndex(r => r.Id == b.RecipeId) + 1);
             opt.ItemSelected += i => Root.Send(new SetRecipe(b.Id, i == 0 ? null : recipes[(int)i - 1].Id));
-            _inspActions.AddChild(opt);
+            into.AddChild(opt);
         }
 
         if (b.Def.Kind == BuildingKind.RailStop)
@@ -257,24 +296,12 @@ public partial class Hud
                 Root.Send(new RenameBuilding(b.Id, txt));
                 edit.ReleaseFocus();
             };
-            _inspActions.AddChild(edit);
-        }
-
-        if (reach && (b.Def.Kind is not (BuildingKind.Pole or BuildingKind.Rail)))
-        {
-            HBoxContainer row = new HBoxContainer();
-            row.AddChild(HudStyle.Button("Deposit all", () => Root.Send(new DepositToBuilding(leader.Id, b.Id)), "Put what you're carrying into this building (only what it accepts)"));
-            row.AddChild(HudStyle.Button("Take all", () => Root.Send(new TakeFromBuilding(leader.Id, b.Id))));
-            _inspActions.AddChild(row);
-        }
-        else if (b.Def.Slots > 0)
-        {
-            _inspActions.AddChild(new Label { Text = "(walk closer to move items by hand)" });
+            into.AddChild(edit);
         }
 
         if (b.Def.Kind != BuildingKind.Lander)
         {
-            _inspActions.AddChild(HudStyle.Button("Dismantle", () => Root.Send(new DeconstructEntity(b.Id))));
+            into.AddChild(HudStyle.Button("Dismantle", () => Root.Send(new DeconstructEntity(b.Id))));
         }
     }
 

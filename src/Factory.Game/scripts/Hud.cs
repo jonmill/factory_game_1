@@ -48,9 +48,10 @@ public partial class Hud : CanvasLayer
         _ui.AddChild(_messages);
 
         _windows[HudWindow.Inventory] = BuildInventory();
-        _windows[HudWindow.Replicator] = BuildReplicator();
         _windows[HudWindow.Tech] = BuildTechTree();
         _windows[HudWindow.Help] = BuildHelp();
+        _windows[HudWindow.Machine] = BuildMachine();
+        _windows[HudWindow.Menu] = BuildMenu();
         ShowOnly(_open);
     }
 
@@ -58,7 +59,11 @@ public partial class Hud : CanvasLayer
     /// A centred window: a header strip with the title, its hotkey and a close button, over a body the
     /// caller fills in.
     /// </summary>
-    private PanelContainer MakeWindow(HudWindow which, string title, string key, out VBoxContainer body)
+    private PanelContainer MakeWindow(HudWindow which, string title, string key, out VBoxContainer body) =>
+        MakeWindow(which, title, key, out body, out _);
+
+    /// <summary>A centred window whose title can be changed later through <paramref name="titleLabel"/>.</summary>
+    private PanelContainer MakeWindow(HudWindow which, string title, string? key, out VBoxContainer body, out Label titleLabel)
     {
         PanelContainer win = new PanelContainer { MouseFilter = Control.MouseFilterEnum.Stop };
         win.AddThemeStyleboxOverride("panel", HudStyle.Box(HudStyle.WindowBg, HudStyle.LineBright, 3, 14, 12));
@@ -67,9 +72,14 @@ public partial class Hud : CanvasLayer
         v.AddThemeConstantOverride("separation", 8);
         win.AddChild(v);
         HBoxContainer header = new HBoxContainer();
-        header.AddChild(HudStyle.Title(title, 15));
+        titleLabel = HudStyle.Title(title, 15);
+        header.AddChild(titleLabel);
         header.AddChild(new Control { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill });
-        header.AddChild(HudStyle.Key(key));
+        if (key is not null)
+        {
+            header.AddChild(HudStyle.Key(key));
+        }
+
         header.AddChild(HudStyle.Button("✕", () => Toggle(which), "Close (Esc)"));
         v.AddChild(header);
         v.AddChild(HudStyle.Divider());
@@ -80,12 +90,43 @@ public partial class Hud : CanvasLayer
         return win;
     }
 
+    /// <summary>The replicator is a tab of the character screen, so both open the same panel.</summary>
+    private static HudWindow Panel(HudWindow which) => which == HudWindow.Replicator ? HudWindow.Inventory : which;
+
     private void ShowOnly(HudWindow which)
     {
+        // Closing a machine window lets go of the building it showed, as closing a machine's panel does.
+        if ((_open == HudWindow.Machine) && (which != HudWindow.Machine))
+        {
+            _machineId = 0;
+            Root.SelectedId = 0;
+        }
+
+        bool wasMenu = _open == HudWindow.Menu;
+        bool isMenu = which == HudWindow.Menu;
+        if (wasMenu != isMenu)
+        {
+            if (isMenu)
+            {
+                _pausedBeforeMenu = Root.Paused;
+                Root.Paused = true;
+            }
+            else
+            {
+                Root.Paused = _pausedBeforeMenu;
+            }
+        }
+
         _open = which;
         foreach ((HudWindow w, PanelContainer panel) in _windows)
         {
-            panel.Visible = w == which;
+            panel.Visible = w == Panel(which);
+        }
+
+        if (Panel(which) == HudWindow.Inventory)
+        {
+            _inventorySig = null;
+            SyncInventoryTabs();
         }
     }
 
@@ -123,6 +164,7 @@ public partial class Hud : CanvasLayer
     /// <inheritdoc />
     public override void _Process(double delta)
     {
+        WatchSelection();
         UpdateStatus();
         UpdateBuildBar();
         UpdateFollowers();
@@ -135,10 +177,14 @@ public partial class Hud : CanvasLayer
                 UpdateInventory();
                 break;
             case HudWindow.Replicator:
+                UpdateInventory();
                 UpdateReplicator();
                 break;
             case HudWindow.Tech:
                 UpdateTechTree();
+                break;
+            case HudWindow.Machine:
+                UpdateMachine();
                 break;
         }
 

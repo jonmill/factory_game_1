@@ -4,11 +4,33 @@ namespace Factory.Game.Ui;
 
 /// <summary>
 /// A square icon tile: recessed well, procedural icon, count in the corner and an optional key hint
-/// and progress ring. Used by the build bar, inventory and replicator alike.
+/// and progress ring. Used by the build bar, inventory and replicator alike. Slots given a
+/// <see cref="DragSource"/> can be dragged onto slots that accept the stack; a plain left click on
+/// them fires on release instead of press, so it doesn't fight with starting a drag.
 /// </summary>
 public partial class Slot : Control
 {
     private bool _hover;
+    private bool _armed;
+    private bool _dragged;
+
+    /// <summary>Raised when a drag starts or ends, so slots can show whether they would take the stack.</summary>
+    private static event System.Action? DragChanged;
+
+    /// <summary>The stack being dragged, if any.</summary>
+    public static ItemDrag? Dragging { get; private set; }
+
+    /// <summary>What dragging this slot picks up, or null when it can't be dragged right now.</summary>
+    public System.Func<ItemDrag?>? DragSource { get; set; }
+
+    /// <summary>Whether a dragged stack may be dropped here.</summary>
+    public System.Func<ItemDrag, bool>? CanDrop { get; set; }
+
+    /// <summary>Raised when a stack is dropped here.</summary>
+    public event System.Action<ItemDrag>? Dropped;
+
+    /// <summary>A faint icon for an empty slot, showing what belongs there.</summary>
+    public bool Ghost { get; set; }
 
     /// <summary>Draws the icon into the given rect, or null for an empty slot.</summary>
     public System.Action<CanvasItem, Rect2>? Icon { get; set; }
@@ -56,12 +78,85 @@ public partial class Slot : Control
     }
 
     /// <inheritdoc />
+    public override void _EnterTree() => DragChanged += QueueRedraw;
+
+    /// <inheritdoc />
+    public override void _ExitTree() => DragChanged -= QueueRedraw;
+
+    /// <inheritdoc />
     public override void _GuiInput(InputEvent @event)
     {
-        if ((@event is InputEventMouseButton { Pressed: true } mb) && (mb.ButtonIndex is MouseButton.Left or MouseButton.Right))
+        if ((@event is not InputEventMouseButton mb) || (mb.ButtonIndex is not (MouseButton.Left or MouseButton.Right)))
         {
-            Clicked?.Invoke(mb.ButtonIndex, mb.ShiftPressed);
+            return;
+        }
+
+        if ((DragSource is null) || (mb.ButtonIndex == MouseButton.Right))
+        {
+            if (mb.Pressed)
+            {
+                Clicked?.Invoke(mb.ButtonIndex, mb.ShiftPressed);
+                AcceptEvent();
+            }
+
+            return;
+        }
+
+        if (mb.Pressed)
+        {
+            _armed = true;
+            _dragged = false;
+        }
+        else if (_armed)
+        {
+            _armed = false;
+            if (_dragged == false)
+            {
+                Clicked?.Invoke(mb.ButtonIndex, mb.ShiftPressed);
+            }
+
             AcceptEvent();
+        }
+    }
+
+    /// <inheritdoc />
+    public override Variant _GetDragData(Vector2 atPosition)
+    {
+        if (DragSource?.Invoke() is not { } drag)
+        {
+            return default;
+        }
+
+        _dragged = true;
+        Dragging = drag;
+        Control holder = new Control { MouseFilter = MouseFilterEnum.Ignore };
+        Slot preview = new Slot(Size.X) { Icon = Icon, Count = drag.Count, Position = -Size / 2, Modulate = new Color(1, 1, 1, 0.85f) };
+        holder.AddChild(preview);
+        SetDragPreview(holder);
+        DragChanged?.Invoke();
+
+        return "item-stack";
+    }
+
+    /// <inheritdoc />
+    public override bool _CanDropData(Vector2 atPosition, Variant data) => (Dragging is { } d) && (CanDrop?.Invoke(d) == true);
+
+    /// <inheritdoc />
+    public override void _DropData(Vector2 atPosition, Variant data)
+    {
+        if (Dragging is { } d)
+        {
+            Dropped?.Invoke(d);
+        }
+    }
+
+    /// <inheritdoc />
+    public override void _Notification(int what)
+    {
+        if ((what == NotificationDragEnd) && (Dragging is not null))
+        {
+            Dragging = null;
+            DragChanged?.Invoke();
         }
     }
 
@@ -69,12 +164,22 @@ public partial class Slot : Control
     public override void _Draw()
     {
         Rect2 r = new Rect2(Vector2.Zero, Size);
-        Color border = Selected ? HudStyle.Orange : _hover ? HudStyle.LineBright : HudStyle.Line;
+        bool target = (Dragging is { } d) && (CanDrop?.Invoke(d) == true);
+        Color border = Selected ? HudStyle.Orange : (_hover || target) ? HudStyle.LineBright : HudStyle.Line;
         DrawStyleBox(HudStyle.Box(Selected ? new Color(0.16f, 0.1f, 0.04f, 0.95f) : HudStyle.Well, border, 3, 0, 0), r);
+        if (target)
+        {
+            DrawRect(r.Grow(-1), new Color(0.45f, 0.72f, 0.9f, 0.12f));
+        }
+
         if (Icon is not null)
         {
             Icon(this, r.Grow(-Size.X * 0.1f));
-            if (Dim)
+            if (Ghost)
+            {
+                DrawRect(r.Grow(-1), new Color(0.015f, 0.03f, 0.05f, 0.75f));
+            }
+            else if (Dim)
             {
                 DrawRect(r.Grow(-1), new Color(0.015f, 0.03f, 0.05f, 0.62f));
             }
