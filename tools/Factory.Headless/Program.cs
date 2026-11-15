@@ -87,7 +87,13 @@ if (command == "trace")
     s.Bots.Add(bot);
     while ((s.World.Tick < mins * 3600) && (g.IsMet(s.World) == false))
     {
-        s.Run(_ => false, every);
+        RunResult step = s.Run(_ => false, every);
+        if (step.Crash is not null)
+        {
+            Console.WriteLine($"CRASH at tick {s.World.Tick}: {step.Crash}");
+            break;
+        }
+
         Planet p = s.World.Planets[0];
         Console.WriteLine($"[{s.World.Tick / 60}s] research={s.World.Research.Current ?? "-"} {s.World.Research.UnitsDone} done=[{string.Join(",", s.World.Research.Completed)}] sites={p.Sites.Count}");
         foreach (Building? b in p.Buildings.Where(b => (b.Def.Energy == EnergyKind.Electric) || (b.Def.Kind is BuildingKind.SteamEngine or BuildingKind.Furnace or BuildingKind.LaunchPad or BuildingKind.Ferry)))

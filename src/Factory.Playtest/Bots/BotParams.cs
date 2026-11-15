@@ -23,6 +23,8 @@ public sealed record BotParams
     public int FurnaceCollectAt { get; init; } = 8;
     /// <summary>Research look-ahead: how many units of each remaining tech to plan materials for.</summary>
     public int ResearchLookahead { get; init; } = 10;
+    /// <summary>Whether the bot automates like a real player: drills, smelting columns, fabricators, more helper bots, outposts.</summary>
+    public bool Automate { get; init; } = true;
 
     /// <summary>Creates a random strategy with every knob drawn from its allowed range.</summary>
     /// <param name="rng">Random source.</param>
@@ -61,5 +63,5 @@ public sealed record BotParams
 
     /// <inheritdoc />
     public override string ToString() =>
-        $"think={ThinkInterval} furnaces={Furnaces} labs={Labs} fuel={FuelResource} minFuel={MinFuelStock} batch={CraftBatch} builders={MaxBuilders} collect={FurnaceCollectAt} lookahead={ResearchLookahead}";
+        $"think={ThinkInterval} furnaces={Furnaces} labs={Labs} fuel={FuelResource} minFuel={MinFuelStock} batch={CraftBatch} builders={MaxBuilders} collect={FurnaceCollectAt} lookahead={ResearchLookahead} automate={Automate}";
 }
