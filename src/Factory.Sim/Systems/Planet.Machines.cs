@@ -130,7 +130,7 @@ public sealed partial class Planet
             }
 
             b.Inv.Remove(fuel, 1);
-            World.Stats.Record(ItemFlow.Fuel, fuel, 1);
+            World.Stats.Record(ItemFlow.Fuel, fuel, 1, b.Def.Id, "", Id);
             b.FuelJ += c.Item(fuel).FuelKj * 1000L;
         }
 
@@ -247,7 +247,7 @@ public sealed partial class Planet
         if (b.Progress >= need)
         {
             b.Progress -= need;
-            string? item = MineOne(tile.Value, ItemFlow.DrillMined);
+            string? item = MineOne(tile.Value, ItemFlow.DrillMined, b.Def.Id);
             if (item is not null)
             {
                 b.Out.AddUnchecked(item, 1);
@@ -372,7 +372,7 @@ public sealed partial class Planet
         }
 
         b.Inv.RemoveAll(r.Inputs);
-        World.Stats.Record(r.Category == "smelting" ? ItemFlow.SmeltInput : ItemFlow.CraftInput, r.Inputs);
+        World.Stats.Record(r.Category == "smelting" ? ItemFlow.SmeltInput : ItemFlow.CraftInput, r.Inputs, 1, b.Def.Id, r.Id, Id);
         if (b.Def.Kind == BuildingKind.Lander)
         {
             b.CraftQueue.RemoveAt(0);
@@ -412,7 +412,7 @@ public sealed partial class Planet
             b.Out.AddUnchecked(o.Item, o.Count);
         }
 
-        World.Stats.Record(r.Category == "smelting" ? ItemFlow.Smelted : ItemFlow.Crafted, r.Outputs);
+        World.Stats.Record(r.Category == "smelting" ? ItemFlow.Smelted : ItemFlow.Crafted, r.Outputs, 1, b.Def.Id, r.Id, Id);
         b.Crafting = false;
         b.Progress = 0;
         if ((ContentDb.RobotForEffect(r.Effect) is { } robot) && World.Content.Robots.TryGetValue(robot, out RobotDef? def))
@@ -450,7 +450,7 @@ public sealed partial class Planet
             }
 
             b.Inv.RemoveAll(tech.UnitCostList);
-            World.Stats.Record(ItemFlow.Research, tech.UnitCostList);
+            World.Stats.Record(ItemFlow.Research, tech.UnitCostList, 1, b.Def.Id, tech.Id, Id);
             b.Crafting = true;
             b.Progress = 0;
         }

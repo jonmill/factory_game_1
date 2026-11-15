@@ -3,6 +3,11 @@ namespace Factory.Sim;
 /// <summary>Leader movement/hand-mining and follower job AI (gather, build, haul, operate train).</summary>
 public sealed partial class Planet
 {
+    /// <summary>Who a unit is in the ledger: its robot kind ("commander", "helper-mk1").</summary>
+    /// <param name="u">The unit.</param>
+    /// <returns>The ledger name.</returns>
+    internal static string WhoIs(Unit u) => u.Robot?.Id ?? "";
+
     /// <summary>How far, in tiles, the leader can reach to build or interact.</summary>
     public const int LeaderReachTiles = 10;
     /// <summary>How close, in tiles, the leader has to stand to a tile to hand-mine it.</summary>
@@ -166,7 +171,7 @@ public sealed partial class Planet
         }
 
         u.MiningProgress = 0;
-        string? item = MineOne(t, ItemFlow.HandMined);
+        string? item = MineOne(t, ItemFlow.HandMined, WhoIs(u));
         if (item is not null)
         {
             u.Carry.Add(item, 1);
@@ -379,7 +384,7 @@ public sealed partial class Planet
                 }
 
                 u.WorkTicks = 0;
-                if (MineOne(u.TargetTile, ItemFlow.HandMined) is { } item)
+                if (MineOne(u.TargetTile, ItemFlow.HandMined, WhoIs(u)) is { } item)
                 {
                     u.Carry.AddUnchecked(item, 1);
                 }

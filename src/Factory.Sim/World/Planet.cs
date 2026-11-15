@@ -143,7 +143,7 @@ public sealed partial class Planet
 
     private int _veinCredit;
 
-    internal string? MineOne(Int2 t, ItemFlow flow)
+    internal string? MineOne(Int2 t, ItemFlow flow, string by = "")
     {
         int i = Index(t);
         if ((_resource[i] == 0) || (_amount[i] <= 0))
@@ -168,7 +168,7 @@ public sealed partial class Planet
             TerrainVersion++;
         }
 
-        World.Stats.Record(flow, res.Item, 1);
+        World.Stats.Record(flow, res.Item, 1, by, res.Id, Id);
 
         return res.Item;
     }
@@ -223,6 +223,7 @@ public sealed partial class Planet
 
         Buildings.Add(b);
         World.Register(b);
+        World.Stats.RecordBuilt(def.Id, Id, Buildings.Count(x => x.Def.Id == def.Id));
         PowerDirty = true;
 
         return b;
@@ -240,6 +241,7 @@ public sealed partial class Planet
 
         Buildings.Remove(b);
         World.Unregister(b);
+        World.Stats.RecordRemoved(b.Def.Id, Id);
         PowerDirty = true;
     }
 

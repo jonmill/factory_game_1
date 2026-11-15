@@ -290,7 +290,7 @@ public sealed partial class Planet
                 }
 
                 loco.Cargo.Remove(fuel, 1);
-                World.Stats.Record(ItemFlow.Fuel, fuel, 1);
+                World.Stats.Record(ItemFlow.Fuel, fuel, 1, loco.Def.Id, "", Id);
                 t.FuelJ += World.Content.Item(fuel).FuelKj * 1000L;
             }
 

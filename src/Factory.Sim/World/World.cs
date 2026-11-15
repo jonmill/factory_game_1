@@ -129,6 +129,7 @@ public sealed partial class World
     /// <summary>Advances one tick: applies due commands in deterministic order, then updates every planet.</summary>
     public void Step()
     {
+        Stats.Tick = Tick;
         LastCommandResults.Clear();
         // Apply commands due this tick in deterministic order (player, then submission order).
         List<ScheduledCommand> due = _pending.Where(c => c.Tick <= Tick).OrderBy(c => c.Command.Player).ThenBy(c => c.Seq).ToList();
@@ -208,7 +209,7 @@ public sealed partial class World
         foreach ((string? item, int n) in Content.Start.Lander)
         {
             lander.Inv.AddUnchecked(item, n);
-            Stats.Record(ItemFlow.Start, item, n);
+            Stats.Record(ItemFlow.Start, item, n, "start", "", planet.Id);
         }
 
         planet.LanderId = lander.Id;

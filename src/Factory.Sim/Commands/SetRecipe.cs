@@ -50,7 +50,7 @@ public sealed record SetRecipe(int BuildingId, string? RecipeId) : Command
                 b.Inv.AddUnchecked(i.Item, i.Count);
             }
 
-            w.Stats.Record(ItemFlow.Refunded, old.Inputs);
+            w.Stats.Record(ItemFlow.Refunded, old.Inputs, 1, b.Def.Id, old.Id, b.Planet.Id);
         }
 
         b.Crafting = false;

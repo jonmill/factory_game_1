@@ -117,11 +117,11 @@ public sealed partial class Planet
     {
         if (TerraformEffect(r.Effect) is { } t)
         {
-            AddTerraform(t.Stat, t.Points, b.Origin);
+            AddTerraform(t.Stat, t.Points, b.Origin, b.Def.Id);
         }
         else if ((PayloadEffect(r.Effect) is { } p) && (TargetOf(b) is { } target))
         {
-            target.AddTerraform(p.Stat, p.Points, new Int2(target.Width / 2, target.Height / 2));
+            target.AddTerraform(p.Stat, p.Points, new Int2(target.Width / 2, target.Height / 2), b.Def.Id);
         }
         else if (r.Effect == CallSettlersEffect)
         {
@@ -131,8 +131,9 @@ public sealed partial class Planet
     }
 
     /// <summary>Adds terraforming points to a stat, announcing a finished stat or a planet that has become ready.</summary>
-    private void AddTerraform(string statId, int points, Int2 at)
+    private void AddTerraform(string statId, int points, Int2 at, string by)
     {
+        World.Stats.RecordTerraform(Id, statId, points, by);
         PlanetStatDef? stat = World.Content.Terraform.Stats.FirstOrDefault(s => s.Id == statId);
         bool wasReady = IsReady;
         int before = Stats.GetValueOrDefault(statId);

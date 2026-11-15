@@ -55,11 +55,11 @@ public sealed partial class Planet
     {
         ContentDb c = World.Content;
         pad.Inv.Remove(pad.Def.Vessel!, 1);
-        World.Stats.Record(ItemFlow.Launched, pad.Def.Vessel!, 1);
+        World.Stats.Record(ItemFlow.Launched, pad.Def.Vessel!, 1, pad.Def.Id, to.Def.Id, Id);
         foreach (ItemAmount f in LaunchFuel(pad))
         {
             pad.Inv.Remove(f.Item, f.Count);
-            World.Stats.Record(ItemFlow.Fuel, f.Item, f.Count);
+            World.Stats.Record(ItemFlow.Fuel, f.Item, f.Count, pad.Def.Id, "launch", Id);
         }
 
         Int2 site = to.FindLandingSite(c.Buildings[pad.Def.LandsAs!].W, c.Buildings[pad.Def.LandsAs!].H)!.Value;
@@ -94,7 +94,7 @@ public sealed partial class Planet
         if (VesselOf(ferry.Def) is { } vessel)
         {
             store.Inv.AddUnchecked(vessel, 1);
-            World.Stats.Record(ItemFlow.Refunded, vessel, 1);
+            World.Stats.Record(ItemFlow.Refunded, vessel, 1, ferry.Def.Id, "return", home.Id);
         }
 
         foreach ((string item, int n) in ferry.Inv.Items.ToList())

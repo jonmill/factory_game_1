@@ -83,7 +83,7 @@ public sealed partial class Planet
             case SiteKind.Build:
                 {
                     BuildingDef def = content.Buildings[s.DefId];
-                    ConsumeDelivered(s);
+                    ConsumeDelivered(s, builder);
                     RemoveSite(s);
                     if (def.Kind == BuildingKind.Rail)
                     {
@@ -107,7 +107,7 @@ public sealed partial class Planet
                         return false;
                     }
 
-                    ConsumeDelivered(s);
+                    ConsumeDelivered(s, builder);
                     RemoveSite(s);
                     Train train = CreateTrain(s.Vehicles, s.TrainTiles);
                     World.Emit($"{builder.Name} assembled {train.Name}", Id, s.Origin);
@@ -175,11 +175,11 @@ public sealed partial class Planet
         return true;
     }
 
-    private void ConsumeDelivered(ConstructionSite s)
+    private void ConsumeDelivered(ConstructionSite s, Unit builder)
     {
         foreach ((string? k, int v) in s.Delivered.Items)
         {
-            World.Stats.Record(ItemFlow.Construction, k, v);
+            World.Stats.Record(ItemFlow.Construction, k, v, WhoIs(builder), s.DefId, Id);
         }
 
         s.Delivered.Clear();
@@ -192,7 +192,7 @@ public sealed partial class Planet
             builder.Carry.AddUnchecked(c.Item, c.Count);
         }
 
-        World.Stats.Record(ItemFlow.Refunded, items);
+        World.Stats.Record(ItemFlow.Refunded, items, 1, WhoIs(builder), "deconstruct", Id);
     }
 
     private Building CreateBuildingRotated(BuildingDef def, Int2 origin, Dir rot)

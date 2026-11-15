@@ -25,12 +25,14 @@ public sealed partial class World
             Research.Levels[id] = level;
             Research.Progress[id] = 0;
             Research.Completed.Add(id);
+            Stats.RecordResearch(id);
             Emit($"Research complete: {tech.Name} {level}");
 
             return;
         }
 
         Research.Completed.Add(id);
+        Stats.RecordResearch(id);
         foreach (string u in tech.Unlocks)
         {
             Research.Unlocked.Add(u);

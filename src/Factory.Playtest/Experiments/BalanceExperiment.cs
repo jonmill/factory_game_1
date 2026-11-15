@@ -46,6 +46,7 @@ public sealed class BalanceExperiment : IExperiment
         Starvation(ctx, report, runs);
         FollowerTime(report, runs);
         Milestones(ctx, report, runs);
+        LedgerAnalysis.Analyze(ctx, report, runs.Select(r => (r.Seed, r.S.World)).ToList());
         int met = runs.Count(r => r.Result.GoalMet);
         report.Summary = $"Reference bot pursued **{ctx.Goal.Describe(ctx.Content)}** on {runs.Count} seeds for up to {ctx.Minutes} game-minutes: " +
                          $"reached it on {met}/{runs.Count}.";
