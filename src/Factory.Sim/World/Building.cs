@@ -44,6 +44,10 @@ public sealed class Building : Entity
     public List<BeltItem> Lane { get; } = [];
     /// <summary>A logistics station's item settings: what it supplies and what it demands.</summary>
     public List<StationSlot> StationSlots { get; } = [];
+    /// <summary>Machine modules installed, by item id, in slot order.</summary>
+    public List<string> Modules { get; } = [];
+    /// <summary>Extra speed, in percent, the craft in progress gets from supplied modules.</summary>
+    public int BoostPct { get; internal set; }
     /// <summary>Generation actually delivered last tick (W), for UI.</summary>
     public long LastOutputJ { get; internal set; }
 

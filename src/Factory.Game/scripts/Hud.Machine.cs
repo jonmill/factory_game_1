@@ -140,7 +140,7 @@ public partial class Hud
         }
 
         // The third part changes whenever the action controls need rebuilding: recipe, launch target or station settings.
-        string actionsKey = $"{b.RecipeId};{b.TargetPlanetId};" + string.Join(",", b.StationSlots.Select(s => $"{s.Item}:{s.Mode}"));
+        string actionsKey = $"{b.RecipeId};{b.TargetPlanetId};{string.Join(",", b.Modules)};" + string.Join(",", b.StationSlots.Select(s => $"{s.Item}:{s.Mode}"));
         string sig = $"{b.Id}|{reach}|{actionsKey}|" + string.Join(",", b.Inv.Items.Select(kv => $"{kv.Key}:{kv.Value}")) + "|" +
                      string.Join(",", b.Out.Items.Select(kv => $"{kv.Key}:{kv.Value}"));
         if (sig != _machineSig)
@@ -190,6 +190,13 @@ public partial class Hud
         if (reach == false)
         {
             Root.Notify("Too far away: walk closer to the machine", Colors.OrangeRed);
+
+            return;
+        }
+
+        if ((C.Item(item).Module is { Fits: ModuleFit.Machine }) && (b.Modules.Count < b.Def.ModuleSlots))
+        {
+            Root.Send(new InstallMachineModule(Root.Leader.Id, b.Id, item));
 
             return;
         }

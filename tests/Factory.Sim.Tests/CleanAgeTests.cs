@@ -26,7 +26,7 @@ public class CleanAgeTests
         TestWorld tw = new TestWorld();
         Building turbine = tw.Build("wind-turbine", 10, 10);
         long thin = tw.P.GenCapacityJ(turbine);
-        tw.P.Stats["atmosphere"] = 100;
+        tw.P.Stats["atmosphere"] = 10000;
         await Assert.That(tw.P.GenCapacityJ(turbine)).IsEqualTo(Planet.PerTickJ(300));
         await Assert.That(thin < Planet.PerTickJ(300) / 3).IsTrue();
     }

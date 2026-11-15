@@ -68,6 +68,10 @@ public sealed class BuildingDef
     public string? LandsAs { get; init; }
     /// <summary>Burner buildings: the only fuels it takes, or empty for any fuel.</summary>
     public string[] Fuels { get; init; } = [];
+    /// <summary>Machine module slots (climate amplifiers and the like); 0 for none.</summary>
+    public int ModuleSlots { get; init; }
+    /// <summary>The most of this building that can stand on one planet; 0 for no limit.</summary>
+    public int MaxPerPlanet { get; init; }
     /// <summary>Logistics stations: how many drones fly its supplies around the planet.</summary>
     public int Drones { get; init; }
     /// <summary>Logistics stations: items one drone carries.</summary>

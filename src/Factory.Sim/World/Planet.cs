@@ -426,6 +426,13 @@ public sealed partial class Planet
             h.Add(b.HomePadId);
             h.Add(b.HomePlanetId);
             h.Add(b.TargetPlanetId);
+            h.Add(b.BoostPct);
+            h.Add(b.Modules.Count);
+            foreach (string m in b.Modules)
+            {
+                h.Add(m);
+            }
+
             foreach (BeltItem it in b.Lane)
             {
                 h.Add(it.Item);

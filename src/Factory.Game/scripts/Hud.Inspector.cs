@@ -278,6 +278,34 @@ public partial class Hud
     }
 
     /// <summary>Controls for a building (recipe, rename, replicator, dismantle), added to the given container.</summary>
+    /// <summary>A machine's module slots: click a filled one to take the module out; click a module in your pockets to put it in.</summary>
+    private void BuildModuleSlots(Container into, Building b)
+    {
+        HBoxContainer row = new HBoxContainer();
+        row.AddChild(HudStyle.Caption("Modules", HudStyle.TextDim, 11));
+        for (int slot = 0; slot < b.Def.ModuleSlots; slot++)
+        {
+            int index = slot;
+            if (slot < b.Modules.Count)
+            {
+                ItemDef module = C.Item(b.Modules[slot]);
+                Button take = HudStyle.Button(module.Name, () => Root.Send(new RemoveMachineModule(Root.Leader.Id, b.Id, index)));
+                take.TooltipText = $"{module.Module!.Description}\nClick to take it out.";
+                row.AddChild(take);
+            }
+            else
+            {
+                string? fits = C.ItemList.Where(it => it.Module is { Fits: ModuleFit.Machine }).Select(it => it.Name).FirstOrDefault();
+                Label empty = HudStyle.Caption("(empty)", HudStyle.TextDim, 11);
+                empty.TooltipText = fits is null ? "An empty module slot." : $"An empty module slot. Click a {fits} in your pockets to put it in.";
+                empty.MouseFilter = Control.MouseFilterEnum.Pass;
+                row.AddChild(empty);
+            }
+        }
+
+        into.AddChild(row);
+    }
+
     private void BuildBuildingActions(Container into, Building b)
     {
         if (b.Def.Kind == BuildingKind.Lander)
@@ -298,6 +326,11 @@ public partial class Hud
             opt.Select(b.RecipeId is null ? 0 : recipes.FindIndex(r => r.Id == b.RecipeId) + 1);
             opt.ItemSelected += i => Root.Send(new SetRecipe(b.Id, i == 0 ? null : recipes[(int)i - 1].Id));
             into.AddChild(opt);
+        }
+
+        if (b.Def.ModuleSlots > 0)
+        {
+            BuildModuleSlots(into, b);
         }
 
         if (b.Def.Kind == BuildingKind.RailStop)

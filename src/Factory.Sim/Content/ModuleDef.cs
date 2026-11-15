@@ -18,6 +18,12 @@ public sealed class ModuleDef
     public bool Hover { get; init; }
     /// <summary>Jobs a helper bot can take only with this module installed.</summary>
     public JobKind[] Jobs { get; init; } = [];
+    /// <summary>Machines: extra crafting speed, in percent, while the module is supplied.</summary>
+    public int BoostPct { get; init; }
+    /// <summary>Machines: items the module uses up each craft to give its boost, keyed by item id.</summary>
+    public Dictionary<string, int> Consumes { get; init; } = new();
+    /// <summary><see cref="Consumes"/> as an id-sorted list, for deterministic iteration.</summary>
+    [System.Text.Json.Serialization.JsonIgnore] public ItemAmount[] ConsumesList => Consumes.OrderBy(kv => kv.Key, StringComparer.Ordinal).Select(kv => new ItemAmount(kv.Key, kv.Value)).ToArray();
     /// <summary>What the module does, for tooltips.</summary>
     public string Description { get; init; } = "";
 
@@ -28,6 +34,7 @@ public sealed class ModuleDef
     {
         ModuleFit.Commander => commander,
         ModuleFit.Helper => commander == false,
+        ModuleFit.Machine => false,
         _ => true,
     };
 }

@@ -195,6 +195,11 @@ public sealed class ContentDb
             }
         }
 
+        foreach (ItemDef i in ItemList.Where(i => i.Module is not null))
+        {
+            CheckItems($"module {i.Id}", i.Module!.Consumes.Keys);
+        }
+
         foreach (ResourceDef r in ResourceList)
         {
             CheckItems($"resource {r.Id}", [r.Item]);

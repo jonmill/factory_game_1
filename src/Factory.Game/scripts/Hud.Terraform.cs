@@ -64,8 +64,9 @@ public partial class Hud
         foreach ((PlanetStatDef stat, ProgressBar b, Label value) in _statRows)
         {
             int pct = P.StatPercent(stat);
-            b.Value = pct / 100.0;
-            value.Text = $"{pct}%";
+            double exact = stat.Target <= 0 ? 100 : System.Math.Min(100.0, P.Stats.GetValueOrDefault(stat.Id) * 100.0 / stat.Target);
+            b.Value = exact / 100.0;
+            value.Text = $"{exact:0.00}%";
             value.AddThemeColorOverride("font_color", pct >= 100 ? HudStyle.Good : HudStyle.TextDim);
         }
 

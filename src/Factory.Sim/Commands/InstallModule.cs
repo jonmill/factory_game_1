@@ -26,6 +26,11 @@ public sealed record InstallModule(int UnitId, int TargetId, string Item) : Comm
             return $"No {item.Name} in your pockets";
         }
 
+        if (module.Fits == ModuleFit.Machine)
+        {
+            return $"{item.Name} goes in a machine, not a robot";
+        }
+
         if (module.FitsRobot(target.IsLeader) == false)
         {
             return target.IsLeader ? $"{item.Name} only fits helper bots" : $"{item.Name} only fits the commander";

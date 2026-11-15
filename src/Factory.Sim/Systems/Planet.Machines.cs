@@ -50,6 +50,11 @@ public sealed partial class Planet
             case BuildingKind.Assembler or BuildingKind.RobotBay or BuildingKind.Terraformer or BuildingKind.Uplink:
                 {
                     RecipeDef? r = b.Recipe;
+                    if (ModuleSupply(b, item) is int perCraft and > 0)
+                    {
+                        return Cap(perCraft * 10);
+                    }
+
                     if ((r is null) || (r.In.TryGetValue(item, out int need) == false))
                     {
                         return 0;
@@ -373,6 +378,7 @@ public sealed partial class Planet
 
         b.Inv.RemoveAll(r.Inputs);
         World.Stats.Record(r.Category == "smelting" ? ItemFlow.SmeltInput : ItemFlow.CraftInput, r.Inputs, 1, b.Def.Id, r.Id, Id);
+        SupplyModules(b);
         if (b.Def.Kind == BuildingKind.Lander)
         {
             b.CraftQueue.RemoveAt(0);
@@ -401,6 +407,7 @@ public sealed partial class Planet
         b.Status = MachineStatus.Working;
         RecipeDef r = b.Recipe!;
         int speed = (r.Category == "orbital") && HasSpaceElevator ? 2 * b.Def.Speed : b.Def.Speed;
+        speed = speed * (100 + b.BoostPct) / 100;
         b.Progress += speed * f / 1000;
         if (b.Progress < r.Ticks * 100L)
         {
@@ -547,5 +554,35 @@ public sealed partial class Planet
         }
 
         b.Status = MachineStatus.Idle;
+    }
+
+    /// <summary>The machine modules installed in a building.</summary>
+    /// <param name="b">The building.</param>
+    /// <returns>Their module definitions, in slot order.</returns>
+    public IEnumerable<ModuleDef> MachineModulesOf(Building b) => b.Modules.Select(m => World.Content.Item(m).Module!);
+
+    /// <summary>How many of an item a building's modules use up per craft, or 0 if none do.</summary>
+    private int ModuleSupply(Building b, string item) => MachineModulesOf(b).Sum(m => m.Consumes.GetValueOrDefault(item));
+
+    /// <summary>
+    /// At the start of a craft, each module whose supplies are in the machine uses them up and adds its boost;
+    /// a module left without supplies does nothing this craft.
+    /// </summary>
+    private void SupplyModules(Building b)
+    {
+        b.BoostPct = 0;
+        foreach (string id in b.Modules)
+        {
+            ModuleDef m = World.Content.Item(id).Module!;
+            ItemAmount[] use = m.ConsumesList;
+            if (b.Inv.Has(use) == false)
+            {
+                continue;
+            }
+
+            b.Inv.RemoveAll(use);
+            World.Stats.Record(ItemFlow.CraftInput, use, 1, b.Def.Id, id, Id);
+            b.BoostPct += m.BoostPct;
+        }
     }
 }

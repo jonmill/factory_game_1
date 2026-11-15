@@ -130,11 +130,20 @@ terraforms another planet from home, Conveyor Belts (sorter arms load and unload
 Stations (drones carry supplied items to stations that demand them) and Orbital Logistics Stations (vessels
 between planets); in the Stellar Age an Orbital Collector (helium-3 from the gas giant Vesper, osmiridium from
 the Shards), Plasma Smelters and Drills, a Fusion Reactor (12 MW on Fusion Cells), the Space Elevator (free
-launches, faster collectors and vessels), the Climate Engine (fast terraforming) and Vein Utilization, infinite
-research that makes deposits last longer; terraformers (Atmosphere Processor, Hydrosphere Seeder, Bio Incubator), a system readiness meter
-and the Settler Uplink to win.
+launches, faster collectors and vessels), Precision and Plasma Fabricators (2x and 4x), the Climate Engine
+(terraforms the planet it stands on 60x faster than the first terraformers), Climate Amplifier modules for it
+(burn Lanthanide Accelerant from Dune's lanthanide and Cinder's brimstone to double its speed), Climate
+Acceleration and Vein Utilization (infinite research); terraformers (Atmosphere Processor, Hydrosphere Seeder,
+Bio Incubator), a system readiness meter and the Settler Uplink (Stellar Age) to win.
 
-Win condition: any 3 of the 4 terraformable planets (Kepler's Rest, Cinder, Rime, Dune) ready; the others are terraformed from home with the Payload Launcher.
+Win condition: any 3 of the 4 terraformable planets (Kepler's Rest, Cinder, Rime, Dune) ready. Each stat runs
+to 10,000 points. The first terraformers and the Payload Launcher add 2 points per 20 s or 10 s and only 2 of
+each fit on a planet, so terraforming with them alone takes dozens of hours; Climate Engines on each planet
+finish the job.
+
+Every item, building, research and terraform point goes into the sim's ledger (`World.Stats`): who made or
+used it, how, on which planet and when, with five-minute time series. It is the basis for achievements and for
+the playtest reports that check the bots really automate.
 
 Not yet: splitters and underground belts, rail signals
 (trains just block each other), train collision avoidance on single track, snapshot saves, audio,

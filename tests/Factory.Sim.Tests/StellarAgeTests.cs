@@ -67,7 +67,52 @@ public class StellarAgeTests
         engine.Inv.AddUnchecked("helium-3", 2);
         int before = tw.P.Stats["atmosphere"];
         tw.Run(60 * 11);
-        await Assert.That(tw.P.Stats["atmosphere"]).IsEqualTo(before + 10);
+        await Assert.That(tw.P.Stats["atmosphere"]).IsEqualTo(before + 60);
+    }
+
+    [Test]
+    public async Task ClimateAmplifiers_BurnAccelerantToDoubleTheSpeed()
+    {
+        TestWorld tw = new TestWorld();
+        tw.Unlock("climate-atmosphere", "climate-amplifier");
+        Power(tw, 10, 10);
+        Building engine = tw.Build("climate-engine", 15, 10);
+        tw.Do(new SetRecipe(engine.Id, "climate-atmosphere"));
+        tw.Leader.Carry.AddUnchecked("climate-amplifier", 2);
+        tw.Leader.Pos = Fixed.TileCenter(new Int2(14, 12));
+        tw.Do(new InstallMachineModule(tw.Leader.Id, engine.Id, "climate-amplifier"));
+        tw.Do(new InstallMachineModule(tw.Leader.Id, engine.Id, "climate-amplifier"));
+        await Assert.That(tw.Try(new InstallMachineModule(tw.Leader.Id, engine.Id, "climate-amplifier"))).IsNotNull();
+        await Assert.That(tw.Try(new InstallModule(tw.Leader.Id, tw.Leader.Id, "climate-amplifier"))).IsNotNull().Because("it goes in machines, not robots");
+        engine.Inv.AddUnchecked("catalyst-pack", 4);
+        engine.Inv.AddUnchecked("helium-3", 4);
+        engine.Inv.AddUnchecked("lanthanide-accelerant", 2);
+        int before = tw.P.Stats["atmosphere"];
+        tw.Run((600 / 3) + 5);
+        await Assert.That(tw.P.Stats["atmosphere"]).IsEqualTo(before + 60).Because("two amplifiers make a surge three times as fast");
+        await Assert.That(engine.Inv.Count("lanthanide-accelerant")).IsEqualTo(0);
+        await Assert.That(tw.W.Stats.Count("lanthanide-accelerant", ItemFlow.CraftInput, by: "climate-engine", via: "climate-amplifier")).IsEqualTo(2);
+        // Out of accelerant, the next surge runs at the normal speed.
+        tw.Run((600 / 3) + 5);
+        await Assert.That(tw.P.Stats["atmosphere"]).IsEqualTo(before + 60);
+        tw.Run(600);
+        await Assert.That(tw.P.Stats["atmosphere"]).IsEqualTo(before + 120);
+    }
+
+    [Test]
+    public async Task ClimateAcceleration_AddsAQuarterPerLevel()
+    {
+        TestWorld tw = new TestWorld();
+        tw.Unlock("climate-atmosphere");
+        tw.W.Research.Levels[Planet.ClimateAcceleration] = 2;
+        Power(tw, 10, 10);
+        Building engine = tw.Build("climate-engine", 15, 10);
+        tw.Do(new SetRecipe(engine.Id, "climate-atmosphere"));
+        engine.Inv.AddUnchecked("catalyst-pack", 2);
+        engine.Inv.AddUnchecked("helium-3", 2);
+        int before = tw.P.Stats["atmosphere"];
+        tw.Run(60 * 11);
+        await Assert.That(tw.P.Stats["atmosphere"]).IsEqualTo(before + 90);
     }
 
     [Test]

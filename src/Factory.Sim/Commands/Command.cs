@@ -31,6 +31,8 @@ namespace Factory.Sim;
 [JsonDerivedType(typeof(ReturnFerry), "returnFerry")]
 [JsonDerivedType(typeof(SetLaunchTarget), "setLaunchTarget")]
 [JsonDerivedType(typeof(SetStationSlot), "setStationSlot")]
+[JsonDerivedType(typeof(InstallMachineModule), "installMachineModule")]
+[JsonDerivedType(typeof(RemoveMachineModule), "removeMachineModule")]
 public abstract record Command
 {
     /// <summary>Issuing player (0 in single player).</summary>

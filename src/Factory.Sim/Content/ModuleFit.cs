@@ -9,4 +9,6 @@ public enum ModuleFit
     Commander,
     /// <summary>Only helper bots.</summary>
     Helper,
+    /// <summary>Only machines with module slots, not robots.</summary>
+    Machine,
 }

@@ -109,6 +109,12 @@ public sealed partial class Planet
         return null;
     }
 
+    /// <summary>The repeatable tech that speeds up climate engines.</summary>
+    public const string ClimateAcceleration = "climate-acceleration";
+
+    /// <summary>Extra climate engine terraforming per level of <see cref="ClimateAcceleration"/>, in percent.</summary>
+    public const int ClimateAccelerationPct = 25;
+
     /// <summary>The recipe effect that calls the settlers.</summary>
     public const string CallSettlersEffect = "call-settlers";
 
@@ -117,7 +123,9 @@ public sealed partial class Planet
     {
         if (TerraformEffect(r.Effect) is { } t)
         {
-            AddTerraform(t.Stat, t.Points, b.Origin, b.Def.Id);
+            // Climate Acceleration: each level adds a quarter to what a recipe-less (climate) terraformer achieves.
+            int points = b.Def.Recipe is null ? t.Points * (100 + (ClimateAccelerationPct * World.Research.Level(ClimateAcceleration))) / 100 : t.Points;
+            AddTerraform(t.Stat, points, b.Origin, b.Def.Id);
         }
         else if ((PayloadEffect(r.Effect) is { } p) && (TargetOf(b) is { } target))
         {

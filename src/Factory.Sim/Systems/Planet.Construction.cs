@@ -20,6 +20,11 @@ public sealed partial class Planet
             return $"{def.Name} has not been researched";
         }
 
+        if ((def.MaxPerPlanet > 0) && (Buildings.Count(b => b.Def.Id == def.Id) + Sites.Count(s => (s.Kind == SiteKind.Build) && (s.DefId == def.Id)) >= def.MaxPerPlanet))
+        {
+            return $"Only {def.MaxPerPlanet} {def.Name}s can work on one planet";
+        }
+
         (int w, int h) = SizeOf(def, rot);
         if (def.Kind == BuildingKind.Rail)
         {
@@ -128,6 +133,11 @@ public sealed partial class Planet
                     else if (World.Get<Building>(s.TargetId) is { } b)
                     {
                         Refund(builder, b.Def.CostList);
+                        foreach (string m in b.Modules)
+                        {
+                            builder.Carry.AddUnchecked(m, 1);
+                        }
+
                         foreach ((string? k, int v) in b.Inv.Items)
                         {
                             builder.Carry.AddUnchecked(k, v);
