@@ -39,7 +39,10 @@ public sealed record SetRecipe(int BuildingId, string? RecipeId) : Command
 
         return null;
     }
-    /// <summary>Refunds the inputs of any craft in progress and switches to the new recipe.</summary>
+    /// <summary>
+    /// Refunds the inputs of any craft in progress and switches to the new recipe. Ingredients the new recipe
+    /// doesn't use move to the output, where arms and helper bots carry them off.
+    /// </summary>
     public override void Apply(World w)
     {
         Building b = w.Get<Building>(BuildingId)!;
@@ -56,5 +59,16 @@ public sealed record SetRecipe(int BuildingId, string? RecipeId) : Command
         b.Crafting = false;
         b.Progress = 0;
         b.RecipeId = RecipeId;
+        if ((b.Def.Kind is BuildingKind.Assembler or BuildingKind.Terraformer) == false)
+        {
+            return;
+        }
+
+        HashSet<string> keep = RecipeId is null ? [] : w.Content.Recipes[RecipeId].In.Keys.ToHashSet();
+        foreach ((string item, int n) in b.Inv.Items.Where(kv => keep.Contains(kv.Key) == false).ToList())
+        {
+            b.Inv.Remove(item, n);
+            b.Out.AddUnchecked(item, n);
+        }
     }
 }

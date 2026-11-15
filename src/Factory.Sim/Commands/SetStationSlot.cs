@@ -5,12 +5,18 @@ namespace Factory.Sim;
 /// <param name="Index">Slot index, from 0.</param>
 /// <param name="Item">Item id, or null to clear the slot.</param>
 /// <param name="Mode">Supply or demand.</param>
-public sealed record SetStationSlot(int BuildingId, int Index, string? Item, StationMode Mode) : Command
+/// <param name="Max">The most of the item the station keeps; 0 means up to its capacity.</param>
+public sealed record SetStationSlot(int BuildingId, int Index, string? Item, StationMode Mode, int Max = 0) : Command
 {
     /// <summary>Checks the building is a station, the slot exists and the item is real and not already set.</summary>
     public override string? Validate(World w)
     {
         if ((w.Get<Building>(BuildingId) is not { Def.IsStation: true } b) || (Index < 0) || (Index >= b.Def.StationSlots))
+        {
+            return "Invalid";
+        }
+
+        if (Max < 0)
         {
             return "Invalid";
         }
@@ -42,7 +48,7 @@ public sealed record SetStationSlot(int BuildingId, int Index, string? Item, Sta
             return;
         }
 
-        StationSlot slot = new StationSlot(Item, Mode);
+        StationSlot slot = new StationSlot(Item, Mode, Max);
         if (Index < b.StationSlots.Count)
         {
             b.StationSlots[Index] = slot;

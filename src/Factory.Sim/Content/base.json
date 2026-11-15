@@ -237,8 +237,8 @@
 
     { "id": "electric-drill", "name": "Electric Drill", "kind": "Drill", "look": "HighTech", "w": 2, "h": 2,
       "cost": { "logic-board": 3, "drive-cog": 5, "siderite-plate": 10 }, "buildTicks": 120,
-      "energy": "Electric", "powerKw": 90, "outSlots": 1, "miningTicks": 40, "color": "#40e0ff",
-      "description": "Faster, fuel-free mining. Needs power." },
+      "energy": "Electric", "powerKw": 90, "outSlots": 1, "miningTicks": 40, "miningRadius": 1, "color": "#40e0ff",
+      "description": "Faster, fuel-free mining that reaches one tile past its edges (a 4 × 4 area). Needs power." },
 
     { "id": "arc-smelter", "name": "Arc Smelter", "kind": "Furnace", "look": "HighTech", "age": "combustion", "w": 2, "h": 2,
       "cost": { "logic-board": 5, "siderite-plate": 10, "sintered-brick": 10 }, "buildTicks": 120,
@@ -261,11 +261,11 @@
 
     { "id": "launch-pad", "name": "Launch Pad", "kind": "LaunchPad", "w": 3, "h": 3,
       "cost": { "siderite-plate": 40, "sintered-brick": 40, "drive-cog": 10, "logic-board": 10 }, "buildTicks": 300,
-      "slots": 16, "vessel": "ferry-rocket", "launchFuel": { "kerogen-fuel": 20 }, "landsAs": "ferry", "color": "#b0b4bc",
+      "slots": 32, "vessel": "ferry-rocket", "launchFuel": { "kerogen-fuel": 20 }, "landsAs": "ferry", "color": "#b0b4bc",
       "description": "Load a Ferry Rocket and 20 Kerogen Fuel, plus any cargo, then fly to another planet. The ferry can always fly home." },
 
     { "id": "ferry", "name": "Landed Ferry", "kind": "Ferry", "age": "combustion", "w": 3, "h": 3, "buildable": false,
-      "slots": 16, "color": "#e0e0e8",
+      "slots": 32, "color": "#e0e0e8",
       "description": "Your ferry, landed. Its hold is storage. Fly home from here at any time: it carries return fuel and recalls your helper bots." },
 
     { "id": "solar-panel", "name": "Solar Panel", "kind": "SolarPanel", "look": "HighTech", "w": 2, "h": 2,
@@ -303,8 +303,8 @@
       "description": "Smelts ore in contained plasma, twice as fast as an arc smelter. Needs power." },
     { "id": "plasma-drill", "name": "Plasma Drill", "kind": "Drill", "look": "HighTech", "age": "stellar", "w": 3, "h": 3,
       "cost": { "titanium-plate": 15, "logic-board": 10, "promethium-lattice": 2, "drive-cog": 10 }, "buildTicks": 180,
-      "energy": "Electric", "powerKw": 360, "outSlots": 2, "miningTicks": 15, "color": "#c080ff",
-      "description": "Cuts ore with plasma across a 3 × 3 area, more than twice as fast as an electric drill. Needs power." },
+      "energy": "Electric", "powerKw": 360, "outSlots": 2, "miningTicks": 15, "miningRadius": 2, "color": "#c080ff",
+      "description": "Cuts ore with plasma two tiles past its edges (a 7 × 7 area), more than twice as fast as an electric drill. Needs power." },
     { "id": "fusion-reactor", "name": "Fusion Reactor", "kind": "SteamEngine", "look": "HighTech", "age": "stellar", "w": 4, "h": 4,
       "cost": { "titanium-plate": 40, "osmiridium-ingot": 20, "logic-board": 30, "promethium-lattice": 10, "charge-cell": 20 }, "buildTicks": 600,
       "energy": "Burner", "outputKw": 12000, "efficiency": 100, "slots": 2, "fuels": ["fusion-cell"], "color": "#ff70d0",

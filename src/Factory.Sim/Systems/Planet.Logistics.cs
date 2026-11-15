@@ -99,7 +99,9 @@ public sealed partial class Planet
     {
         int coming = World.Planets.Sum(p => p.Shipments.Where(s => (s.ToId == station.Id) && (s.Item == item)).Sum(s => s.Count));
 
-        return System.Math.Max(0, System.Math.Min(station.Def.ItemCap - station.Inv.Count(item), station.Inv.SpaceFor(item)) - coming);
+        int cap = station.StationSlots.FirstOrDefault(s => s.Item == item) is { } slot ? StationCap(station, slot) : station.Def.ItemCap;
+
+        return System.Math.Max(0, System.Math.Min(cap - station.Inv.Count(item), station.Inv.SpaceFor(item)) - coming);
     }
 
     private void Send(Building from, Building to, string item, int n, bool vessel, long ticks)

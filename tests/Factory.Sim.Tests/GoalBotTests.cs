@@ -164,12 +164,12 @@ public class GoalBotTests
     }
 
     [Test]
-    [Skip("The settlers now need the Stellar Age and climate engines on other planets; the reference bot is being taught to play that far.")]
+    [Skip("Plays about 20 game hours (minutes of real time); the headless trace and balance runs cover it: trace --goal settlers --minutes 1500.")]
     public async Task GoalBot_PlaysTheWholeGame_AndCallsTheSettlers()
     {
         World w = new World(TestWorld.Content, new WorldSettings { Seed = 1 });
         GoalBot bot = new GoalBot(new SettlersGoal());
-        for (int i = 0; (i < 60 * 60 * 300) && (w.SettlersCalled == false); i++)
+        for (int i = 0; (i < 60 * 60 * 60 * 25) && (w.SettlersCalled == false); i++)
         {
             bot.Tick(w);
             w.Step();

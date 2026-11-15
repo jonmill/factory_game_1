@@ -40,6 +40,8 @@ public sealed class BuildingDef
     public string[] Categories { get; init; } = [];
     /// <summary>Ticks to mine one item at 100% speed (drills).</summary>
     public int MiningTicks { get; init; }
+    /// <summary>How many tiles beyond its footprint a drill reaches (0: only the ore beneath it).</summary>
+    public int MiningRadius { get; init; }
     /// <summary>Maximum distance in tiles a pole can wire to another pole.</summary>
     public int WireReach { get; init; }
     /// <summary>Radius in tiles within which a pole powers machines.</summary>

@@ -37,4 +37,33 @@ public class ProgressionTests
         await Assert.That(tw.Try(new SetRecipe(bay.Id, "drive-cog"))).IsNotNull();
         await Assert.That(tw.Try(new SetRecipe(bay.Id, "helper-mk1"))).IsNull();
     }
+
+    [Test]
+    public async Task SetRecipe_MovesIngredientsTheNewRecipeDoesNotUseToTheOutput()
+    {
+        TestWorld tw = new TestWorld();
+        tw.Unlock("assembler", "drive-cog", "cupral-filament");
+        Building fab = tw.Build("assembler", 20, 20);
+        tw.Do(new SetRecipe(fab.Id, "drive-cog"));
+        fab.Inv.AddUnchecked("siderite-plate", 6);
+        fab.Inv.AddUnchecked("cupral-bar", 3);
+        tw.Do(new SetRecipe(fab.Id, "cupral-filament"));
+        await Assert.That(fab.Inv.Count("siderite-plate")).IsEqualTo(0);
+        await Assert.That(fab.Out.Count("siderite-plate")).IsEqualTo(6).Because("an arm or a helper bot carries it off");
+        await Assert.That(fab.Out.Count("cupral-bar")).IsEqualTo(0).Because("the new recipe uses it");
+    }
+
+    [Test]
+    public async Task ElectricDrill_MinesTheRingAroundItsFootprint()
+    {
+        TestWorld tw = new TestWorld();
+        tw.Unlock("electric-drill");
+        Building drill = tw.Build("electric-drill", 20, 20);
+        List<Int2> area = tw.P.MiningArea(drill).ToList();
+        await Assert.That(area.Count).IsEqualTo(12).Because("a 4 x 4 area less the drill's own 2 x 2");
+        await Assert.That(area).Contains(new Int2(19, 19));
+        await Assert.That(area).DoesNotContain(new Int2(20, 20));
+        tw.Ore("siderite", 22, 20, 1, 1);
+        await Assert.That(tw.P.FindMinable(drill)).IsEqualTo(new Int2(22, 20));
+    }
 }

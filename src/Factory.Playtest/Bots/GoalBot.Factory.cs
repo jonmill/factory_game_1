@@ -60,6 +60,7 @@ public sealed partial class GoalBot
         PlanFabricators(plan, lander);
         PlanWorkforce(plan, lander);
         PlanPowerGrowth(plan, lander);
+        PlanStellar(plan, lander);
         AssignFabricatorRecipes(plan);
         AssignMachineRecipes(plan);
     }
@@ -426,13 +427,17 @@ public sealed partial class GoalBot
         {
             // Fuel for a waiting expedition first, then the biggest backlog.
             HashSet<string> launch = P.Buildings.Where(b => b.Def.Kind == BuildingKind.LaunchPad).SelectMany(b => b.Def.LaunchFuelList).Select(i => i.Item).ToHashSet();
-            RecipeDef? pick = plan.CraftDeficit.OrderByDescending(kv => (_offPlanet is not null) && launch.Contains(kv.Key)).ThenByDescending(kv => kv.Value).ThenBy(kv => kv.Key, StringComparer.Ordinal)
+            RecipeDef? pick = plan.CraftDeficit.OrderByDescending(kv => ((_offPlanet is not null) || (NextOutpost() is not null)) && launch.Contains(kv.Key)).ThenByDescending(kv => kv.Value).ThenBy(kv => kv.Key, StringComparer.Ordinal)
                 .Select(kv => WorldProbe.RecipeFor(C, kv.Key)!).FirstOrDefault(r => m.Def.Categories.Contains(r.Category));
             bool idleOrSurplus = (m.Crafting == false) || (m.Recipe is { } cur && (plan.CraftDeficit.ContainsKey(cur.Outputs[0].Item) == false))
-                                 || ((pick is not null) && (_offPlanet is not null) && launch.Contains(pick.Outputs[0].Item));
+                                 || ((pick is not null) && ((_offPlanet is not null) || (NextOutpost() is not null)) && launch.Contains(pick.Outputs[0].Item));
             if ((pick is not null) && (pick.Id != m.RecipeId) && idleOrSurplus)
             {
                 Send(new SetRecipe(m.Id, pick.Id));
+            }
+            else if ((pick is null) && (m.Recipe is { Inputs.Length: 0 } idle) && Surplus(plan, idle))
+            {
+                Send(new SetRecipe(m.Id, null));
             }
         }
     }
@@ -488,7 +493,8 @@ public sealed partial class GoalBot
             // Emptied by its arm into a crate, unless that crate is full (then carry the output to storage too).
             Building? arm = P.Buildings.FirstOrDefault(s => (s.Def.Kind == BuildingKind.Sorter) && (P.BuildingAt(s.BackTile())?.Id == f.Id));
             bool armWorks = arm is not null && P.BuildingAt(arm.FrontTile()) is { } crate && f.Out.Items.All(kv => crate.Inv.SpaceFor(kv.Key) > 0);
-            if ((armWorks == false) && (f.Out.Total >= 10) && (f.Out.Items.Select(kv => kv.Key).FirstOrDefault() is { } made) && (StoreFor(made, lander) is { } into))
+            bool leftovers = f.Out.Items.Any(kv => r.Outputs.All(o => o.Item != kv.Key));
+            if (((armWorks == false) || leftovers) && ((f.Out.Total >= 10) || leftovers) && (f.Out.Items.Select(kv => kv.Key).FirstOrDefault() is { } made) && (StoreFor(made, lander) is { } into))
             {
                 needs.Add(new Job(JobKind.Haul, FromId: f.Id, ToId: into.Id));
             }
@@ -535,6 +541,24 @@ public sealed partial class GoalBot
         lander.Inv.SpaceFor(item) >= 10 ? lander
             : WorldProbe.Storages(P).Where(st => (st.Def.Kind != BuildingKind.Ferry) && (st.Inv.SpaceFor(item) >= 10))
                 .OrderBy(st => P.SubTorus.DistSq(lander.CenterSub, st.CenterSub)).ThenBy(st => st.Id).FirstOrDefault();
+
+    /// <summary>The pole the bot runs power lines with: lattice pylons once researched (no biomass, which runs out with the trees).</summary>
+    private string PoleId() => _w.Research.Unlocked.Contains("lattice-pylon") ? "lattice-pylon" : "power-pole";
+
+    /// <summary>
+    /// The fuel to carry to a burner: the richest one in storage that it burns, keeping biomass (the trees run
+    /// out) for when there's nothing else, and the parameter fuel ahead of biomass.
+    /// </summary>
+    private string BestFuel(Building b, List<string> inStorage, string preferred)
+    {
+        List<string> burns = inStorage.Where(i => (b.Def.Fuels.Length == 0) ? (C.Items[i].FuelKj < 100_000) : b.Def.Fuels.Contains(i)).ToList();
+        if (Params.Automate == false)
+        {
+            return burns.Contains(preferred) ? preferred : burns.FirstOrDefault() ?? inStorage[0];
+        }
+
+        return burns.OrderBy(i => i == "biomass" ? 1 : 0).ThenByDescending(i => C.Items[i].FuelKj).ThenBy(i => i, StringComparer.Ordinal).FirstOrDefault() ?? inStorage[0];
+    }
 
     /// <summary>Whether the bot should still be assembling helper bots.</summary>
     private bool WantsHelpers() => Params.Automate && (P.Units.Count(u => (u.IsLeader == false) && (u.OwnerPlayer == Player)) < HelperTarget());

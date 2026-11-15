@@ -42,7 +42,7 @@ public sealed partial class Planet
                     return burner && c.IsFuel(item) ? Cap(MaxFuelStock) : 0;
                 }
             case BuildingKind.LogisticsStation or BuildingKind.OrbitalStation:
-                return b.StationSlots.Any(s => s.Item == item) ? Cap(b.Def.ItemCap) : 0;
+                return b.StationSlots.FirstOrDefault(s => s.Item == item) is { } slot ? Cap(StationCap(b, slot)) : 0;
             case BuildingKind.Drill or BuildingKind.SteamEngine:
                 return burner && c.IsFuel(item) ? Cap(MaxFuelStock) : 0;
             case BuildingKind.PayloadLauncher:
@@ -203,10 +203,13 @@ public sealed partial class Planet
         }
     }
 
-    /// <summary>First tile under a drill's footprint with a minable (non-tree) resource left, or null if exhausted.</summary>
+    /// <summary>
+    /// The tile a drill mines next: ore under its footprint first, then ore within its mining radius around it
+    /// (row by row), or null once all of that is worked out.
+    /// </summary>
     public Int2? FindMinable(Building b)
     {
-        foreach (Int2 t in b.Footprint())
+        foreach (Int2 t in b.Footprint().Concat(MiningArea(b)))
         {
             ResourceDef? r = ResourceAt(t);
             if ((r is not null) && (r.IsTree == false) && (AmountAt(t) > 0))
@@ -216,6 +219,24 @@ public sealed partial class Planet
         }
 
         return null;
+    }
+
+    /// <summary>The tiles around a drill's footprint that its mining radius reaches, row by row.</summary>
+    /// <param name="b">A drill.</param>
+    /// <returns>The tiles outside the footprint, wrapped onto the planet.</returns>
+    public IEnumerable<Int2> MiningArea(Building b)
+    {
+        int r = b.Def.MiningRadius;
+        for (int y = -r; y < b.H + r; y++)
+        {
+            for (int x = -r; x < b.W + r; x++)
+            {
+                if ((x < 0) || (y < 0) || (x >= b.W) || (y >= b.H))
+                {
+                    yield return Torus.Wrap(b.Origin + new Int2(x, y));
+                }
+            }
+        }
     }
 
     private void UpdateDrill(Building b)
@@ -585,4 +606,10 @@ public sealed partial class Planet
             b.BoostPct += m.BoostPct;
         }
     }
+
+    /// <summary>The most of a slot's item a station keeps: the slot's limit, if set, within the station's capacity.</summary>
+    /// <param name="station">The station.</param>
+    /// <param name="slot">One of its slots.</param>
+    /// <returns>The item cap.</returns>
+    public static int StationCap(Building station, StationSlot slot) => slot.Max > 0 ? System.Math.Min(slot.Max, station.Def.ItemCap) : station.Def.ItemCap;
 }

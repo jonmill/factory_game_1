@@ -50,14 +50,18 @@ public partial class Hud
             {
                 if (slot is not null)
                 {
-                    Root.Send(new SetStationSlot(station.Id, index, slot.Item, sel == 1 ? StationMode.Demand : StationMode.Supply));
+                    Root.Send(new SetStationSlot(station.Id, index, slot.Item, sel == 1 ? StationMode.Demand : StationMode.Supply, slot.Max));
                 }
             };
             row.AddChild(item);
             row.AddChild(mode);
             if (slot is not null)
             {
-                row.AddChild(HudStyle.Caption($"{station.Inv.Count(slot.Item)}/{station.Def.ItemCap}", HudStyle.TextDim, 12));
+                // The slot's limit, like a station's max-stock slider: 0 keeps up to the station's capacity.
+                SpinBox max = new SpinBox { MinValue = 0, MaxValue = station.Def.ItemCap, Step = 100, Value = slot.Max, FocusMode = Control.FocusModeEnum.Click, TooltipText = "Most to keep (0 = full capacity)" };
+                max.ValueChanged += v => Root.Send(new SetStationSlot(station.Id, index, slot.Item, slot.Mode, (int)v));
+                row.AddChild(max);
+                row.AddChild(HudStyle.Caption($"{station.Inv.Count(slot.Item)}/{Planet.StationCap(station, slot)}", HudStyle.TextDim, 12));
             }
 
             into.AddChild(row);

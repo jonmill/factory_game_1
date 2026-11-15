@@ -122,6 +122,21 @@ public class LogisticsTests
     }
 
     [Test]
+    public async Task LogisticsStation_DemandStopsAtTheSlotLimit()
+    {
+        TestWorld tw = new TestWorld();
+        Building supply = PoweredStation(tw.P, "logistics-station", 10, 10);
+        Building demand = PoweredStation(tw.P, "logistics-station", 30, 10);
+        tw.Do(new SetStationSlot(supply.Id, 0, "regolith", StationMode.Supply));
+        tw.Do(new SetStationSlot(demand.Id, 0, "regolith", StationMode.Demand, 300));
+        supply.Inv.AddUnchecked("regolith", 1400);
+        tw.Run(60 * 120);
+        await Assert.That(demand.Inv.Count("regolith")).IsEqualTo(300);
+        await Assert.That(supply.Inv.Count("regolith")).IsEqualTo(1100);
+        await Assert.That(tw.Try(new SetStationSlot(demand.Id, 0, "regolith", StationMode.Demand, -1))).IsNotNull();
+    }
+
+    [Test]
     public async Task OrbitalStations_ShipBetweenPlanets()
     {
         TestWorld tw = new TestWorld();

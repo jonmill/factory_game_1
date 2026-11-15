@@ -98,7 +98,19 @@ if (command == "trace")
         Console.WriteLine($"[{s.World.Tick / 60}s] research={s.World.Research.Current ?? "-"} {s.World.Research.UnitsDone} done=[{string.Join(",", s.World.Research.Completed)}] sites={p.Sites.Count}");
         foreach (Building? b in p.Buildings.Where(b => (b.Def.Energy == EnergyKind.Electric) || (b.Def.Kind is BuildingKind.SteamEngine or BuildingKind.Furnace or BuildingKind.LaunchPad or BuildingKind.Ferry)))
         {
-            Console.WriteLine($"    {b.Def.Id,-14} {b.Status,-10} power={b.Satisfaction / 10}% inv=[{string.Join(",", b.Inv.Items.Select(kv => kv.Key + "=" + kv.Value))}] out=[{string.Join(",", b.Out.Items.Select(kv => kv.Key + "=" + kv.Value))}]");
+            Console.WriteLine($"    {b.Def.Id,-14} {b.Status,-10} r={b.Recipe?.Id ?? "-"} power={b.Satisfaction / 10}% inv=[{string.Join(",", b.Inv.Items.Select(kv => kv.Key + "=" + kv.Value))}] out=[{string.Join(",", b.Out.Items.Select(kv => kv.Key + "=" + kv.Value))}]");
+        }
+
+        foreach (Planet other in s.World.Planets.Skip(1).Where(o => (o.Buildings.Count > 0) || (o.Sites.Count > 0)))
+        {
+            string built = string.Join(",", other.Buildings.GroupBy(b => $"{b.Def.Id}:{b.Status}").OrderBy(g => g.Key, StringComparer.Ordinal).Select(g => $"{g.Key}x{g.Count()}"));
+            string ghosts = string.Join(",", other.Sites.GroupBy(x => x.DefId).OrderBy(g => g.Key, StringComparer.Ordinal).Select(g => $"{g.Key}x{g.Count()}"));
+            Console.WriteLine($"    planet {other.Def.Id}: units={other.Units.Count} stats=[{string.Join(",", other.Stats.Select(kv => kv.Key + "=" + kv.Value))}] built=[{built}] sites=[{ghosts}]");
+            foreach (Building b in other.Buildings.Where(b => b.Def.Kind is BuildingKind.OrbitalStation or BuildingKind.Terraformer or BuildingKind.Drill or BuildingKind.SteamEngine))
+            {
+                string slots = string.Join(",", b.StationSlots.Select(sl => $"{sl.Mode}:{sl.Item}"));
+                Console.WriteLine($"      {b.Def.Id} {b.Status} r={b.Recipe?.Id ?? "-"} slots=[{slots}] inv=[{string.Join(",", b.Inv.Items.Select(kv => kv.Key + "=" + kv.Value))}] out=[{string.Join(",", b.Out.Items.Select(kv => kv.Key + "=" + kv.Value))}]");
+            }
         }
 
         Building landerB = s.World.Get<Building>(p.LanderId)!;

@@ -200,6 +200,13 @@ public partial class WorldView
                         DrawArrow(r.GetCenter(), Root.PlaceRot, T * 0.3f, A(ok ? good : bad, 0.9f));
                     }
 
+                    if ((def.Kind == BuildingKind.Drill) && (def.MiningRadius > 0))
+                    {
+                        // The ore it reaches beyond its edges.
+                        float mr = def.MiningRadius;
+                        DrawRect(new Rect2(S(origin) - (new Vector2(mr, mr) * T), new Vector2(w + (2 * mr), h + (2 * mr)) * T), A(new Color(0.5f, 0.85f, 1f), 0.6f), false, 1);
+                    }
+
                     if (def.Kind == BuildingKind.Pole)
                     {
                         float sr = def.SupplyRadius;

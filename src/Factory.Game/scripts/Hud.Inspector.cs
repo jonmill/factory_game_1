@@ -271,7 +271,9 @@ public partial class Hud
 
         if ((b.Def.Kind == BuildingKind.Drill) && (P.FindMinable(b) is { } t))
         {
-            sb.AppendLine($"Mining {P.ResourceAt(t)!.Name} ({P.AmountAt(t)} left on tile)");
+            ResourceDef res = P.ResourceAt(t)!;
+            long left = b.Footprint().Concat(P.MiningArea(b)).Where(x => P.ResourceAt(x) == res).Sum(x => (long)P.AmountAt(x));
+            sb.AppendLine($"Mining {res.Name} ({left} left within reach)");
         }
 
         return sb.ToString();

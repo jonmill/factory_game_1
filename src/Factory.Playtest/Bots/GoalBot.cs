@@ -46,9 +46,9 @@ public sealed partial class GoalBot : IBot
     private (string Resource, int Planet, int Amount, long Since)? _expedition;
     private const int ExpeditionAmount = 600;
     private const int ExpeditionTicks = 25 * 3600;
-    private Planet P => _w.Planets[0];
+    private Planet P => Focus ?? _w.Planets[0];
     private ContentDb C => _w.Content;
-    private void Send(Command c) => _w.Submit(c with { Player = Player });
+    private void Send(Command c) => _w.Submit(c with { Player = Player, PlanetId = P.Id });
 
     /// <inheritdoc />
     public void Tick(World world)
@@ -64,6 +64,7 @@ public sealed partial class GoalBot : IBot
             return;
         }
 
+        ManageStellar();
         Building? lander = world.Get<Building>(P.LanderId);
         if ((lander is null) || Away())
         {
@@ -110,6 +111,11 @@ public sealed partial class GoalBot : IBot
         }
 
         bool nearFerry = there.InLeaderReach(away, ferry.Origin);
+        if ((_outpostTrip is { } trip) && (trip.Planet == there.Id))
+        {
+            return OutpostWork(away, there, ferry, nearFerry);
+        }
+
         if ((_expedition is { } ex) && (ex.Planet == there.Id) && there.HasResource(ex.Resource))
         {
             ResourceDef res = C.Resources[ex.Resource];
@@ -168,15 +174,15 @@ public sealed partial class GoalBot : IBot
     /// Gets an expedition off the ground: carry the ferry rocket and its fuel from the lander to the launch
     /// pad, empty the commander's pockets, then launch with every helper bot. True while there's work.
     /// </summary>
-    private bool PrepareExpedition(Unit leader, Building lander)
+    private bool PrepareExpedition(Unit leader, Building lander, Dictionary<string, int>? kit = null)
     {
         if ((_offPlanet is not { } want) || (P.Buildings.Where(b => b.Def.Kind == BuildingKind.LaunchPad).OrderBy(b => b.Id).FirstOrDefault() is not { } pad))
         {
             return false;
         }
 
-        List<ItemAmount> load = pad.Def.LaunchFuelList.Prepend(new ItemAmount(pad.Def.Vessel!, 1))
-            .Select(i => new ItemAmount(i.Item, i.Count - pad.Inv.Count(i.Item))).Where(i => i.Count > 0).ToList();
+        List<ItemAmount> load = pad.Def.LaunchFuelList.Prepend(new ItemAmount(pad.Def.Vessel!, 1)).Concat((kit ?? []).Select(kv => new ItemAmount(kv.Key, kv.Value)))
+            .GroupBy(i => i.Item).Select(g => new ItemAmount(g.Key, g.Sum(i => i.Count) - pad.Inv.Count(g.Key))).Where(i => i.Count > 0).ToList();
         bool nearPad = P.InLeaderReach(leader, pad.Origin);
         bool nearLander = P.InLeaderReach(leader, lander.Origin);
         Int2 besidePad = P.Torus.Wrap(pad.Origin + new Int2(-1, 1));
@@ -382,7 +388,7 @@ public sealed partial class GoalBot : IBot
             return;
         }
 
-        if (((Params.Automate == false) && TendMachines(plan, leader, lander)) || PrepareExpedition(leader, lander))
+        if (((Params.Automate == false) && TendMachines(plan, leader, lander)) || PrepareOutpost(leader, lander) || PrepareExpedition(leader, lander))
         {
             return;
         }
@@ -563,7 +569,7 @@ public sealed partial class GoalBot : IBot
 
     private static readonly HashSet<BuildingKind> _wanted =
         [BuildingKind.Lab, BuildingKind.Furnace, BuildingKind.SteamEngine, BuildingKind.Pole, BuildingKind.Chest, BuildingKind.RobotBay, BuildingKind.Terraformer, BuildingKind.Uplink,
-            BuildingKind.LaunchPad, BuildingKind.PayloadLauncher, BuildingKind.Drill, BuildingKind.Sorter, BuildingKind.Assembler];
+            BuildingKind.LaunchPad, BuildingKind.PayloadLauncher, BuildingKind.Drill, BuildingKind.Sorter, BuildingKind.Assembler, BuildingKind.OrbitalStation, BuildingKind.SolarPanel];
 
     /// <summary>Kinds the factory builds several of at once (columns and cells): duplicate orders are fine.</summary>
     private static readonly HashSet<BuildingKind> _many = [BuildingKind.Pole, BuildingKind.Drill, BuildingKind.Furnace, BuildingKind.Sorter, BuildingKind.Chest, BuildingKind.Assembler, BuildingKind.SteamEngine];
@@ -579,7 +585,7 @@ public sealed partial class GoalBot : IBot
     /// The other planets the bot terraforms from here with a payload launcher: as many as the settlers need
     /// besides the home planet, picking those already closest to ready.
     /// </summary>
-    private IEnumerable<Planet> RemoteTargets() => _w.TerraformablePlanets.Where(p => p != P)
+    private IEnumerable<Planet> RemoteTargets() => _w.TerraformablePlanets.Where(p => p != Home)
         .OrderByDescending(p => p.Readiness).ThenBy(p => p.Id).Take(System.Math.Max(0, _w.PlanetsNeeded - 1));
 
     /// <summary>Terraforming points a stat still needs across the remote targets.</summary>
@@ -715,7 +721,7 @@ public sealed partial class GoalBot : IBot
             }
         }
 
-        if ((_offPlanet is not null) && (CountOf(BuildingKind.LaunchPad) == 0))
+        if (((_offPlanet is not null) || (NextOutpost() is not null)) && (CountOf(BuildingKind.LaunchPad) == 0))
         {
             PlaceNear(plan, C.BuildingList.First(b => b.Kind == BuildingKind.LaunchPad).Id, center, 5, 18);
         }
@@ -748,7 +754,7 @@ public sealed partial class GoalBot : IBot
         bool noCrateRoom = LanderCongested(lander) && storages.All(st => (st.Id == lander.Id) || (st.Inv.UsedSlots + 4 > st.Inv.Slots));
         if ((slots > 0) && ((used * 100 / slots > 85) || noCrateRoom) && (HasSite("chest") == false))
         {
-            PlaceNear(plan, "chest", center, 3, 12);
+            PlaceNear(plan, "chest", center, 3, 28);
         }
 
         List<Building> consumers = P.Buildings.Where(b => b.Def.Energy == EnergyKind.Electric).ToList();
@@ -773,7 +779,7 @@ public sealed partial class GoalBot : IBot
             return;
         }
 
-        if (HasSite("power-pole") || HasSite("steam-engine"))
+        if (P.Sites.Any(st => C.Buildings.TryGetValue(st.DefId, out BuildingDef? d) && (d.Kind == BuildingKind.Pole)) || HasSite("steam-engine"))
         {
             return; // wait for builders
         }
@@ -803,7 +809,7 @@ public sealed partial class GoalBot : IBot
 
     private bool PlacePoleChain(BotPlan plan, Building engine, Building target)
     {
-        BuildingDef pole = C.Buildings["power-pole"];
+        BuildingDef pole = C.Buildings[PoleId()];
         int reach = pole.WireReach - 1, supply = pole.SupplyRadius;
         Int2 targetCenter = Placement.Center(target);
 
@@ -839,10 +845,10 @@ public sealed partial class GoalBot : IBot
 
         foreach (Int2 t in chain)
         {
-            Send(new PlaceBuilding("power-pole", t, Dir.North));
+            Send(new PlaceBuilding(pole.Id, t, Dir.North));
         }
 
-        plan.Placed.AddRange(chain.Select(_ => "power-pole"));
+        plan.Placed.AddRange(chain.Select(_ => pole.Id));
 
         return (chain.Count > 0) || (Placement.DistToRect(P, last, target.Origin, target.W, target.H) <= supply);
     }
@@ -851,7 +857,7 @@ public sealed partial class GoalBot : IBot
     {
         Int2? best = null;
         long bestD = long.MaxValue;
-        BuildingDef def = C.Buildings["power-pole"];
+        BuildingDef def = C.Buildings[PoleId()];
         for (int y = -radius; y <= radius; y++)
         {
             for (int x = -radius; x <= radius; x++)
@@ -1001,6 +1007,11 @@ public sealed partial class GoalBot : IBot
             }
         }
 
+        foreach (ItemAmount i in OutpostDemand().Concat(ClimateDemand()))
+        {
+            Add(i.Item, i.Count);
+        }
+
         Dictionary<string, long> stock = WorldProbe.StorageTotals(P);
         // Cargo back from an expedition waits on the launch pad until it's hauled in: it counts too.
         // (Not the rocket and its fuel: those are already set aside for the trip.)
@@ -1040,7 +1051,7 @@ public sealed partial class GoalBot : IBot
 
         // Raw materials this planet doesn't have: fetch them on an expedition to a planet that does.
         _offPlanet = null;
-        foreach (string res in plan.RawDeficit.Keys.Where(r => P.HasResource(r) == false).Order(StringComparer.Ordinal))
+        foreach (string res in plan.RawDeficit.Keys.Where(r => (P.HasResource(r) == false) && (ShippedHome(r) == false)).Order(StringComparer.Ordinal))
         {
             if (_w.Planets.FirstOrDefault(p => (p != P) && p.HasResource(res)) is { } there)
             {
@@ -1296,7 +1307,7 @@ public sealed partial class GoalBot : IBot
         {
             if ((FuelIn(e) < 3) && (storageFuel.Count > 0))
             {
-                string fi = storageFuel.Contains(fuelItem) ? fuelItem : storageFuel[0];
+                string fi = BestFuel(e, storageFuel, fuelItem);
                 needs.Add(new Job(JobKind.Haul, FromId: SourceFor(fi), ToId: e.Id, Item: fi));
             }
         }
@@ -1338,7 +1349,7 @@ public sealed partial class GoalBot : IBot
             bool wantsOre = (ore is not null) && oreQueue.Contains(ore) && (f.Inv.Count(ore) < 5) && (drillFed.Contains(f.Id) == false);
             if (drillFed.Contains(f.Id) && (f.Def.Energy == EnergyKind.Burner) && (FuelIn(f) < 2) && (f.FuelJ < 200_000) && (storageFuel.Count > 0))
             {
-                string fi = storageFuel.Contains(fuelItem) ? fuelItem : storageFuel[0];
+                string fi = BestFuel(f, storageFuel, fuelItem);
                 needs.Add(new Job(JobKind.Haul, FromId: SourceFor(fi), ToId: f.Id, Item: fi));
             }
 
@@ -1348,9 +1359,9 @@ public sealed partial class GoalBot : IBot
             }
 
             // Fuel any furnace that has (or is about to get) ore to smelt — not just ones still wanting ore.
-            if ((wantsOre || (held is not null)) && (FuelIn(f) < 2) && (f.FuelJ < 200_000) && (storageFuel.Count > 0))
+            if ((wantsOre || (held is not null)) && (f.Def.Energy == EnergyKind.Burner) && (FuelIn(f) < 2) && (f.FuelJ < 200_000) && (storageFuel.Count > 0))
             {
-                string fi = storageFuel.Contains(fuelItem) ? fuelItem : storageFuel[0];
+                string fi = BestFuel(f, storageFuel, fuelItem);
                 needs.Add(new Job(JobKind.Haul, FromId: SourceFor(fi), ToId: f.Id, Item: fi));
             }
 
@@ -1365,7 +1376,7 @@ public sealed partial class GoalBot : IBot
         {
             if ((FuelIn(d) < 2) && (d.FuelJ < 200_000) && (storageFuel.Count > 0))
             {
-                string fi = storageFuel.Contains(fuelItem) ? fuelItem : storageFuel[0];
+                string fi = BestFuel(d, storageFuel, fuelItem);
                 needs.Add(new Job(JobKind.Haul, FromId: SourceFor(fi), ToId: d.Id, Item: fi));
             }
         }
@@ -1399,12 +1410,13 @@ public sealed partial class GoalBot : IBot
             needs.Add(new Job(JobKind.Gather, Resource: res));
         }
 
+        StationJobs(needs, SourceFor, lander);
         FeedFabricators(plan, needs, SourceFor, lander);
 
         // Expedition cargo waits on the launch pad: bring it in (but leave the rocket and its fuel).
         foreach (Building pad in P.Buildings.Where(b => b.Def.Kind == BuildingKind.LaunchPad))
         {
-            HashSet<string> keep = pad.Def.LaunchFuelList.Select(i => i.Item).Append(pad.Def.Vessel!).ToHashSet();
+            HashSet<string> keep = pad.Def.LaunchFuelList.Select(i => i.Item).Append(pad.Def.Vessel!).Concat(KitItems(pad)).ToHashSet();
             if (pad.Inv.Items.Select(kv => kv.Key).Where(k => keep.Contains(k) == false).Order(StringComparer.Ordinal).FirstOrDefault() is { } cargo)
             {
                 needs.Add(new Job(JobKind.Haul, FromId: pad.Id, ToId: lander.Id, Item: cargo));
