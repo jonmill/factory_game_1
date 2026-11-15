@@ -120,7 +120,7 @@ public partial class Hud
         SyncInventoryTabs();
         Unit leader = Root.Leader;
         Inventory carry = leader.Carry;
-        List<Building> stores = P.Buildings.Where(b => b.Def.Kind is BuildingKind.Lander or BuildingKind.Chest).ToList();
+        List<Building> stores = P.Buildings.Where(b => b.Def.IsDepot).ToList();
         SortedDictionary<string, int> totals = new SortedDictionary<string, int>(System.StringComparer.Ordinal);
         foreach (Building b in stores)
         {

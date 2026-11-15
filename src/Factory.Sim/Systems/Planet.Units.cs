@@ -247,7 +247,7 @@ public sealed partial class Planet
 
         Building? target = World.Get<Building>(u.SourceEntity);
         bool HasRoom(Building s) => u.Carry.Items.Any(kv => s.Inv.SpaceFor(kv.Key) > 0);
-        if ((target is null) || (target.Def.Kind is not (BuildingKind.Lander or BuildingKind.Chest)) || (HasRoom(target) == false))
+        if ((target is null) || (target.Def.IsDepot == false) || (HasRoom(target) == false))
         {
             target = StoragesByDistance(u.Pos).FirstOrDefault(HasRoom);
             if (target is null)

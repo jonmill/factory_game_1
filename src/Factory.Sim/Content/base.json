@@ -28,6 +28,10 @@
     { "id": "helium-3",        "name": "Helium-3",        "stack": 100, "mass": 0, "color": "#ffe0a0" },
     { "id": "osmiridium-ore",  "name": "Osmiridium Ore",  "stack": 50, "mass": 3, "color": "#8aa0b8" },
 
+    { "id": "kerogen-fuel",    "name": "Kerogen Fuel",    "stack": 50, "mass": 2, "fuelKj": 16000, "color": "#c08030" },
+    { "id": "polymer-resin",   "name": "Polymer Resin",   "stack": 100, "mass": 1, "color": "#e0c890" },
+    { "id": "ferry-rocket",    "name": "Ferry Rocket",    "stack": 1, "mass": 40, "color": "#e0e0e8" },
+
     { "id": "survey-core",   "name": "Survey Core",   "stack": 200, "mass": 1, "color": "#ff8a4a" },
     { "id": "analysis-core", "name": "Analysis Core", "stack": 200, "mass": 1, "color": "#4ad8a0" },
 
@@ -78,6 +82,11 @@
     { "id": "charge-cell",  "name": "Charge Cell", "category": "crafting", "in": { "ballast-plate": 1, "cupral-bar": 1 }, "out": { "charge-cell": 1 }, "ticks": 120 },
     { "id": "survey-core",   "name": "Survey Core",   "category": "crafting", "in": { "cupral-bar": 1, "drive-cog": 1 }, "out": { "survey-core": 1 }, "ticks": 300 },
     { "id": "analysis-core", "name": "Analysis Core", "category": "crafting", "in": { "logic-board": 1, "ballast-plate": 1, "charge-cell": 1 }, "out": { "analysis-core": 1 }, "ticks": 420 },
+
+    { "id": "kerogen-fuel",  "name": "Kerogen Fuel",  "category": "refining", "in": { "crude-kerogen": 2 }, "out": { "kerogen-fuel": 1 }, "ticks": 120 },
+    { "id": "polymer-resin", "name": "Polymer Resin", "category": "refining", "in": { "crude-kerogen": 1, "compacted-carbon": 1 }, "out": { "polymer-resin": 2 }, "ticks": 180 },
+    { "id": "ferry-rocket",  "name": "Ferry Rocket",  "category": "crafting",
+      "in": { "siderite-plate": 40, "drive-cog": 20, "logic-board": 20, "polymer-resin": 20, "charge-cell": 10 }, "out": { "ferry-rocket": 1 }, "ticks": 1200 },
 
     { "id": "construction-module", "name": "Construction Module", "category": "crafting",
       "in": { "logic-board": 3, "drive-cog": 5, "siderite-plate": 5 }, "out": { "construction-module": 1 }, "ticks": 300 },
@@ -179,6 +188,29 @@
       "cost": { "logic-board": 5, "siderite-plate": 10, "sintered-brick": 10 }, "buildTicks": 120,
       "energy": "Electric", "powerKw": 180, "slots": 2, "outSlots": 1, "speed": 200, "categories": ["smelting"], "color": "#ff9040",
       "description": "Smelts ore with an electric arc, twice as fast as a burner smelter. Needs power." },
+
+    { "id": "kerogen-refinery", "name": "Kerogen Refinery", "kind": "Assembler", "age": "combustion", "w": 3, "h": 3,
+      "cost": { "siderite-plate": 15, "drive-cog": 10, "logic-board": 5, "sintered-brick": 10 }, "buildTicks": 180,
+      "energy": "Electric", "powerKw": 150, "slots": 4, "outSlots": 2, "speed": 100, "categories": ["refining"], "color": "#a07040",
+      "description": "Cracks crude kerogen into Kerogen Fuel or Polymer Resin. Pick a recipe. Needs power." },
+
+    { "id": "kerogen-generator", "name": "Kerogen Generator", "kind": "SteamEngine", "w": 2, "h": 2,
+      "cost": { "siderite-plate": 15, "drive-cog": 10, "cupral-bar": 10, "sintered-brick": 10 }, "buildTicks": 150,
+      "energy": "Burner", "outputKw": 900, "efficiency": 80, "slots": 2, "color": "#d09040",
+      "description": "An internal-combustion generator. No water needed and 80% efficient. Runs best on Kerogen Fuel." },
+
+    { "id": "lattice-pylon", "name": "Lattice Pylon", "kind": "Pole",
+      "cost": { "siderite-plate": 4, "cupral-filament": 4, "sintered-brick": 2 }, "buildTicks": 40, "wireReach": 20, "supplyRadius": 1, "color": "#c0c8d0",
+      "description": "A tall steel pylon. Connects to poles within 20 tiles; powers machines within 1 tile." },
+
+    { "id": "launch-pad", "name": "Launch Pad", "kind": "LaunchPad", "w": 3, "h": 3,
+      "cost": { "siderite-plate": 40, "sintered-brick": 40, "drive-cog": 10, "logic-board": 10 }, "buildTicks": 300,
+      "slots": 16, "vessel": "ferry-rocket", "launchFuel": { "kerogen-fuel": 20 }, "landsAs": "ferry", "color": "#b0b4bc",
+      "description": "Load a Ferry Rocket and 20 Kerogen Fuel, plus any cargo, then fly to another planet. The ferry can always fly home." },
+
+    { "id": "ferry", "name": "Landed Ferry", "kind": "Ferry", "age": "combustion", "w": 3, "h": 3, "buildable": false,
+      "slots": 16, "color": "#e0e0e8",
+      "description": "Your ferry, landed. Its hold is storage. Fly home from here at any time: it carries return fuel and recalls your helper bots." },
 
     { "id": "robot-bay", "name": "Robot Assembly Bay", "kind": "RobotBay", "look": "HighTech", "w": 3, "h": 3,
       "cost": { "logic-board": 15, "sintered-brick": 10, "siderite-plate": 20, "drive-cog": 10 }, "buildTicks": 300,
@@ -283,6 +315,19 @@
     { "id": "settler-uplink", "name": "Settler Uplink", "age": "combustion", "prereqs": ["bio-engineering"],
       "description": "A transmitter to tell the settlers the system is ready for them.",
       "unitCost": { "survey-core": 1, "analysis-core": 1 }, "units": 30, "unitTicks": 600, "unlocks": ["settler-uplink", "call-settlers"] },
+
+    { "id": "kerogen-refining", "name": "Kerogen Refining", "age": "combustion", "prereqs": ["analysis-cores"],
+      "description": "Crack crude kerogen from fen shale into fuel and polymer resin.",
+      "unitCost": { "survey-core": 1, "analysis-core": 1 }, "units": 15, "unitTicks": 600, "unlocks": ["kerogen-refinery", "kerogen-fuel", "polymer-resin"] },
+    { "id": "combustion-engines", "name": "Combustion Engines", "age": "combustion", "prereqs": ["kerogen-refining"],
+      "description": "Generators that need no water and waste far less fuel than steam engines.",
+      "unitCost": { "survey-core": 1, "analysis-core": 1 }, "units": 20, "unitTicks": 600, "unlocks": ["kerogen-generator"] },
+    { "id": "long-range-power", "name": "Long-Range Power", "age": "combustion", "prereqs": ["analysis-cores"],
+      "description": "Steel pylons that carry power across the planet.",
+      "unitCost": { "survey-core": 1, "analysis-core": 1 }, "units": 10, "unitTicks": 600, "unlocks": ["lattice-pylon"] },
+    { "id": "orbital-ferry", "name": "Orbital Ferry", "age": "combustion", "prereqs": ["kerogen-refining", "rail-logistics"],
+      "description": "A reusable rocket that carries you, your helper bots and cargo to the other planets.",
+      "unitCost": { "survey-core": 1, "analysis-core": 1 }, "units": 30, "unitTicks": 600, "unlocks": ["launch-pad", "ferry-rocket"] },
 
     { "id": "conveyor-belts", "name": "Conveyor Belts", "age": "clean", "prereqs": ["mechanical-arms", "rail-logistics"], "comingSoon": true,
       "description": "Continuous item transport. (Not in this playtest.)",

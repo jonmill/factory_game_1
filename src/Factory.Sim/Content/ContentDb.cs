@@ -154,6 +154,7 @@ public sealed class ContentDb
         foreach (BuildingDef b in BuildingList)
         {
             b.CostList = Sorted(b.Cost);
+            b.LaunchFuelList = Sorted(b.LaunchFuel);
         }
 
         foreach (VehicleDef v in VehicleList)
@@ -275,6 +276,15 @@ public sealed class ContentDb
             if (a.Core is not null)
             {
                 CheckItems($"age {a.Id}", [a.Core]);
+            }
+        }
+
+        foreach (BuildingDef b in BuildingList.Where(b => b.Kind == BuildingKind.LaunchPad))
+        {
+            CheckItems($"building {b.Id}", b.LaunchFuel.Keys.Append(b.Vessel ?? ""));
+            if ((b.LandsAs is null) || (Buildings.TryGetValue(b.LandsAs, out BuildingDef? landed) == false) || (landed.Kind != BuildingKind.Ferry))
+            {
+                errors.Add($"building {b.Id}: a launch pad must land as a Ferry building");
             }
         }
 

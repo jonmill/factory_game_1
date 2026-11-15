@@ -46,7 +46,8 @@ public partial class Hud
         ("Research", "Craft Survey Cores and feed them to a Research Station. Analytical Engines unlocks Analysis Cores and the Combustion Age: electric machines, railways, robotics and terraforming."),
         ("Upgrades", "Research unlocks modules. Craft them, then drag them into your own slots (E) or a helper bot's. Later, a Robot Assembly Bay builds new helper bots."),
         ("Your pockets", "While you're nearby, whatever you carry supplies construction sites and the lander's queued crafts, so you can build straight from what you mined."),
-        ("Power", "Steam engines must touch water and burn biomass or compacted carbon. Power poles carry power to machines around them; batteries store the surplus."),
+        ("Power", "Steam engines must touch water and burn biomass or compacted carbon. Power poles carry power to machines around them; batteries store the surplus. In the Combustion Age, Kerogen Generators need no water and waste less fuel, and Lattice Pylons carry power across the planet."),
+        ("Other planets", "Refine crude kerogen (from fen shale) into fuel. Research Orbital Ferry, build a Launch Pad and load it with a Ferry Rocket, 20 Kerogen Fuel and any cargo, then pick a planet and launch. The landed ferry can always fly you home."),
         ("Trains", "Lay track, place a Rail Stop facing it, then a train. Select the train to set its schedule. Hand carts need a helper bot to pump them; steam locomotives need water (a Water Tower near a stop) and fuel (compacted carbon in the stop)."),
     ];
 

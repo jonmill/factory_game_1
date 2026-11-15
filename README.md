@@ -42,8 +42,9 @@ dotnet run --project tests/Factory.Sim.Tests    # tests (TUnit runs as an execut
 
 Debug/automation env vars for the client: `FACTORY_DEMO=1` (queues a sample base and fast-forwards
 via normal commands; `FACTORY_DEMO=2` also unlocks everything and stocks the lander to show the late-game
-buildings, so it is not a replayable game), `FACTORY_SCREENSHOT=/path.png` (saves a frame after 3 s and quits),
-`FACTORY_SEED=<n>` (pins the map seed), `FACTORY_WINDOW=inventory|replicator|tech|help|victory` and
+buildings, so it is not a replayable game; `3` adds the Combustion Age set and a loaded launch pad, `4` also
+flies the ferry to Rime), `FACTORY_PLANET=<planet id>` (view another planet), `FACTORY_SCREENSHOT=/path.png` (saves a frame after 3 s and quits),
+`FACTORY_SEED=<n>` (pins the map seed), `FACTORY_WINDOW=inventory|replicator|tech|help|victory|system` and
 `FACTORY_CATEGORY=<1-7>` (open a HUD window or build category), `FACTORY_SELECT=<building id>` (selects the
 nearest building of that type, e.g. `burner-smelter`, or `helper` for a helper bot), `FACTORY_REPLAY=/path.replay.json`
 (loads a headless replay and centres on the lander) and `FACTORY_ZOOM=<f>` (initial camera zoom,
@@ -120,10 +121,12 @@ Combustion Age). The commander (hand-mining, builds ghosts in reach, 2 module sl
 helper bots, lander fabricator, burner drills and smelters, steam engines, poles, charge cell banks,
 research stations; in the Combustion Age electric drills, arc smelters, rails, rail stops, water towers,
 hand-pump carts (need an operator, 1500 kg pull limit), steam locomotives (water + fuel, 12 t pull), mine
-carts, terraformers (Atmosphere Processor, Hydrosphere Seeder, Bio Incubator), a system readiness meter
+carts, a Kerogen Refinery (Kerogen Fuel, Polymer Resin), Kerogen Generators (no water, 80% efficient),
+Lattice Pylons (20-tile reach), a Launch Pad and reusable Ferry Rocket to fly the commander, helper bots
+and cargo to the other planets (a landed ferry always flies home), terraformers (Atmosphere Processor, Hydrosphere Seeder, Bio Incubator), a system readiness meter
 and the Settler Uplink to win.
 
-Not yet: belts (shown as "coming soon" tech), travel between planets (other planets can be viewed but
-not visited, so only the start planet counts toward readiness for now), rail signals
+Not yet: belts (shown as "coming soon" tech), automated logistics between planets (the ferry is by hand,
+so only the start planet counts toward readiness for now), rail signals
 (trains just block each other), train collision avoidance on single track, snapshot saves, audio,
 sprite art, multiplayer transport.

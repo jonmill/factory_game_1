@@ -38,6 +38,8 @@ public sealed class GoalBot : IBot
     private Int2 _lastLeaderPos;
     private int _stuckThinks;
     private Int2? _cutting;
+    /// <summary>Recipe categories that only a dedicated machine runs (refining), wanted on the last think.</summary>
+    private HashSet<string> _machineCategories = [];
     private Planet P => _w.Planets[0];
     private ContentDb C => _w.Content;
     private void Send(Command c) => _w.Submit(c with { Player = Player });
@@ -57,7 +59,7 @@ public sealed class GoalBot : IBot
         }
 
         Building? lander = world.Get<Building>(P.LanderId);
-        if (lander is null)
+        if ((lander is null) || ComeHome())
         {
             return;
         }
@@ -75,6 +77,27 @@ public sealed class GoalBot : IBot
     }
 
     // ------------------------------------------------------------------ commander
+
+    /// <summary>
+    /// The bot plays from the start planet: if the commander has flown elsewhere, walk it to its landed
+    /// ferry and fly home (which brings the helper bots there too). True while that is in hand.
+    /// </summary>
+    private bool ComeHome()
+    {
+        Unit? away = _w.Planets.Where(p => p != P).SelectMany(p => p.Units).FirstOrDefault(u => u.IsLeader && (u.OwnerPlayer == Player));
+        if (away is null)
+        {
+            return false;
+        }
+
+        Planet there = away.Planet;
+        if (there.Buildings.Where(b => b.Def.Kind == BuildingKind.Ferry).OrderBy(b => there.SubTorus.DistSq(away.Pos, there.SubTorus.Wrap(b.CenterSub))).FirstOrDefault() is { } ferry)
+        {
+            Send(there.InLeaderReach(away, ferry.Origin) ? new ReturnFerry(away.Id, ferry.Id) : new WalkTo(away.Id, ferry.Origin + new Int2(-1, 1)));
+        }
+
+        return true;
+    }
 
     private Unit? Commander() => P.Units.FirstOrDefault(u => u.IsLeader && (u.OwnerPlayer == Player));
 
@@ -154,11 +177,35 @@ public sealed class GoalBot : IBot
             if (missing.Count > 0)
             {
                 // Fetch from the lander and crates: enough must be in storage altogether, possibly split.
-                List<Building> stores = P.Buildings.Where(b => b.Def.Kind is BuildingKind.Lander or BuildingKind.Chest)
+                List<Building> stores = P.Buildings.Where(b => b.Def.IsDepot)
                     .OrderBy(b => b.Id == lander.Id ? 0 : 1).ThenBy(b => P.SubTorus.DistSq(leader.Pos, b.CenterSub)).ThenBy(b => b.Id).ToList();
                 if (missing.Any(m => stores.Sum(st => st.Inv.Count(m.Item)) < m.Count))
                 {
                     continue; // not all in storage yet; try another ghost
+                }
+
+                // Pockets stuffed with things this ghost doesn't need: unload them into storage with room first.
+                if (missing.Any(m => leader.Carry.SpaceFor(m.Item) == 0))
+                {
+                    HashSet<string> needed = missing.Select(m => m.Item).ToHashSet();
+                    Building? dump = stores.FirstOrDefault(st => leader.Carry.Items.Any(kv => (needed.Contains(kv.Key) == false) && (st.Inv.SpaceFor(kv.Key) > 0)));
+                    if (dump is null)
+                    {
+                        plan.Problems.Add("pockets and storage are full");
+                    }
+                    else if (P.InLeaderReach(leader, dump.Origin))
+                    {
+                        foreach ((string item, int _) in leader.Carry.Items.Where(kv => needed.Contains(kv.Key) == false).ToList())
+                        {
+                            Send(new DepositToBuilding(leader.Id, dump.Id, item));
+                        }
+                    }
+                    else
+                    {
+                        WalkTowards(leader, dump.Id == lander.Id ? home : P.Torus.Wrap(dump.Origin + new Int2(0, dump.H)));
+                    }
+
+                    return;
                 }
 
                 Building source = stores.First(st => missing.Any(m => st.Inv.Count(m.Item) > 0));
@@ -185,13 +232,32 @@ public sealed class GoalBot : IBot
             return;
         }
 
+        if (TendMachines(plan, leader, lander))
+        {
+            return;
+        }
+
         if (nearLander == false)
         {
             WalkTowards(leader, home);
         }
         else if (leader.Carry.IsEmpty == false)
         {
-            Send(new DepositToBuilding(leader.Id, lander.Id));
+            // Unload at the lander, or the nearest crate with room once the lander is full.
+            Building? store = P.Buildings.Where(b => b.Def.IsDepot && leader.Carry.Items.Any(kv => b.Inv.SpaceFor(kv.Key) > 0))
+                .OrderBy(b => b.Id == lander.Id ? 0 : 1).ThenBy(b => P.SubTorus.DistSq(leader.Pos, b.CenterSub)).ThenBy(b => b.Id).FirstOrDefault();
+            if (store is null)
+            {
+                plan.Problems.Add("nowhere to unload the commander's pockets");
+            }
+            else if (P.InLeaderReach(leader, store.Origin))
+            {
+                Send(new DepositToBuilding(leader.Id, store.Id));
+            }
+            else
+            {
+                WalkTowards(leader, P.Torus.Wrap(store.Origin + new Int2(0, store.H)));
+            }
         }
     }
 
@@ -361,6 +427,9 @@ public sealed class GoalBot : IBot
     /// think) and rescind dismantle orders on buildings it relies on. This is what lets the bot recover
     /// from chaos instead of drowning its builders in junk orders.
     /// </summary>
+    /// <summary>Buildings the bot keeps: its usual kinds, plus machines for the recipe categories it needs.</summary>
+    private bool Wanted(BuildingDef d) => _wanted.Contains(d.Kind) || d.Categories.Any(_machineCategories.Contains);
+
     private void CleanUp(BotPlan plan)
     {
         int cancelled = 0;
@@ -373,10 +442,10 @@ public sealed class GoalBot : IBot
 
             bool junk = site.Kind switch
             {
-                SiteKind.Build => (C.Buildings.TryGetValue(site.DefId, out BuildingDef? d) == false) || (_wanted.Contains(d.Kind) == false)
+                SiteKind.Build => (C.Buildings.TryGetValue(site.DefId, out BuildingDef? d) == false) || (Wanted(d) == false)
                                   || ((d.Kind != BuildingKind.Pole) && (P.Sites.Count(x => x.DefId == site.DefId) > 1) && (site.Id != P.Sites.First(x => x.DefId == site.DefId).Id)),
                 SiteKind.BuildTrain => true,
-                SiteKind.Deconstruct => (_w.Get<Building>(site.TargetId) is { } b) && _wanted.Contains(b.Def.Kind),
+                SiteKind.Deconstruct => (_w.Get<Building>(site.TargetId) is { } b) && Wanted(b.Def),
                 _ => false,
             };
             if (junk == false)
@@ -451,6 +520,14 @@ public sealed class GoalBot : IBot
                 {
                     PlaceNear(plan, def.Id, center, 5, 20);
                 }
+            }
+        }
+
+        foreach (string category in _machineCategories.Order(StringComparer.Ordinal))
+        {
+            if ((MachineFor(category) is { } def) && (CountOf(def.Kind, def.Id) == 0))
+            {
+                PlaceNear(plan, def.Id, center, 4, 16);
             }
         }
 
@@ -675,6 +752,12 @@ public sealed class GoalBot : IBot
         Add(fuelItem, Params.MinFuelStock);
 
         Dictionary<string, long> stock = WorldProbe.StorageTotals(P);
+        // What the commander is carrying counts too (it's on its way to storage or a machine).
+        foreach ((string item, int n) in Commander()?.Carry.Items ?? [])
+        {
+            stock[item] = stock.GetValueOrDefault(item) + n;
+        }
+
         // Count crafts already queued/in progress as incoming, so the bot doesn't over-queue.
         if (_w.Get<Building>(P.LanderId) is { } lander)
         {
@@ -692,6 +775,122 @@ public sealed class GoalBot : IBot
         {
             Expand(plan, stock, item, n, 0);
         }
+
+        _machineCategories = plan.CraftDeficit.Keys.Select(it => WorldProbe.RecipeFor(C, it)!.Category).Where(NeedsMachine).ToHashSet();
+    }
+
+    /// <summary>True for recipe categories neither the lander nor a smelter runs, so they need their own machine.</summary>
+    private bool NeedsMachine(string category) =>
+        (category != "smelting") && (C.Buildings.Values.Any(b => (b.Kind == BuildingKind.Lander) && b.Categories.Contains(category)) == false);
+
+    /// <summary>The researched building that runs a recipe category.</summary>
+    private BuildingDef? MachineFor(string category) =>
+        C.BuildingList.FirstOrDefault(b => b.Buildable && b.Categories.Contains(category) && _w.Research.Unlocked.Contains(b.Id));
+
+    /// <summary>
+    /// Hand-feeds a machine that makes something the plan wants (a refinery): set its recipe, carry the
+    /// ingredients over from the lander and bring the products back. True if the commander has work there.
+    /// </summary>
+    private bool TendMachines(BotPlan plan, Unit leader, Building lander)
+    {
+        foreach ((string item, long _) in plan.CraftDeficit.OrderBy(kv => kv.Key, StringComparer.Ordinal))
+        {
+            RecipeDef r = WorldProbe.RecipeFor(C, item)!;
+            if (NeedsMachine(r.Category) == false)
+            {
+                continue;
+            }
+
+            Building? m = P.Buildings.Where(b => b.Def.Categories.Contains(r.Category)).OrderBy(b => b.Id).FirstOrDefault();
+            if (m is null)
+            {
+                continue;
+            }
+
+            bool powered = (m.Def.Energy != EnergyKind.Electric) || ((m.NetworkId != 0) && P.Networks.TryGetValue(m.NetworkId, out PowerNetwork? n) && (n.Generators.Count > 0));
+            if (powered == false)
+            {
+                plan.Problems.Add($"{m.Def.Name} has no power yet");
+
+                continue;
+            }
+
+            Int2 beside = P.Torus.Wrap(m.Origin + new Int2(0, m.H));
+            bool atMachine = P.InLeaderReach(leader, m.Origin);
+            if ((m.RecipeId != r.Id) && (m.Crafting == false))
+            {
+                if (atMachine && m.Out.IsEmpty)
+                {
+                    Send(new SetRecipe(m.Id, r.Id));
+                }
+                else if (atMachine)
+                {
+                    Send(new TakeFromBuilding(leader.Id, m.Id, null, int.MaxValue, InventoryPart.Output));
+                }
+                else
+                {
+                    WalkTowards(leader, beside);
+                }
+
+                return true;
+            }
+
+            if (m.Out.IsEmpty == false)
+            {
+                if (atMachine)
+                {
+                    Send(new TakeFromBuilding(leader.Id, m.Id, null, int.MaxValue, InventoryPart.Output));
+                }
+                else
+                {
+                    WalkTowards(leader, beside);
+                }
+
+                return true;
+            }
+
+            ItemAmount[] wanted = r.Inputs.Select(i => new ItemAmount(i.Item, (i.Count * Params.CraftBatch) - m.Inv.Count(i.Item))).Where(i => i.Count >= r.In[i.Item]).ToArray();
+            if (wanted.Length == 0)
+            {
+                continue; // fed and working
+            }
+
+            if (wanted.Any(i => leader.Carry.Count(i.Item) > 0))
+            {
+                if (atMachine)
+                {
+                    foreach (ItemAmount i in wanted.Where(i => leader.Carry.Count(i.Item) > 0))
+                    {
+                        Send(new DepositToBuilding(leader.Id, m.Id, i.Item, i.Count));
+                    }
+                }
+                else
+                {
+                    WalkTowards(leader, beside);
+                }
+
+                return true;
+            }
+
+            if (wanted.All(i => lander.Inv.Count(i.Item) >= r.In[i.Item]))
+            {
+                if (P.InLeaderReach(leader, lander.Origin))
+                {
+                    foreach (ItemAmount i in wanted)
+                    {
+                        Send(new TakeFromBuilding(leader.Id, lander.Id, i.Item, System.Math.Min(i.Count, lander.Inv.Count(i.Item))));
+                    }
+                }
+                else
+                {
+                    WalkTowards(leader, P.Torus.Wrap(lander.Origin + new Int2(1, lander.H + 1)));
+                }
+
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private void Expand(BotPlan plan, Dictionary<string, long> stock, string item, long qty, int depth)

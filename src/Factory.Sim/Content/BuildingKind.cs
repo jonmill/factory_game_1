@@ -37,5 +37,9 @@ public enum BuildingKind
     /// <summary>Runs a fixed recipe that raises one of the planet's stats.</summary>
     Terraformer,
     /// <summary>The Settler Uplink, which calls the settlers once every planet is ready.</summary>
-    Uplink
+    Uplink,
+    /// <summary>A launch pad: holds a ferry rocket, its fuel and cargo, and flies them to another planet.</summary>
+    LaunchPad,
+    /// <summary>A ferry that has landed on another planet: storage for its cargo, and the way home.</summary>
+    Ferry
 }

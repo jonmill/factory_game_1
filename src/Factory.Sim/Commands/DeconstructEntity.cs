@@ -16,6 +16,11 @@ public sealed record DeconstructEntity(int TargetId) : Command
                 return "You can't dismantle the lander";
             }
 
+            if (b.Def.Kind == BuildingKind.Ferry)
+            {
+                return "The ferry is your way home: fly it back instead";
+            }
+
             if (b.Planet.Sites.Any(s => (s.Kind == SiteKind.Deconstruct) && (s.TargetId == TargetId)))
             {
                 return "Already marked";

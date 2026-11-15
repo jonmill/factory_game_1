@@ -17,7 +17,7 @@ public partial class Hud
         ("Production", [BuildingKind.Drill, BuildingKind.Furnace, BuildingKind.Assembler]),
         ("Power", [BuildingKind.SteamEngine, BuildingKind.Pole, BuildingKind.Battery]),
         ("Science", [BuildingKind.Lab, BuildingKind.RobotBay]),
-        ("Transport", [BuildingKind.Rail, BuildingKind.RailStop, BuildingKind.WaterTower]),
+        ("Transport", [BuildingKind.Rail, BuildingKind.RailStop, BuildingKind.WaterTower, BuildingKind.LaunchPad]),
         ("Terraform", [BuildingKind.Terraformer, BuildingKind.Uplink]),
         ("Tools", []),
     ];

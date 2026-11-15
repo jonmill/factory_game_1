@@ -7,7 +7,7 @@ public static class WorldProbe
 {
     /// <summary>The buildings that act as general storage on a planet (the lander and chests).</summary>
     public static IEnumerable<Building> Storages(Planet p) =>
-        p.Buildings.Where(b => b.Def.Kind is BuildingKind.Lander or BuildingKind.Chest);
+        p.Buildings.Where(b => b.Def.IsDepot);
 
     /// <summary>Total amount of an item held across all storage buildings on a planet.</summary>
     public static long StorageCount(Planet p, string item) => Storages(p).Sum(b => (long)b.Inv.Count(item));

@@ -154,12 +154,16 @@ public partial class GameRoot : Node2D
     {
         World = replay is null ? new World(Content, new WorldSettings { Seed = seed }) : replay.Play(Content);
         PlanetId = 0;
-        ViewPlanet(Leader.Planet.Id);
+        _leaderPlanet = Leader.Planet.Id;
+        ViewPlanet(_leaderPlanet);
         SelectedId = 0;
         SetTool(ToolKind.Select);
         Messages.Clear();
         Notify("Landing complete. Your helper bots await orders.", Colors.Cyan);
     }
+
+    /// <summary>The planet the commander was on last frame, to follow it when it flies.</summary>
+    private int _leaderPlanet;
 
     /// <summary>
     /// Shows another planet. On the commander's own planet the camera follows it; elsewhere it's a remote
@@ -290,6 +294,13 @@ public partial class GameRoot : Node2D
             {
                 _acc = 0; // don't spiral if we fall behind
             }
+        }
+
+        // The commander flew to another planet: the camera goes with it.
+        if (Leader.Planet.Id != _leaderPlanet)
+        {
+            _leaderPlanet = Leader.Planet.Id;
+            ViewPlanet(_leaderPlanet);
         }
 
         DebugHooks();
@@ -738,7 +749,7 @@ public partial class GameRoot : Node2D
         Unit leader = Leader;
 
         return Planet.Buildings
-            .Where(b => (b.Def.Kind is BuildingKind.Lander or BuildingKind.Chest) && InReach(b.Origin) && ((filter is null) || filter(b)))
+            .Where(b => b.Def.IsDepot && InReach(b.Origin) && ((filter is null) || filter(b)))
             .OrderBy(b => Planet.SubTorus.DistSq(leader.Pos, b.CenterSub))
             .ThenBy(b => b.Id)
             .FirstOrDefault();
@@ -839,7 +850,7 @@ public partial class GameRoot : Node2D
         }
 
         string? demo = System.Environment.GetEnvironmentVariable("FACTORY_DEMO");
-        if ((_demoDone == false) && (demo is "1" or "2"))
+        if ((_demoDone == false) && (demo is "1" or "2" or "3" or "4"))
         {
             _demoDone = true;
             Int2 l = World.Get<Building>(Planet.LanderId)!.Origin;
@@ -858,7 +869,7 @@ public partial class GameRoot : Node2D
             }
 
             Send(new PlaceBuilding("rail-stop", new Int2(l.X + 7, l.Y + 5), SimDir.South));
-            if (demo == "2")
+            if (demo is "2" or "3" or "4")
             {
                 // Dev only: skip ahead to the late game (unlock everything, stock the lander) to show the
                 // robot bay, terraformers and uplink. Not a replayable game.
@@ -879,6 +890,15 @@ public partial class GameRoot : Node2D
                 Send(new PlaceBuilding("bio-incubator", new Int2(l.X + 4, l.Y - 5), SimDir.North));
                 Send(new PlaceBuilding("settler-uplink", new Int2(l.X + 9, l.Y - 2), SimDir.North));
                 Send(new PlaceBuilding("robot-bay", new Int2(l.X - 9, l.Y - 3), SimDir.North));
+                if (demo is "3" or "4")
+                {
+                    // The Combustion Age set: refinery, generator, pylons and a launch pad.
+                    lander.Inv.AddUnchecked("crude-kerogen", 100);
+                    Send(new PlaceBuilding("kerogen-refinery", new Int2(l.X - 4, l.Y + 9), SimDir.North));
+                    Send(new PlaceBuilding("kerogen-generator", new Int2(l.X, l.Y + 9), SimDir.North));
+                    Send(new PlaceBuilding("lattice-pylon", new Int2(l.X + 3, l.Y + 10), SimDir.North));
+                    Send(new PlaceBuilding("launch-pad", new Int2(l.X + 5, l.Y + 9), SimDir.North));
+                }
             }
 
             World.Run(60 * 60);
@@ -906,6 +926,31 @@ public partial class GameRoot : Node2D
             {
                 Send(new MineTile(Leader.Id, target));
                 World.Run(60 * 15);
+            }
+
+            if ((demo is "3" or "4") && (Planet.Buildings.FirstOrDefault(b => b.Def.Kind == BuildingKind.LaunchPad) is { } pad))
+            {
+                pad.Inv.AddUnchecked("ferry-rocket", 1);
+                pad.Inv.AddUnchecked("kerogen-fuel", 20);
+                if (Planet.Buildings.FirstOrDefault(b => b.Def.Id == "kerogen-generator") is { } gen)
+                {
+                    gen.Inv.AddUnchecked("kerogen-fuel", 5);
+                }
+
+                if (Planet.Buildings.FirstOrDefault(b => b.Def.Id == "kerogen-refinery") is { } refinery)
+                {
+                    Send(new SetRecipe(refinery.Id, "kerogen-fuel"));
+                }
+
+                World.Run(60 * 5);
+                if (demo == "4")
+                {
+                    Send(new WalkTo(Leader.Id, pad.Origin + new Int2(-1, 1)));
+                    World.Run(60 * 20);
+                    pad.Inv.AddUnchecked("siderite-plate", 50);
+                    Send(new LaunchFerry(Leader.Id, pad.Id, World.Planets.First(p => p.Def.Id == "rime").Id, [.. Planet.Units.Where(u => u.IsLeader == false).Select(u => u.Id)]));
+                    World.Run(60);
+                }
             }
 
             SelectedId = Planet.Trains.FirstOrDefault()?.Id ?? Planet.LanderId;

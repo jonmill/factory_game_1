@@ -60,6 +60,12 @@ public sealed class BuildingDef
     public string Color { get; init; } = "#88aaff";
     /// <summary>Tooltip text describing the building to the player.</summary>
     public string Description { get; init; } = "";
+    /// <summary>Launch pads: the item that flies (a ferry rocket), used up on launch and returned when the ferry comes home.</summary>
+    public string? Vessel { get; init; }
+    /// <summary>Launch pads: items burned for each launch, keyed by item id.</summary>
+    public Dictionary<string, int> LaunchFuel { get; init; } = new();
+    /// <summary>Launch pads: the building the vessel becomes once it lands (a landed ferry).</summary>
+    public string? LandsAs { get; init; }
     /// <summary>The age this building belongs to, if set explicitly; otherwise its unlocking technology's age.</summary>
     public string? Age { get; init; }
     /// <summary>The age this building belongs to (resolved when content loads).</summary>
@@ -67,5 +73,9 @@ public sealed class BuildingDef
     /// <summary><see cref="Cost"/> as an id-sorted list, for deterministic iteration.</summary>
     [JsonIgnore] public ItemAmount[] CostList { get; internal set; } = [];
     /// <summary>True for buildings whose inventory is general storage (lander, chest, rail stop), so input and output share one inventory.</summary>
-    [JsonIgnore] public bool IsStorage => Kind is BuildingKind.Lander or BuildingKind.Chest or BuildingKind.RailStop;
+    [JsonIgnore] public bool IsStorage => Kind is BuildingKind.Lander or BuildingKind.Chest or BuildingKind.RailStop or BuildingKind.Ferry or BuildingKind.LaunchPad;
+    /// <summary>True for general stores (lander, crates, a landed ferry): helper bots deliver to them and construction draws from them.</summary>
+    [JsonIgnore] public bool IsDepot => Kind is BuildingKind.Lander or BuildingKind.Chest or BuildingKind.Ferry;
+    /// <summary><see cref="LaunchFuel"/> as an id-sorted list, for deterministic iteration.</summary>
+    [JsonIgnore] public ItemAmount[] LaunchFuelList { get; internal set; } = [];
 }

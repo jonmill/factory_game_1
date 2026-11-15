@@ -312,7 +312,7 @@ public sealed partial class Planet
 
     /// <summary>All storage buildings, nearest first.</summary>
     public IEnumerable<Building> StoragesByDistance(Int2 fromSub) =>
-        Buildings.Where(b => b.Def.Kind is BuildingKind.Lander or BuildingKind.Chest)
+        Buildings.Where(b => b.Def.IsDepot)
                  .OrderBy(b => SubTorus.DistSq(fromSub, SubTorus.Wrap(b.CenterSub))).ThenBy(b => b.Id);
 
     /// <summary>True if a rectangle can be built on: no water, occupants or trees, and no rail unless allowed.</summary>
@@ -403,6 +403,8 @@ public sealed partial class Planet
             h.Add(b.FuelJ);
             h.Add(b.StoredJ);
             h.Add(b.Crafting);
+            h.Add(b.HomePadId);
+            h.Add(b.HomePlanetId);
             b.Inv.Hash(h);
             if (b.Def.IsStorage == false)
             {

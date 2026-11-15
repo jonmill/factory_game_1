@@ -17,7 +17,7 @@ public sealed partial class Planet
 
         switch (b.Def.Kind)
         {
-            case BuildingKind.Lander or BuildingKind.Chest or BuildingKind.RailStop:
+            case BuildingKind.Lander or BuildingKind.Chest or BuildingKind.RailStop or BuildingKind.Ferry or BuildingKind.LaunchPad:
                 return b.Inv.SpaceFor(item);
             case BuildingKind.Furnace:
                 {

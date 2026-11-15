@@ -63,7 +63,7 @@ public sealed class Telemetry
 
             foreach (Building b in p.Buildings)
             {
-                if (b.Def.Kind is BuildingKind.Pole or BuildingKind.Rail or BuildingKind.Chest or BuildingKind.RailStop or BuildingKind.WaterTower or BuildingKind.Lander)
+                if (b.Def.Kind is BuildingKind.Pole or BuildingKind.Rail or BuildingKind.Chest or BuildingKind.RailStop or BuildingKind.WaterTower or BuildingKind.Lander or BuildingKind.LaunchPad or BuildingKind.Ferry)
                 {
                     continue;
                 }

@@ -38,6 +38,7 @@ public sealed class ChaosBot(ulong seed, int actionsPerMinute = 30, int player =
         Int2 RandTile(int r) => p.Torus.Wrap(near + new Int2(_rng.Range(-r, r + 1), _rng.Range(-r, r + 1)));
         List<Unit> followers = p.Units.Where(u => u.IsLeader == false).ToList();
         Unit? leader = p.Units.FirstOrDefault(u => u.IsLeader && (u.OwnerPlayer == player));
+        Unit? anyLeader = world.Planets.SelectMany(q => q.Units).FirstOrDefault(u => u.IsLeader && (u.OwnerPlayer == player));
         List<Building> buildings = p.Buildings;
         Dir RandDir() => (Dir)_rng.Range(0, 4);
 
@@ -60,7 +61,8 @@ public sealed class ChaosBot(ulong seed, int actionsPerMinute = 30, int player =
                     .Select(b => new ScheduleStop(b.Id, (StopAction)_rng.Range(0, 3))).ToArray())
                 : null,
             < 92 => leader is null ? null : new SetMoveIntent(leader.Id, _rng.Range(-1, 2), _rng.Range(-1, 2)),
-            < 95 => leader is null ? null : new MineTile(leader.Id, _rng.Range(0, 3) == 0 ? null : RandTile(3)),
+            < 94 => leader is null ? null : new MineTile(leader.Id, _rng.Range(0, 3) == 0 ? null : RandTile(3)),
+            < 95 => Travel(world, anyLeader, followers),
             < 98 => (leader is null) || (buildings.Count == 0) ? null : new DepositToBuilding(leader.Id, Pick(buildings)!.Id),
             _ => (leader is null) || (buildings.Count == 0) ? null : new TakeFromBuilding(leader.Id, Pick(buildings)!.Id),
         };
@@ -74,6 +76,24 @@ public sealed class ChaosBot(ulong seed, int actionsPerMinute = 30, int player =
             Player = player
         });
         ActionsSubmitted++;
+    }
+
+    /// <summary>Launch from a random pad to a random planet with some helpers, or fly a landed ferry home.</summary>
+    private Command? Travel(World w, Unit? leader, List<Unit> followers)
+    {
+        if (leader is null)
+        {
+            return null;
+        }
+
+        if (Pick(leader.Planet.Buildings.Where(b => b.Def.Kind == BuildingKind.Ferry).ToList()) is { } ferry)
+        {
+            return new ReturnFerry(leader.Id, ferry.Id);
+        }
+
+        return Pick(leader.Planet.Buildings.Where(b => b.Def.Kind == BuildingKind.LaunchPad).ToList()) is { } pad
+            ? new LaunchFerry(leader.Id, pad.Id, _rng.Range(0, w.Planets.Count), followers.Where(_ => _rng.Range(0, 2) == 0).Select(u => u.Id).ToArray())
+            : null;
     }
 
     private Command? RailLine(Planet p, Int2 start, Dir d)

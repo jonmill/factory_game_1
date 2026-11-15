@@ -263,6 +263,12 @@ public partial class Hud
             sb.AppendLine("Queue: " + string.Join(", ", b.CraftQueue.GroupBy(x => x).Select(g => $"{C.Recipes[g.Key].Name} ×{g.Count()}")));
         }
 
+        if (b.Def.Kind == BuildingKind.LaunchPad)
+        {
+            sb.AppendLine("To launch: " + string.Join(", ", b.Def.LaunchFuelList.Prepend(new ItemAmount(b.Def.Vessel!, 1))
+                .Select(f => $"{ItemName(f.Item)} {System.Math.Min(f.Count, b.Inv.Count(f.Item))}/{f.Count}")) + ". Everything else in the pad flies as cargo.");
+        }
+
         if ((b.Def.Kind == BuildingKind.Drill) && (P.FindMinable(b) is { } t))
         {
             sb.AppendLine($"Mining {P.ResourceAt(t)!.Name} ({P.AmountAt(t)} left on tile)");
@@ -305,7 +311,19 @@ public partial class Hud
             into.AddChild(edit);
         }
 
-        if (b.Def.Kind != BuildingKind.Lander)
+        if (b.Def.Kind == BuildingKind.LaunchPad)
+        {
+            BuildLaunchActions(into, b);
+        }
+
+        if (b.Def.Kind == BuildingKind.Ferry)
+        {
+            (Planet home, Building store) = b.Planet.HomeOf(b);
+            into.AddChild(HudStyle.Button($"Fly home to {home.Name}", () => Root.Send(new ReturnFerry(Root.Leader.Id, b.Id)),
+                $"Lands on {store.Name} with the hold's cargo, you and every one of your helper bots on {b.Planet.Name}."));
+        }
+
+        if (b.Def.Kind is not (BuildingKind.Lander or BuildingKind.Ferry))
         {
             into.AddChild(HudStyle.Button("Dismantle", () => Root.Send(new DeconstructEntity(b.Id))));
         }

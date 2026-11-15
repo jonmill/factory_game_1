@@ -33,6 +33,11 @@ public partial class WorldView
             return;
         }
 
+        if ((b.Def.AgeId == "combustion") && DrawCombustion(b, r, working))
+        {
+            return;
+        }
+
         switch (b.Def.Kind)
         {
             case BuildingKind.Furnace:

@@ -58,6 +58,45 @@ public static class Icons
             return;
         }
 
+        if (id == "kerogen-fuel")
+        {
+            // A ribbed steel drum with a hazard band.
+            Rect2 drum = new Rect2(m - new Vector2(s * 0.2f, s * 0.3f), new Vector2(s * 0.4f, s * 0.6f));
+            ci.DrawRect(drum, c.Darkened(0.2f));
+            ci.DrawRect(new Rect2(drum.Position + new Vector2(0, s * 0.22f), new Vector2(drum.Size.X, s * 0.14f)), new Color(0.9f, 0.72f, 0.15f));
+            ci.DrawLine(drum.Position + new Vector2(0, s * 0.08f), drum.Position + new Vector2(drum.Size.X, s * 0.08f), c.Darkened(0.5f), 1);
+            ci.DrawLine(drum.End - new Vector2(drum.Size.X, s * 0.08f), drum.End - new Vector2(0, s * 0.08f), c.Darkened(0.5f), 1);
+            ci.DrawRect(drum, c.Darkened(0.55f), false, 1);
+            ci.DrawCircle(drum.Position + new Vector2(s * 0.1f, s * 0.04f), s * 0.035f, c.Darkened(0.6f));
+
+            return;
+        }
+
+        if (id == "polymer-resin")
+        {
+            for (int i = 0; i < 5; i++)
+            {
+                Vector2 o = m + new Vector2(((i % 3) - 1) * s * 0.17f, (i < 3 ? s * 0.1f : -s * 0.1f) + (i % 2 * s * 0.03f));
+                ci.DrawCircle(o, s * 0.1f, c.Darkened(0.15f));
+                ci.DrawCircle(o - new Vector2(s * 0.03f, s * 0.03f), s * 0.04f, c.Lightened(0.3f));
+            }
+
+            return;
+        }
+
+        if (id == "ferry-rocket")
+        {
+            Vector2[] hull = [m + new Vector2(0, -s * 0.42f), m + new Vector2(s * 0.13f, -s * 0.2f), m + new Vector2(s * 0.13f, s * 0.24f), m + new Vector2(-s * 0.13f, s * 0.24f), m + new Vector2(-s * 0.13f, -s * 0.2f)];
+            ci.DrawColoredPolygon([m + new Vector2(-s * 0.13f, s * 0.04f), m + new Vector2(-s * 0.28f, s * 0.36f), m + new Vector2(-s * 0.13f, s * 0.26f)], new Color(0.7f, 0.2f, 0.15f));
+            ci.DrawColoredPolygon([m + new Vector2(s * 0.13f, s * 0.04f), m + new Vector2(s * 0.28f, s * 0.36f), m + new Vector2(s * 0.13f, s * 0.26f)], new Color(0.7f, 0.2f, 0.15f));
+            ci.DrawColoredPolygon(hull, c);
+            ci.DrawPolyline([.. hull, hull[0]], c.Darkened(0.5f), 1, true);
+            ci.DrawCircle(m + new Vector2(0, -s * 0.08f), s * 0.06f, new Color(0.3f, 0.5f, 0.7f));
+            ci.DrawColoredPolygon([m + new Vector2(-s * 0.08f, s * 0.24f), m + new Vector2(s * 0.08f, s * 0.24f), m + new Vector2(0, s * 0.42f)], new Color(1f, 0.6f, 0.2f));
+
+            return;
+        }
+
         if (id == "seed-pod")
         {
             ci.DrawCircle(m + new Vector2(0, s * 0.06f), s * 0.24f, c.Darkened(0.35f));
@@ -200,6 +239,38 @@ public static class Icons
 
         switch (def.Kind)
         {
+            case BuildingKind.LaunchPad:
+                ci.DrawRect(body, new Color(0.34f, 0.33f, 0.31f));
+                ci.DrawArc(m, s * 0.28f, 0, Mathf.Tau, 20, new Color(0.9f, 0.72f, 0.15f), Mathf.Max(1.5f, s * 0.05f), true);
+                Item(ci, new Rect2(m - new Vector2(s * 0.3f, s * 0.3f), new Vector2(s * 0.6f, s * 0.6f)), new ItemDef { Id = "ferry-rocket", Color = "#e0e0e8" });
+                break;
+            case BuildingKind.Ferry:
+                Item(ci, r, new ItemDef { Id = "ferry-rocket", Color = "#e0e0e8" });
+                break;
+            case BuildingKind.Assembler when def.Look != VisualStyle.HighTech:
+                ci.DrawRect(body, new Color(0.52f, 0.2f, 0.14f));
+                ci.DrawCircle(m + new Vector2(-s * 0.12f, -s * 0.04f), s * 0.14f, new Color(0.46f, 0.48f, 0.5f));
+                ci.DrawCircle(m + new Vector2(s * 0.14f, s * 0.08f), s * 0.17f, new Color(0.72f, 0.58f, 0.2f));
+                ci.DrawCircle(m + new Vector2(s * 0.14f, s * 0.08f), s * 0.06f, new Color(0.88f, 0.86f, 0.8f));
+                break;
+            case BuildingKind.SteamEngine when def.NeedsWater == false:
+                ci.DrawRect(body, new Color(0.72f, 0.58f, 0.2f));
+                ci.DrawRect(new Rect2(m + new Vector2(-s * 0.26f, -s * 0.14f), new Vector2(s * 0.3f, s * 0.26f)), new Color(0.34f, 0.35f, 0.37f));
+                for (int i = 0; i < 4; i++)
+                {
+                    float y = m.Y - (s * 0.14f) + (i * s * 0.08f);
+                    ci.DrawLine(new Vector2(m.X + (s * 0.1f), y), new Vector2(m.X + (s * 0.28f), y), _darkIron, 1);
+                }
+
+                break;
+            case BuildingKind.Pole when def.AgeId == "combustion":
+                ci.DrawLine(m + new Vector2(-s * 0.2f, s * 0.36f), m + new Vector2(0, -s * 0.3f), new Color(0.6f, 0.62f, 0.64f), Mathf.Max(1.5f, s * 0.05f));
+                ci.DrawLine(m + new Vector2(s * 0.2f, s * 0.36f), m + new Vector2(0, -s * 0.3f), new Color(0.6f, 0.62f, 0.64f), Mathf.Max(1.5f, s * 0.05f));
+                ci.DrawLine(m + new Vector2(-s * 0.28f, -s * 0.28f), m + new Vector2(s * 0.28f, -s * 0.28f), new Color(0.6f, 0.62f, 0.64f), Mathf.Max(1.5f, s * 0.06f));
+                ci.DrawLine(m + new Vector2(-s * 0.12f, s * 0.05f), m + new Vector2(s * 0.12f, s * 0.05f), new Color(0.5f, 0.52f, 0.54f), 1);
+                ci.DrawCircle(m + new Vector2(-s * 0.26f, -s * 0.3f), s * 0.04f, accent);
+                ci.DrawCircle(m + new Vector2(s * 0.26f, -s * 0.3f), s * 0.04f, accent);
+                break;
             case BuildingKind.Lander:
                 ci.DrawCircle(m, s * 0.2f, _glass);
                 ci.DrawArc(m, s * 0.14f, 0, Mathf.Pi * 1.4f, 16, accent, Mathf.Max(1.5f, s * 0.05f), true);

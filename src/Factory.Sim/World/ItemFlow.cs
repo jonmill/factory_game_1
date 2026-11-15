@@ -27,4 +27,6 @@ public enum ItemFlow
     Construction,
     /// <summary>Consumed by labs to advance research.</summary>
     Research,
+    /// <summary>A ferry rocket away on another planet (refunded when it flies home).</summary>
+    Launched,
 }

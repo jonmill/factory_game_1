@@ -9,6 +9,32 @@ namespace Factory.Sim.Tests;
 public class GoalBotTests
 {
     [Test]
+    public async Task GoalBot_FliesHomeWhenTheCommanderIsOnAnotherPlanet()
+    {
+        TestWorld tw = new TestWorld();
+        Int2 at = tw.Lander.Origin + new Int2(6, 0);
+        Building pad = tw.Build("launch-pad", at.X, at.Y);
+        pad.Inv.AddUnchecked("ferry-rocket", 1);
+        pad.Inv.AddUnchecked("kerogen-fuel", 20);
+        tw.Leader.Pos = Fixed.TileCenter(at + new Int2(-1, 1));
+        Unit commander = tw.Leader;
+        int dune = tw.W.Planets.FindIndex(p => p.Def.Id == "dune");
+        tw.Do(new LaunchFerry(commander.Id, pad.Id, dune, [tw.Followers[0].Id]));
+        commander.Pos = Fixed.TileCenter(commander.Tile + new Int2(12, 0));
+        GoalBot bot = new GoalBot(Goal.Parse("item:drive-cog:200"));
+
+        tw.RunUntil(() =>
+        {
+            bot.Tick(tw.W);
+
+            return commander.Planet == tw.P;
+        }, 60 * 60, "the commander to fly home");
+
+        await Assert.That(tw.P.Units.Count).IsEqualTo(3).Because("the helper bot came home too");
+        await Assert.That(pad.Inv.Count("ferry-rocket")).IsEqualTo(1);
+    }
+
+    [Test]
     public async Task GoalBot_ClearsCraftQueueWhenNothingQueuedCanBeCrafted()
     {
         TestWorld tw = new TestWorld();

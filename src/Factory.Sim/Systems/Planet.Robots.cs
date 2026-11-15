@@ -106,7 +106,7 @@ public sealed partial class Planet
                 continue;
             }
 
-            stores ??= Buildings.Where(b => (b.Def.Kind is BuildingKind.Lander or BuildingKind.Chest) && InLeaderReach(u, b.Origin)).OrderBy(b => b.Id).ToList();
+            stores ??= Buildings.Where(b => b.Def.IsDepot && InLeaderReach(u, b.Origin)).OrderBy(b => b.Id).ToList();
             foreach (ItemAmount m in site.Missing().ToList())
             {
                 int left = m.Count;

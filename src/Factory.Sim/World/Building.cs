@@ -34,6 +34,10 @@ public sealed class Building : Entity
     public string Name { get; internal set; } = "";
     /// <summary>Lander craft queue (recipe ids).</summary>
     public List<string> CraftQueue { get; } = [];
+    /// <summary>Landed ferries: the launch pad it flew from (0 if that pad is gone).</summary>
+    public int HomePadId { get; internal set; }
+    /// <summary>Landed ferries: the planet it flew from, where it returns.</summary>
+    public int HomePlanetId { get; internal set; }
     /// <summary>Generation actually delivered last tick (W), for UI.</summary>
     public long LastOutputJ { get; internal set; }
 
