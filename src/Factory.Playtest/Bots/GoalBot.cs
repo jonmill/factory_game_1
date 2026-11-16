@@ -263,6 +263,7 @@ public sealed partial class GoalBot : IBot
         _expedition = (want.Resource, want.Planet, ExpeditionAmount, _w.Tick);
         _expeditionDrillsPlaced = false;
         _expeditionKit = null;
+        _expeditionDrillCount = null;
         _expeditionResources = _offPlanetAlso;
 
         return true;
@@ -401,7 +402,7 @@ public sealed partial class GoalBot : IBot
             return;
         }
 
-        if (((Params.Automate == false) && TendMachines(plan, leader, lander)) || PrepareOutpost(leader, lander) || PrepareExpedition(leader, lander, ExpeditionKit(lander)))
+        if (((Params.Automate == false) && TendMachines(plan, leader, lander)) || ClearJammedColumn(leader) || PrepareOutpost(leader, lander) || PrepareExpedition(leader, lander, ExpeditionKit(lander)))
         {
             return;
         }
@@ -1402,6 +1403,20 @@ public sealed partial class GoalBot : IBot
             }
         }
 
+        // Drills with nothing in front to take their ore (early ones put down before columns): carry it to storage.
+        // (A column backed up behind a full furnace is left alone: it stops until the plates are wanted.)
+        // Only for ore that's short, one at a time: other hauling comes first.
+        foreach (Building d in P.Buildings.Where(b => (b.Def.Kind == BuildingKind.Drill) && (b.Out.Total >= 5) && (_retiring.Contains(b.Id) == false) && (P.BuildingAt(b.FrontTile()) is null)).OrderBy(b => b.Id))
+        {
+            string ore = d.Out.Items.Select(kv => kv.Key).First();
+            if ((WorldProbe.StorageCount(P, ore) < StockpileCap()) && (StoreFor(ore, lander) is { } into))
+            {
+                needs.Add(new Job(JobKind.Haul, FromId: d.Id, ToId: into.Id));
+
+                break;
+            }
+        }
+
         // Robot bays
         bool moreHelpers = (Params.Automate == false) || (Goal is HelpersGoal) || WantsHelpers();
         foreach (Building? bc in P.Buildings.Where(b => (b.Def.Kind is BuildingKind.RobotBay or BuildingKind.Terraformer or BuildingKind.Uplink) && (b.Status != MachineStatus.Complete))
@@ -1448,12 +1463,14 @@ public sealed partial class GoalBot : IBot
         }
 
         // Consolidate: crafting draws only from the lander, so fetch craft inputs sitting in other storage.
-        IOrderedEnumerable<string> craftInputs = plan.CraftDeficit.Keys.Select(it => WorldProbe.RecipeFor(C, it)!)
-            .Where(r => lander.Def.Categories.Contains(r.Category)).SelectMany(r => r.Inputs).Select(i => i.Item).Distinct().OrderBy(i => i, StringComparer.Ordinal);
-        foreach (string item in craftInputs)
+        // Enough for one craft of whichever wants the most of it (a rocket takes 40 plates), and at least 10.
+        Dictionary<string, int> craftInputs = plan.CraftDeficit.Keys.Select(it => WorldProbe.RecipeFor(C, it)!)
+            .Where(r => lander.Def.Categories.Contains(r.Category)).SelectMany(r => r.Inputs)
+            .GroupBy(i => i.Item).ToDictionary(g => g.Key, g => System.Math.Max(10, g.Max(i => i.Count)));
+        foreach ((string item, int enough) in craftInputs.OrderBy(kv => kv.Key, StringComparer.Ordinal))
         {
             Building? other = WorldProbe.Storages(P).Where(st => (st.Id != lander.Id) && (st.Inv.Count(item) > 0)).OrderByDescending(st => st.Inv.Count(item)).FirstOrDefault();
-            if ((other is not null) && (lander.Inv.Count(item) < 10))
+            if ((other is not null) && (lander.Inv.Count(item) < enough))
             {
                 needs.Add(new Job(JobKind.Haul, FromId: other.Id, ToId: lander.Id, Item: item));
             }

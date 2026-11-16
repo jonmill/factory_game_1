@@ -42,6 +42,34 @@ public sealed partial class GoalBot
     /// <summary>Furnaces fed by a drill: nobody needs to carry ore to them.</summary>
     private HashSet<int> DrillFedFurnaces() => Columns().Where(c => c.Into is { Def.Kind: BuildingKind.Furnace }).Select(c => c.Into!.Id).ToHashSet();
 
+    /// <summary>
+    /// A drill column whose furnace holds some other ore (a stray handful too small to smelt) can't take its
+    /// drill's ore and stands still: the commander takes the stray ore out. True while it's on the way.
+    /// </summary>
+    private bool ClearJammedColumn(Unit leader)
+    {
+        string? Stray(Column c) => C.Resources.TryGetValue(c.Resource, out ResourceDef? rd)
+            ? c.Into!.Inv.Items.Select(kv => kv.Key).FirstOrDefault(i => (C.IsFuel(i) == false) && (i != rd.Item))
+            : null;
+        if (Columns().Where(c => (c.Into is { Def.Kind: BuildingKind.Furnace } f) && (f.Crafting == false) && (c.Drill.Status == MachineStatus.OutputFull) && (Stray(c) is not null))
+                .OrderBy(c => c.Drill.Id).Cast<Column?>().FirstOrDefault() is not { } jammed)
+        {
+            return false;
+        }
+
+        Building furnace = jammed.Into!;
+        if (P.InLeaderReach(leader, furnace.Origin))
+        {
+            Send(new TakeFromBuilding(leader.Id, furnace.Id, Stray(jammed), int.MaxValue, InventoryPart.Input));
+        }
+        else
+        {
+            WalkTowards(leader, P.Torus.Wrap(furnace.Origin + new Int2(0, furnace.H)));
+        }
+
+        return true;
+    }
+
     /// <summary>Resources a drill is mining right now: nobody needs to dig them by hand.</summary>
     private HashSet<string> DrilledResources() => Columns().Where(c => c.Drill.Status == MachineStatus.Working).Select(c => c.Resource).ToHashSet();
 

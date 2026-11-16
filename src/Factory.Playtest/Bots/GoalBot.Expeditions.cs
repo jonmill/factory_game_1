@@ -18,32 +18,39 @@ public sealed partial class GoalBot
     /// <summary>The kit for the expedition being prepared, fixed when it is first worked out so loading it doesn't shrink it.</summary>
     private Dictionary<string, int>? _expeditionKit;
 
-    /// <summary>The parts for as many burner drills as storage can spare (up to <see cref="ExpeditionDrills"/>) and fuel for them.</summary>
+    /// <summary>How many drills the expedition being prepared carries, fixed when first worked out.</summary>
+    private int? _expeditionDrillCount;
+
+    /// <summary>
+    /// The parts for as many burner drills as storage can spare (up to <see cref="ExpeditionDrills"/>) and fuel for
+    /// them. The drill count is fixed once chosen; the fuel is whichever the lander and pad hold most of right now,
+    /// so a fuel burned away in the meantime doesn't hold the trip up.
+    /// </summary>
     private Dictionary<string, int>? ExpeditionKit(Building lander)
     {
         if ((Params.Automate == false) || (_offPlanet is null))
         {
             _expeditionKit = null;
+            _expeditionDrillCount = null;
 
             return null;
         }
 
-        if (_expeditionKit is not null)
-        {
-            return _expeditionKit;
-        }
-
         BuildingDef drill = C.Buildings["burner-drill"];
-        int sets = drill.CostList.Min(c => lander.Inv.Count(c.Item) / c.Count);
-        int n = System.Math.Min(ExpeditionDrills, sets);
-        Dictionary<string, int> kit = drill.CostList.ToDictionary(c => c.Item, c => c.Count * n);
-        string? fuel = new[] { "kerogen-fuel", "compacted-carbon", "biomass" }.FirstOrDefault(f => C.Items.ContainsKey(f) && AcceptsFuel(drill, f) && (lander.Inv.Count(f) >= 20));
+        Building? pad = LaunchPad();
+        int Held(string item) => lander.Inv.Count(item) + (pad?.Inv.Count(item) ?? 0);
+        _expeditionDrillCount ??= System.Math.Min(ExpeditionDrills, drill.CostList.Min(c => lander.Inv.Count(c.Item) / c.Count));
+        int n = _expeditionDrillCount.Value;
+        Dictionary<string, int> kit = n > 0 ? drill.CostList.ToDictionary(c => c.Item, c => c.Count * n) : [];
+        HashSet<string> launch = (pad?.Def.LaunchFuelList ?? []).Select(i => i.Item).ToHashSet();
+        string? fuel = new[] { "kerogen-fuel", "compacted-carbon", "biomass" }.Where(f => C.Items.ContainsKey(f) && AcceptsFuel(drill, f))
+            .OrderByDescending(f => Held(f) - (launch.Contains(f) ? 20 : 0)).ThenBy(f => f, StringComparer.Ordinal).FirstOrDefault();
         if ((n > 0) && (fuel is not null))
         {
-            kit[fuel] = kit.GetValueOrDefault(fuel) + System.Math.Min(ExpeditionFuel, lander.Inv.Count(fuel));
+            kit[fuel] = kit.GetValueOrDefault(fuel) + ExpeditionFuel;
         }
 
-        _expeditionKit = n > 0 ? kit : [];
+        _expeditionKit = kit;
 
         return _expeditionKit;
     }

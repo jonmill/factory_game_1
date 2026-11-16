@@ -22,13 +22,13 @@ public sealed partial class GoalBot
     private const int OutpostDrills = 4;
 
     /// <summary>Power poles carried per outpost.</summary>
-    private const int OutpostPoles = 12;
+    private const int OutpostPoles = 18;
 
     /// <summary>Solar panels per outpost: enough to keep the station and the reactor's sorter going if the reactor runs dry.</summary>
     private const int OutpostPanels = 4;
 
     /// <summary>Of each outpost ore, the most a home station keeps waiting to be unloaded.</summary>
-    private const int HomeOreStock = 600;
+    private const int HomeOreStock = 200;
 
     /// <summary>Fusion cells an outpost station keeps in stock for its reactor.</summary>
     private const int RemoteCells = 50;
@@ -40,7 +40,7 @@ public sealed partial class GoalBot
     private const int OutpostCells = 10;
 
     /// <summary>How long a building trip may take before the commander flies home regardless.</summary>
-    private const int OutpostTicks = 40 * 3600;
+    private const int OutpostTicks = 90 * 3600;
 
     /// <summary>When set, the planet the planning helpers work on instead of the home planet.</summary>
     private Planet? Focus { get; set; }
@@ -156,9 +156,11 @@ public sealed partial class GoalBot
     {
         foreach (Building e in _w.Planets.SelectMany(p => p.Buildings).Where(IsClimateEngine).Where(b => b.Recipe is not null).OrderBy(b => b.Id))
         {
+            // An engine elsewhere is fed by vessel, which carries a station's worth at a time: keep that much made.
+            int crafts = e.Planet == Home ? 10 : RemoteCrafts;
             foreach (ItemAmount i in e.Recipe!.Inputs)
             {
-                yield return new ItemAmount(i.Item, (i.Count * 10) - e.Inv.Count(i.Item));
+                yield return new ItemAmount(i.Item, (i.Count * crafts) - e.Inv.Count(i.Item));
             }
         }
 
@@ -321,19 +323,30 @@ public sealed partial class GoalBot
                     needs.Add(new Job(JobKind.Haul, FromId: sourceFor([slot.Item]), ToId: s.Id, Item: slot.Item));
                 }
             }
+
+            // Whatever is left over from a slot since moved elsewhere takes up room the station's own slots need: empty it out.
+            foreach (string item in s.Inv.Items.Select(kv => kv.Key).Where(i => s.StationSlots.Any(sl => sl.Item == i) == false).Order(StringComparer.Ordinal).Take(1))
+            {
+                if (StoreFor(item, lander) is { } into)
+                {
+                    needs.Add(new Job(JobKind.Haul, FromId: s.Id, ToId: into.Id, Item: item));
+                }
+            }
         }
 
         // Gather the next trip's load in the lander, where the commander loads it from: an outpost's kit, or an
         // expedition's rocket, fuel and drills.
         Dictionary<string, int> load = [];
-        if ((_outpostTrip is null) && (NextOutpost() is { } next))
+        bool outpost = (_outpostTrip is null) && (NextOutpost() is not null);
+        if (outpost)
         {
-            load = new Dictionary<string, int>(OutpostKit(next));
+            load = new Dictionary<string, int>(OutpostKit(NextOutpost()!));
         }
 
-        if ((_offPlanet is not null) && (LaunchPad() is { } pad))
+        if (((_offPlanet is not null) || outpost) && (LaunchPad() is { } pad))
         {
-            foreach (ItemAmount i in pad.Def.LaunchFuelList.Prepend(new ItemAmount(pad.Def.Vessel!, 1)).Concat((ExpeditionKit(lander) ?? []).Select(kv => new ItemAmount(kv.Key, kv.Value))))
+            IEnumerable<KeyValuePair<string, int>> kit = _offPlanet is not null ? ExpeditionKit(lander) ?? [] : [];
+            foreach (ItemAmount i in pad.Def.LaunchFuelList.Prepend(new ItemAmount(pad.Def.Vessel!, 1)).Concat(kit.Select(kv => new ItemAmount(kv.Key, kv.Value))))
             {
                 load[i.Item] = System.Math.Max(load.GetValueOrDefault(i.Item), i.Count);
             }
@@ -445,9 +458,18 @@ public sealed partial class GoalBot
             List<Building> unpowered = there.Buildings.Where(b => ((b.Def.Energy == EnergyKind.Electric) || b.Def.IsRenewable) && (b.Def.Kind != BuildingKind.Pole)
                     && ((b.NetworkId == 0) || (there.Networks.TryGetValue(b.NetworkId, out PowerNetwork? n) && (n.Generators.Count == 0))))
                 .OrderBy(b => b.Id).ToList();
-            if ((reactor is not null) && (there.Sites.Any(s => C.Buildings.TryGetValue(s.DefId, out BuildingDef? d) && (d.Kind == BuildingKind.Pole)) == false) && (unpowered.Count > 0))
+            if ((reactor is not null) && (there.Sites.Any(s => C.Buildings.TryGetValue(s.DefId, out BuildingDef? d) && (d.Kind == BuildingKind.Pole)) == false))
             {
-                PlacePoleChain(plan, reactor, unpowered[0]);
+                // One chain per think; one that can't be routed doesn't hold up the rest.
+                foreach (Building target in unpowered)
+                {
+                    if (PlacePoleChain(plan, reactor, target))
+                    {
+                        break;
+                    }
+
+                    plan.Problems.Add($"couldn't route power to {target.Def.Name} on {there.Name}");
+                }
             }
 
             bool done = (there.Sites.Count == 0) && (unpowered.Count == 0) && (reactor is not null) && ((reactor.Inv.Count("fusion-cell") >= 10) || (cellsLeft == false)) && ((Unlocked(panel.Id) == false) || (panels >= OutpostPanels));

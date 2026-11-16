@@ -27,7 +27,8 @@ public static class Placement
                     continue;
                 }
 
-                if ((def.NeedsWater == false) && (Margin(p, origin, w, h) == false))
+                // Shore buildings too: water around them is fine, but a building beside them could wall them in.
+                if (Margin(p, origin, w, h) == false)
                 {
                     continue;
                 }

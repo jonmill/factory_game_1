@@ -96,9 +96,28 @@ if (command == "trace")
 
         Planet p = s.World.Planets[0];
         Console.WriteLine($"[{s.World.Tick / 60}s] research={s.World.Research.Current ?? "-"} {s.World.Research.UnitsDone} done=[{string.Join(",", s.World.Research.Completed)}] sites={p.Sites.Count} home=[{string.Join(",", p.Stats.Select(kv => kv.Key + "=" + kv.Value))}]");
-        foreach (Building? b in p.Buildings.Where(b => (b.Def.Energy == EnergyKind.Electric) || (b.Def.Kind is BuildingKind.SteamEngine or BuildingKind.Furnace or BuildingKind.LaunchPad or BuildingKind.Ferry)))
+        // FACTORY_MAP=x,y,r draws the tiles around (x, y): a building's first letter, @ a robot, ~ water, T a tree.
+        if (Environment.GetEnvironmentVariable("FACTORY_MAP") is { } mapAt)
         {
-            Console.WriteLine($"    {b.Def.Id,-14} {b.Status,-10} r={b.Recipe?.Id ?? "-"} power={b.Satisfaction / 10}% inv=[{string.Join(",", b.Inv.Items.Select(kv => kv.Key + "=" + kv.Value))}] out=[{string.Join(",", b.Out.Items.Select(kv => kv.Key + "=" + kv.Value))}]");
+            int[] m = mapAt.Split(',').Select(int.Parse).ToArray();
+            for (int my = m[1] - m[2]; my <= m[1] + m[2]; my++)
+            {
+                System.Text.StringBuilder row = new System.Text.StringBuilder();
+                for (int mx = m[0] - m[2]; mx <= m[0] + m[2]; mx++)
+                {
+                    Int2 t = p.Torus.Wrap(new Int2(mx, my));
+                    row.Append(p.BuildingAt(t) is { } mb ? mb.Def.Id[0]
+                        : p.Units.Any(u => (u.Pos.X / Fixed.One == t.X) && (u.Pos.Y / Fixed.One == t.Y)) ? '@'
+                        : p.TerrainAt(t) != Terrain.Ground ? '~' : p.ResourceAt(t) is { IsTree: true } ? 'T' : '.');
+                }
+
+                Console.WriteLine($"    map {my,4} {row}");
+            }
+        }
+
+        foreach (Building? b in p.Buildings.Where(b => (b.Def.Energy == EnergyKind.Electric) || (b.Def.Kind is BuildingKind.SteamEngine or BuildingKind.Furnace or BuildingKind.LaunchPad or BuildingKind.Ferry or BuildingKind.Drill)))
+        {
+            Console.WriteLine($"    {b.Def.Id,-14} {b.Status,-10} #{b.Id} @{b.Origin.X},{b.Origin.Y} r={b.Recipe?.Id ?? "-"} power={b.Satisfaction / 10}% inv=[{string.Join(",", b.Inv.Items.Select(kv => kv.Key + "=" + kv.Value))}] out=[{string.Join(",", b.Out.Items.Select(kv => kv.Key + "=" + kv.Value))}]");
         }
 
         foreach (Planet other in s.World.Planets.Skip(1).Where(o => (o.Buildings.Count > 0) || (o.Sites.Count > 0)))
@@ -144,7 +163,7 @@ if (command == "trace")
 
         foreach (Unit? u in p.Units.Where(u => u.IsLeader == false))
         {
-            Console.WriteLine($"    {u.Name,-6} {u.Job.Kind,-8} {u.Status} @{u.Pos.X / Fixed.One},{u.Pos.Y / Fixed.One} phase={u.Phase} job={u.Job} carry=[{string.Join(",", u.Carry.Items.Select(kv => kv.Key + "=" + kv.Value))}]{((u.Job.Kind == JobKind.Haul) && (s.World.Get<Building>(u.Job.FromId) is { } fb) ? $" from@{fb.Origin.X},{fb.Origin.Y} {fb.Def.Id}" : "")}");
+            Console.WriteLine($"    {u.Name,-6} {u.Job.Kind,-8} {u.Status} @{u.Pos.X / Fixed.One},{u.Pos.Y / Fixed.One} sub={u.Pos.X},{u.Pos.Y} path={u.Path.Count} phase={u.Phase} job={u.Job} carry=[{string.Join(",", u.Carry.Items.Select(kv => kv.Key + "=" + kv.Value))}]{((u.Job.Kind == JobKind.Haul) && (s.World.Get<Building>(u.Job.FromId) is { } fb) ? $" from@{fb.Origin.X},{fb.Origin.Y} {fb.Def.Id}" : "")}");
         }
 
         if (bot.LastPlan is { } plan)

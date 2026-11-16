@@ -34,6 +34,21 @@ public class RegressionTests
     }
 
     [Test]
+    public async Task HaulerToAStation_StoresLeftoversTheStationDoesNotTake()
+    {
+        TestWorld tw = new TestWorld();
+        Int2 l = tw.Lander.Origin;
+        Building station = tw.Build("logistics-station", l.X + 10, l.Y);
+        tw.Do(new SetStationSlot(station.Id, 0, "logic-board", StationMode.Supply));
+        Unit f = tw.Followers[0];
+        tw.Lander.Inv.AddUnchecked("logic-board", 20);
+        f.Carry.Add("biomass", 5); // leftovers: the station has no slot for wood
+        tw.Do(new AssignJob(f.Id, new Job(JobKind.Haul, FromId: tw.Lander.Id, ToId: station.Id, Item: "logic-board")));
+        tw.RunUntil(() => (f.Carry.Count("biomass") == 0) && (station.Inv.Count("logic-board") > 0), 60 * 60, "leftover biomass stored and station stocked");
+        await Assert.That(station.Inv.Count("biomass")).IsEqualTo(0);
+    }
+
+    [Test]
     public async Task Hauler_NeverBringsTwoOreTypesToOneFurnace()
     {
         TestWorld tw = new TestWorld();
