@@ -66,6 +66,14 @@ used with the replay).
 | F | Unload pockets into the nearest lander or crate |
 | Space · + / − · F5 / F9 | Pause · game speed · quicksave / quickload |
 
+## Packaging a playtest build (Windows)
+
+`./package.sh` exports the Windows build and zips it as `exports/Factory-<date>-<commit>-windows.zip`,
+ready to send to playtesters (it includes `tools/playtest/README-PLAYTEST.txt` as the testers' readme).
+It needs Godot 4.7.2 .NET's export templates (Editor → Manage Export Templates). The build bundles the
+.NET runtime, so testers need nothing installed. It's a standard JIT build: NativeAOT can't cross-compile
+from macOS to Windows, so an AOT build has to be exported on Windows (or a Windows CI runner).
+
 ## Headless playtesting
 
 Bots play the real simulation through the same commands a player sends, thousands of times faster
