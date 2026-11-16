@@ -16,7 +16,7 @@ public sealed partial class GoalBot
     private static readonly string[] _remoteOres = ["titanium", "deuterium", "silica", "hafnium", "tantalite", "lanthanide", "brimstone"];
 
     /// <summary>What home ships out to the outposts: climate engine supplies and reactor fuel.</summary>
-    private static readonly string[] _outboundItems = ["fusion-cell", "catalyst-pack", "helium-3", "hydro-cartridge", "seed-pod", "promethium-lattice"];
+    private static readonly string[] _outboundItems = ["fusion-cell", "catalyst-pack", "lanthanide-accelerant", "hydro-cartridge", "seed-pod", "promethium-lattice", "helium-3"];
 
     /// <summary>Drills per outpost.</summary>
     private const int OutpostDrills = 4;
@@ -56,9 +56,9 @@ public sealed partial class GoalBot
 
     private Planet Home => _w.Planets[0];
 
-    /// <summary>Up to two ores this planet has that home lacks, most wanted first.</summary>
+    /// <summary>Up to three ores this planet has that home lacks, most wanted first.</summary>
     private List<ResourceDef> OutpostOres(Planet p) => _remoteOres.Where(r => C.Resources.ContainsKey(r) && p.HasResource(r) && (Home.HasResource(r) == false))
-        .Take(2).Select(r => C.Resources[r]).ToList();
+        .Take(3).Select(r => C.Resources[r]).ToList();
 
     private static Building? StationOn(Planet p) => Stations(p).FirstOrDefault();
 
@@ -169,9 +169,9 @@ public sealed partial class GoalBot
         }
     }
 
-    /// <summary>Whether a planet's station can be sent an item: home ships it, or another outpost supplies it.</summary>
-    private bool Obtainable(Planet q, string item) => _outboundItems.Contains(item)
-        || _w.Planets.Where(p => p != q).SelectMany(Stations).Any(s => s.StationSlots.Any(sl => (sl.Mode == StationMode.Supply) && (sl.Item == item)));
+    /// <summary>Whether a planet's station can get an item: home ships it, or an outpost (this one included) supplies it.</summary>
+    private bool Obtainable(string item) => _outboundItems.Contains(item)
+        || _w.Planets.SelectMany(Stations).Any(s => s.StationSlots.Any(sl => (sl.Mode == StationMode.Supply) && (sl.Item == item)));
 
     private static bool IsClimateEngine(Building b) => (b.Def.Kind == BuildingKind.Terraformer) && (b.Def.Recipe is null);
 
@@ -212,7 +212,7 @@ public sealed partial class GoalBot
         int needed = (slots.Count + station.StationSlots - 1) / station.StationSlots;
         if ((homes.Count < needed) && (HasSite(station.Id) == false))
         {
-            PlaceNear(plan, station.Id, Placement.Center(lander), 6, 30);
+            PlaceNear(plan, station.Id, Placement.Center(lander), 6, 40);
         }
 
         for (int i = 0; i < homes.Count; i++)
@@ -222,9 +222,9 @@ public sealed partial class GoalBot
 
         // Climate engines at home too, while the home planet has terraforming left.
         bool homeLeft = C.Terraform.Stats.Any(s => P.Stats.GetValueOrDefault(s.Id) < s.Target);
-        if (homeLeft && (CountOf(BuildingKind.Terraformer, "climate-engine") < 1 + (Unlocked("climate-amplifier") ? 1 : 0)) && (HasSite("climate-engine") == false))
+        if (homeLeft && (CountOf(BuildingKind.Terraformer, "climate-engine") < 2) && (HasSite("climate-engine") == false))
         {
-            PlaceNear(plan, "climate-engine", Placement.Center(lander), 6, 30);
+            PlaceNear(plan, "climate-engine", Placement.Center(lander), 6, 40);
         }
     }
 
@@ -275,10 +275,10 @@ public sealed partial class GoalBot
             List<(string Stat, string Recipe)> options = C.Terraform.Stats.Where(st => q.Stats.GetValueOrDefault(st.Id) < st.Target)
                 .OrderByDescending(st => st.Target - q.Stats.GetValueOrDefault(st.Id)).ThenBy(st => st.Id, StringComparer.Ordinal)
                 .Select(st => (st.Id, C.RecipeList.FirstOrDefault(r => e.Def.Categories.Contains(r.Category) && (Planet.TerraformEffect(r.Effect)?.Stat == st.Id) && Unlocked(r.Id))?.Id))
-                .Where(x => (x.Item2 is not null) && C.Recipes[x.Item2].Inputs.All(i => Obtainable(q, i.Item)))
+                .Where(x => (x.Item2 is not null) && C.Recipes[x.Item2].Inputs.All(i => Obtainable(i.Item)))
                 .Select(x => (x.Item1, x.Item2!)).ToList();
             bool keep = (e.Recipe is { } cur) && options.Any(o => o.Recipe == cur.Id);
-            if ((keep == false) && (options.Count > 0) && (e.Crafting == false))
+            if ((keep == false) && (options.Count > 0) && ((e.Crafting == false) || (e.Status == MachineStatus.Complete)))
             {
                 _w.Submit(new SetRecipe(e.Id, options[0].Recipe) { Player = Player, PlanetId = q.Id });
             }
@@ -323,24 +323,43 @@ public sealed partial class GoalBot
             }
         }
 
-        // Gather the next outpost's kit in the lander, where the commander loads it from.
+        // Gather the next trip's load in the lander, where the commander loads it from: an outpost's kit, or an
+        // expedition's rocket, fuel and drills.
+        Dictionary<string, int> load = [];
         if ((_outpostTrip is null) && (NextOutpost() is { } next))
         {
-            foreach ((string item, int n) in OutpostKit(next).OrderBy(kv => kv.Key, StringComparer.Ordinal))
+            load = new Dictionary<string, int>(OutpostKit(next));
+        }
+
+        if ((_offPlanet is not null) && (LaunchPad() is { } pad))
+        {
+            foreach (ItemAmount i in pad.Def.LaunchFuelList.Prepend(new ItemAmount(pad.Def.Vessel!, 1)).Concat((ExpeditionKit(lander) ?? []).Select(kv => new ItemAmount(kv.Key, kv.Value))))
             {
-                Building? other = WorldProbe.Storages(P).Where(st => (st.Id != lander.Id) && (st.Inv.Count(item) > 0)).OrderByDescending(st => st.Inv.Count(item)).ThenBy(st => st.Id).FirstOrDefault();
-                if ((lander.Inv.Count(item) + (LaunchPad()?.Inv.Count(item) ?? 0) < n) && (other is not null))
-                {
-                    needs.Add(new Job(JobKind.Haul, FromId: other.Id, ToId: lander.Id, Item: item));
-                }
+                load[i.Item] = System.Math.Max(load.GetValueOrDefault(i.Item), i.Count);
+            }
+        }
+
+        foreach ((string item, int n) in load.OrderBy(kv => kv.Key, StringComparer.Ordinal))
+        {
+            Building? other = WorldProbe.Storages(P).Where(st => (st.Id != lander.Id) && (st.Inv.Count(item) > 0)).OrderByDescending(st => st.Inv.Count(item)).ThenBy(st => st.Id).FirstOrDefault();
+            if ((lander.Inv.Count(item) + (LaunchPad()?.Inv.Count(item) ?? 0) < n) && (other is not null))
+            {
+                needs.Add(new Job(JobKind.Haul, FromId: other.Id, ToId: lander.Id, Item: item));
             }
         }
     }
 
-    /// <summary>Items on the pad that belong to the next outpost's kit, up to what it needs: leave them there.</summary>
-    private HashSet<string> KitItems(Building pad) => (_outpostTrip is null) && (NextOutpost() is { } next)
-        ? OutpostKit(next).Where(kv => pad.Inv.Count(kv.Key) <= kv.Value).Select(kv => kv.Key).ToHashSet()
-        : [];
+    /// <summary>Items on the pad that belong to the next outpost's or expedition's kit, up to what it needs: leave them there.</summary>
+    private HashSet<string> KitItems(Building pad)
+    {
+        IEnumerable<KeyValuePair<string, int>> kit = (_outpostTrip is null) && (NextOutpost() is { } next) ? OutpostKit(next) : [];
+        if (_offPlanet is not null)
+        {
+            kit = kit.Concat(_expeditionKit ?? []);
+        }
+
+        return kit.Where(kv => pad.Inv.Count(kv.Key) <= kv.Value).Select(kv => kv.Key).ToHashSet();
+    }
 
     // ------------------------------------------------------------------ the trip
 

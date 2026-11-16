@@ -19,7 +19,8 @@ public sealed partial class GoalBot
     private static readonly string[] _factoryPath =
     [
         "automation", "mechanical-arms", "robot-modules", "analysis-cores", "electric-mining", "robotics", "arc-smelting", "kerogen-refining",
-        "advanced-helpers", "precision-fabrication", "solar-power", "plasma-smelting", "plasma-mining", "plasma-fabrication", "fusion-power",
+        "atmospheric-processing", "hydro-seeding", "bio-engineering", "advanced-helpers", "precision-fabrication", "solar-power",
+        "fusion-power", "climate-engineering", "plasma-smelting", "plasma-mining", "plasma-fabrication", "lanthanide-catalysis",
     ];
 
     /// <summary>Plates and parts kept in stock ahead of need once the factory runs.</summary>
@@ -152,7 +153,7 @@ public sealed partial class GoalBot
         (BuildingDef _, BuildingDef? smelter, bool _) = BestMiningKit();
         if (smelter is not null)
         {
-            PlaceNear(plan, smelter.Id, Placement.Center(lander), 4, 18);
+            PlaceNear(plan, smelter.Id, Placement.Center(lander), 4, 30);
         }
     }
 
@@ -423,12 +424,19 @@ public sealed partial class GoalBot
     /// </summary>
     private void AssignMachineRecipes(BotPlan plan)
     {
+        HashSet<string> taken = [];
         foreach (Building m in P.Buildings.Where(b => (b.Def.Kind == BuildingKind.Assembler) && (b.Def.Categories.Contains("crafting") == false)).OrderBy(b => b.Id))
         {
-            // Fuel for a waiting expedition first, then the biggest backlog.
+            // Fuel for a waiting expedition first, then the biggest backlog; a second machine of the kind takes the next one.
             HashSet<string> launch = P.Buildings.Where(b => b.Def.Kind == BuildingKind.LaunchPad).SelectMany(b => b.Def.LaunchFuelList).Select(i => i.Item).ToHashSet();
-            RecipeDef? pick = plan.CraftDeficit.OrderByDescending(kv => ((_offPlanet is not null) || (NextOutpost() is not null)) && launch.Contains(kv.Key)).ThenByDescending(kv => kv.Value).ThenBy(kv => kv.Key, StringComparer.Ordinal)
-                .Select(kv => WorldProbe.RecipeFor(C, kv.Key)!).FirstOrDefault(r => m.Def.Categories.Contains(r.Category));
+            List<RecipeDef> wanted = plan.CraftDeficit.OrderByDescending(kv => ((_offPlanet is not null) || (NextOutpost() is not null)) && launch.Contains(kv.Key)).ThenByDescending(kv => kv.Value).ThenBy(kv => kv.Key, StringComparer.Ordinal)
+                .Select(kv => WorldProbe.RecipeFor(C, kv.Key)!).Where(r => m.Def.Categories.Contains(r.Category)).ToList();
+            RecipeDef? pick = wanted.FirstOrDefault(r => taken.Contains(r.Id) == false) ?? wanted.FirstOrDefault();
+            if (pick is not null)
+            {
+                taken.Add(pick.Id);
+            }
+
             bool idleOrSurplus = (m.Crafting == false) || (m.Recipe is { } cur && (plan.CraftDeficit.ContainsKey(cur.Outputs[0].Item) == false))
                                  || ((pick is not null) && ((_offPlanet is not null) || (NextOutpost() is not null)) && launch.Contains(pick.Outputs[0].Item));
             if ((pick is not null) && (pick.Id != m.RecipeId) && idleOrSurplus)
@@ -464,6 +472,20 @@ public sealed partial class GoalBot
             if ((pick is not null) && (pick.Id != f.RecipeId))
             {
                 Send(new SetRecipe(f.Id, pick.Id));
+            }
+        }
+        // A fabricator starved of an ingredient that is itself short moves upstream to make it, one per pass,
+        // while more fabricators make the product than its ingredient: the chain finds its own ratio.
+        foreach (Building f in fabs.Where(f => (f.Crafting == false) && (f.Status == MachineStatus.NoInput) && (f.Recipe is not null)).OrderBy(f => f.Id))
+        {
+            RecipeDef r = f.Recipe!;
+            RecipeDef? upstream = r.Inputs.Where(i => (f.Inv.Count(i.Item) < i.Count) && (WorldProbe.StorageCount(P, i.Item) < i.Count))
+                .Select(i => wanted.FirstOrDefault(w => w.Outputs.Any(o => o.Item == i.Item))).FirstOrDefault(w => w is not null);
+            if ((upstream is not null) && (fabs.Count(x => x.RecipeId == r.Id) > 1) && (fabs.Count(x => x.RecipeId == upstream.Id) < fabs.Count(x => x.RecipeId == r.Id)))
+            {
+                Send(new SetRecipe(f.Id, upstream.Id));
+
+                return;
             }
         }
     }
@@ -533,6 +555,9 @@ public sealed partial class GoalBot
         }
     }
 
+    /// <summary>Labs wanted: more each age, as research grows dearer (at least the bot's own setting).</summary>
+    private int LabTarget() => Params.Automate ? System.Math.Max(Params.Labs, 1 + (2 * AgeReached())) : Params.Labs;
+
     /// <summary>How much of each raw resource spare helpers stockpile before they stand by.</summary>
     private int StockpileCap() => 200 * (1 + AgeReached());
 
@@ -547,7 +572,7 @@ public sealed partial class GoalBot
 
     /// <summary>
     /// The fuel to carry to a burner: the richest one in storage that it burns, keeping biomass (the trees run
-    /// out) for when there's nothing else, and the parameter fuel ahead of biomass.
+    /// out) for when there's nothing else, and rocket fuel for rockets while another fuel is plentiful.
     /// </summary>
     private string BestFuel(Building b, List<string> inStorage, string preferred)
     {
@@ -557,7 +582,11 @@ public sealed partial class GoalBot
             return burns.Contains(preferred) ? preferred : burns.FirstOrDefault() ?? inStorage[0];
         }
 
-        return burns.OrderBy(i => i == "biomass" ? 1 : 0).ThenByDescending(i => C.Items[i].FuelKj).ThenBy(i => i, StringComparer.Ordinal).FirstOrDefault() ?? inStorage[0];
+        // Rocket fuel goes to rockets while there's plenty of another fuel to burn instead.
+        HashSet<string> launch = C.BuildingList.Where(d => d.Kind == BuildingKind.LaunchPad).SelectMany(d => d.LaunchFuelList).Select(i => i.Item).ToHashSet();
+        bool spare = burns.Any(i => (i != "biomass") && (launch.Contains(i) == false) && (WorldProbe.StorageCount(P, i) >= 50));
+
+        return burns.OrderBy(i => i == "biomass" ? 2 : spare && launch.Contains(i) ? 1 : 0).ThenByDescending(i => C.Items[i].FuelKj).ThenBy(i => i, StringComparer.Ordinal).FirstOrDefault() ?? inStorage[0];
     }
 
     /// <summary>Whether the bot should still be assembling helper bots.</summary>

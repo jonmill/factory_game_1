@@ -26,6 +26,9 @@ internal static class LedgerAnalysis
 
         Automation(ctx, report, worlds);
         OutputByHour(report, worlds);
+        AgesReached(ctx, report, worlds);
+        TiersByHour(ctx, report, worlds);
+        UseByHour(ctx, report, worlds);
         ItemOrigins(ctx, report, worlds);
         BuildingsByPlanet(ctx, report, worlds);
         Terraforming(ctx, report, worlds);
@@ -111,6 +114,127 @@ internal static class LedgerAnalysis
         for (int h = 0; h < hours; h++)
         {
             t.Rows.Add([$"{h}–{h + 1}", handMine[h].ToString(), drillMine[h].ToString(), landerCraft[h].ToString(), machineCraft[h].ToString(), smelt[h].ToString()]);
+        }
+
+        report.Tables.Add(t);
+    }
+
+    private static readonly string _bars = "▁▂▃▄▅▆▇█";
+
+    /// <summary>One game hour in ticks.</summary>
+    private const long HourTicks = 3600L * 60;
+
+    /// <summary>A row of hourly counts as a sparkline: blank for none, the tallest bar for the busiest hour.</summary>
+    private static string Spark(long[] v)
+    {
+        long max = v.Length == 0 ? 0 : v.Max();
+
+        return string.Concat(v.Select(x => x == 0 ? '·' : _bars[(int)System.Math.Min(_bars.Length - 1, x * _bars.Length / (max + 1))]));
+    }
+
+    /// <summary>Hourly totals of a five-minute series, summed across seeds.</summary>
+    private static long[] Hourly(IEnumerable<IReadOnlyDictionary<int, long>> series, int hours)
+    {
+        int perHour = (int)(HourTicks / ProductionStats.BucketTicks);
+        long[] into = new long[hours];
+        foreach (IReadOnlyDictionary<int, long> one in series)
+        {
+            foreach ((int bucket, long n) in one)
+            {
+                into[System.Math.Min(hours - 1, bucket / perHour)] += n;
+            }
+        }
+
+        return into;
+    }
+
+    private static int Hours(IReadOnlyList<(ulong Seed, World World)> worlds) => (int)(worlds.Max(w => w.World.Tick) / HourTicks) + 1;
+
+    private static void AgesReached(ExperimentContext ctx, Report report, IReadOnlyList<(ulong Seed, World World)> worlds)
+    {
+        List<AgeDef> ages = ctx.Content.AgeList.Skip(1).ToList();
+        Table t = new Table("When each age began (game hours: first research of that age finished)", ["Seed", .. ages.Select(a => a.Name), "Run ended"], []);
+        foreach ((ulong seed, World w) in worlds)
+        {
+            string[] cells = ages.Select(a => w.Stats.ResearchLines.Where(r => ctx.Content.Techs.TryGetValue(r.Tech, out TechDef? td) && (td.Age == a.Id))
+                .Select(r => (long?)r.FirstTick).Min() is { } at ? $"{at / (double)HourTicks:F1}" : "—").ToArray();
+            t.Rows.Add([seed.ToString(), .. cells, $"{w.Tick / (double)HourTicks:F1}"]);
+        }
+
+        report.Tables.Add(t);
+    }
+
+    /// <summary>
+    /// Who did the mining, smelting and crafting, hour by hour: each machine type's output over the run as a
+    /// sparkline, so a better tier taking over (and the old one fading out) shows at a glance.
+    /// </summary>
+    private static void TiersByHour(ExperimentContext ctx, Report report, IReadOnlyList<(ulong Seed, World World)> worlds)
+    {
+        ContentDb c = ctx.Content;
+        int hours = Hours(worlds);
+        Table t = new Table($"Work by machine type, hour by hour (all seeds; one character per game hour, · = none)",
+            ["Work", "Done by", "Total", "Active (h)", "Share of last 3 h", "Hourly output"], []);
+        foreach (ItemFlow flow in new[] { ItemFlow.HandMined, ItemFlow.DrillMined, ItemFlow.Smelted, ItemFlow.Crafted })
+        {
+            List<string> actors = worlds.SelectMany(w => w.World.Stats.ActorsOf(flow)).Distinct().Order(StringComparer.Ordinal).ToList();
+            Dictionary<string, long[]> rows = actors.ToDictionary(a => a, a => Hourly(worlds.Select(w => w.World.Stats.SeriesBy(flow, a)), hours));
+            long lastAll = rows.Values.Sum(v => v.Skip(System.Math.Max(0, hours - 3)).Sum());
+            foreach ((string a, long[] v) in rows.OrderBy(kv => System.Array.FindIndex(kv.Value, x => x > 0)).ThenBy(kv => kv.Key, StringComparer.Ordinal))
+            {
+                long total = v.Sum();
+                if (total == 0)
+                {
+                    continue;
+                }
+
+                int first = System.Array.FindIndex(v, x => x > 0), last = System.Array.FindLastIndex(v, x => x > 0);
+                int lastPct = Pct(v.Skip(System.Math.Max(0, hours - 3)).Sum(), lastAll);
+                t.Rows.Add([flow.ToString(), Who(c, a), total.ToString(), $"{first}–{last + 1}", $"{lastPct}%", $"`{Spark(v)}`"]);
+
+                // An older machine still doing a big share at the end, once a newer one of its kind is in use.
+                bool superseded = c.Buildings.TryGetValue(a, out BuildingDef? def) && rows.Any(o => (o.Key != a) && c.Buildings.TryGetValue(o.Key, out BuildingDef? od)
+                    && (od.Kind == def.Kind) && (System.Array.FindIndex(o.Value, x => x > 0) > first) && (o.Value.Sum() > 0));
+                if (superseded && (lastPct >= 25) && (hours >= 6))
+                {
+                    report.Add(new Finding(Severity.Low, "tiers", $"{def!.Name} still did {lastPct}% of {flow} in the last 3 hours",
+                        "A newer machine of the same kind was in use by then. Players upgrade when the better tier is clearly better; check its speed and cost."));
+                }
+            }
+        }
+
+        report.Tables.Add(t);
+    }
+
+    /// <summary>Each item's production and use hour by hour, with how spiky the use was and how long it sat idle.</summary>
+    private static void UseByHour(ExperimentContext ctx, Report report, IReadOnlyList<(ulong Seed, World World)> worlds)
+    {
+        ContentDb c = ctx.Content;
+        int hours = Hours(worlds);
+        ItemFlow[] sources = [ItemFlow.HandMined, ItemFlow.DrillMined, ItemFlow.Crafted, ItemFlow.Smelted];
+        ItemFlow[] sinks = [ItemFlow.CraftInput, ItemFlow.SmeltInput, ItemFlow.Fuel, ItemFlow.Construction, ItemFlow.Research];
+        Table t = new Table("Each item made and used, hour by hour (all seeds; one character per game hour)",
+            ["Item", "Made", "Used", "Made ÷ used", "Busiest hour of use", "Idle hours in its span", "Made per hour", "Used per hour"], []);
+        foreach (ItemDef item in c.ItemList)
+        {
+            long[] made = Hourly(sources.SelectMany(f => worlds.Select(w => w.World.Stats.Series(item.Id, f))), hours);
+            long[] used = Hourly(sinks.SelectMany(f => worlds.Select(w => w.World.Stats.Series(item.Id, f))), hours);
+            long m = made.Sum(), u = used.Sum();
+            if ((m == 0) && (u == 0))
+            {
+                continue;
+            }
+
+            int first = System.Array.FindIndex(used, x => x > 0), last = System.Array.FindLastIndex(used, x => x > 0);
+            int idle = first < 0 ? 0 : used.Skip(first).Take(last - first + 1).Count(x => x == 0);
+            int peak = u == 0 ? -1 : System.Array.IndexOf(used, used.Max());
+            int peakPct = u == 0 ? 0 : Pct(used.Max(), u);
+            string ratio = u == 0 ? "never used" : $"{m / (double)u:F1}";
+            t.Rows.Add([item.Name, m.ToString(), u.ToString(), ratio, peak < 0 ? "—" : $"{peak}–{peak + 1} ({peakPct}%)", idle.ToString(), $"`{Spark(made)}`", $"`{Spark(used)}`"]);
+            if ((u >= 200) && (last - first >= 5) && (peakPct >= 40))
+            {
+                report.Add(new Finding(Severity.Low, "use", $"{item.Name} use spikes: {peakPct}% of it was used in hour {peak}–{peak + 1}",
+                    "Most of the demand comes at once; check whether one recipe or build needs far more than the rest of the game."));
+            }
         }
 
         report.Tables.Add(t);

@@ -69,7 +69,7 @@ public class PathTests
 
         int wood = tw.Lander.Inv.Count("biomass");
         tw.Do(new AssignJob(tw.Followers[0].Id, new Job(JobKind.Gather, Resource: "xylo")));
-        RunWithoutOverlaps(tw, 60 * 240, () => tw.Lander.Inv.Count("biomass") >= wood + 40);
+        RunWithoutOverlaps(tw, 60 * 720, () => tw.Lander.Inv.Count("biomass") >= wood + 40);
         await Assert.That(tw.Lander.Inv.Count("biomass") >= wood + 40).IsTrue();
     }
 

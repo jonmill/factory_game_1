@@ -63,8 +63,9 @@ public class PowerTests
         (TestWorld? tw, Building? engine, Building? lab) = Grid(fuel: true);
         engine.Inv.Add("compacted-carbon", 40);
         tw.Do(new SetResearch("automation"));
-        lab.Inv.Add("survey-core", 20);
-        tw.RunUntil(() => tw.W.Research.Completed.Contains("automation"), 600 * 11, "automation research");
+        int units = tw.W.Research.UnitsFor(tw.W.Content.Techs["automation"]);
+        lab.Inv.Add("survey-core", units * tw.W.Content.Techs["automation"].UnitCost["survey-core"]);
+        tw.RunUntil(() => tw.W.Research.Completed.Contains("automation"), 600 * (units + 1), "automation research");
         await Assert.That(tw.W.Research.Unlocked).Contains("assembler");
         await Assert.That(tw.W.Research.Current).IsNull();
     }

@@ -42,9 +42,15 @@ public sealed partial class GoalBot : IBot
     private HashSet<string> _machineCategories = [];
     /// <summary>A resource the plan needs that only another planet has, from the last think (it sends an expedition).</summary>
     private (string Resource, int Planet)? _offPlanet;
+    /// <summary>Other resources the plan lacks that the same planet has: one trip fetches them all.</summary>
+    private List<string> _offPlanetAlso = [];
+    /// <summary>The extra resources the expedition under way is fetching besides its main one.</summary>
+    private List<string> _expeditionResources = [];
     /// <summary>The expedition under way: what is being fetched from which planet, how much, and since when.</summary>
     private (string Resource, int Planet, int Amount, long Since)? _expedition;
     private const int ExpeditionAmount = 600;
+    /// <summary>Whether this expedition's burner drills have been placed on the ore.</summary>
+    private bool _expeditionDrillsPlaced;
     private const int ExpeditionTicks = 25 * 3600;
     private Planet P => Focus ?? _w.Planets[0];
     private ContentDb C => _w.Content;
@@ -119,14 +125,12 @@ public sealed partial class GoalBot : IBot
         if ((_expedition is { } ex) && (ex.Planet == there.Id) && there.HasResource(ex.Resource))
         {
             ResourceDef res = C.Resources[ex.Resource];
-            int got = ferry.Inv.Count(res.Item) + away.Carry.Count(res.Item);
-            bool done = (got >= ex.Amount) || (ferry.Inv.SpaceFor(res.Item) == 0) || (_w.Tick - ex.Since > ExpeditionTicks);
+            List<ResourceDef> fetching = _expeditionResources.Where(there.HasResource).Select(r => C.Resources[r]).Prepend(res).Distinct().ToList();
+            bool AllIn() => fetching.All(r => ferry.Inv.Count(r.Item) + away.Carry.Count(r.Item) >= ex.Amount);
+            bool done = AllIn() || (ferry.Inv.SpaceFor(res.Item) == 0) || (_w.Tick - ex.Since > ExpeditionTicks);
             if (done == false)
             {
-                foreach (Unit h in there.Units.Where(u => (u.IsLeader == false) && (u.OwnerPlayer == Player) && (u.Job.Resource != ex.Resource)).OrderBy(u => u.Id))
-                {
-                    Send(new AssignJob(h.Id, new Job(JobKind.Gather, Resource: ex.Resource)));
-                }
+                ExpeditionCrew(there, ferry, fetching);
 
                 if (away.Carry.SpaceFor(res.Item) > 0)
                 {
@@ -163,6 +167,12 @@ public sealed partial class GoalBot : IBot
             {
                 return true;
             }
+        }
+
+        // Take the drills back aboard first, so they don't sit on ore an outpost will want.
+        if ((_expedition is { } fetched) && (fetched.Planet == there.Id) && ExpeditionPackUp(there))
+        {
+            return true;
         }
 
         Send(nearFerry ? new ReturnFerry(away.Id, ferry.Id) : new WalkTo(away.Id, ferry.Origin + new Int2(-1, 1)));
@@ -251,6 +261,9 @@ public sealed partial class GoalBot : IBot
         int[] crew = P.Units.Where(u => (u.IsLeader == false) && (u.OwnerPlayer == Player)).OrderBy(u => u.Id).Select(u => u.Id).ToArray();
         Send(new LaunchFerry(leader.Id, pad.Id, want.Planet, crew));
         _expedition = (want.Resource, want.Planet, ExpeditionAmount, _w.Tick);
+        _expeditionDrillsPlaced = false;
+        _expeditionKit = null;
+        _expeditionResources = _offPlanetAlso;
 
         return true;
     }
@@ -388,7 +401,7 @@ public sealed partial class GoalBot : IBot
             return;
         }
 
-        if (((Params.Automate == false) && TendMachines(plan, leader, lander)) || PrepareOutpost(leader, lander) || PrepareExpedition(leader, lander))
+        if (((Params.Automate == false) && TendMachines(plan, leader, lander)) || PrepareOutpost(leader, lander) || PrepareExpedition(leader, lander, ExpeditionKit(lander)))
         {
             return;
         }
@@ -699,14 +712,14 @@ public sealed partial class GoalBot : IBot
         BuildingDef bayDef = C.BuildingList.First(b => b.Kind == BuildingKind.RobotBay);
         bool needBay = (Goal is HelpersGoal) && _w.Research.Unlocked.Contains(bayDef.Id);
 
-        if (needLab && (CountOf(BuildingKind.Lab) < Params.Labs))
+        if (needLab && (CountOf(BuildingKind.Lab) < LabTarget()))
         {
-            PlaceNear(plan, "lab", center, 4, 14);
+            PlaceNear(plan, "lab", center, 4, 30);
         }
 
         if (needBay && (CountOf(BuildingKind.RobotBay) == 0))
         {
-            PlaceNear(plan, bayDef.Id, center, 5, 16);
+            PlaceNear(plan, bayDef.Id, center, 5, 30);
         }
 
         if (Goal is SettlersGoal)
@@ -716,7 +729,7 @@ public sealed partial class GoalBot : IBot
                 bool needed = (def.Kind == BuildingKind.Uplink) || (PointsLeft(def) > 0);
                 if (needed && _w.Research.Unlocked.Contains(def.Id) && (CountOf(def.Kind, def.Id) == 0))
                 {
-                    PlaceNear(plan, def.Id, center, 5, 20);
+                    PlaceNear(plan, def.Id, center, 5, 40);
                 }
             }
         }
@@ -739,7 +752,7 @@ public sealed partial class GoalBot : IBot
         {
             if ((MachineFor(category) is { } def) && (CountOf(def.Kind, def.Id) == 0))
             {
-                PlaceNear(plan, def.Id, center, 4, 16);
+                PlaceNear(plan, def.Id, center, 4, 30);
             }
         }
 
@@ -798,12 +811,13 @@ public sealed partial class GoalBot : IBot
                 continue;
             }
 
-            if (PlacePoleChain(plan, engine, c) == false)
+            if (PlacePoleChain(plan, engine, c))
             {
-                plan.Problems.Add($"couldn't route power to {c.Def.Name}");
+                return; // one chain per think
             }
 
-            return; // one chain per think
+            // This one can't be reached: try the next rather than leave them all unpowered.
+            plan.Problems.Add($"couldn't route power to {c.Def.Name}");
         }
     }
 
@@ -1005,6 +1019,12 @@ public sealed partial class GoalBot : IBot
             {
                 Add(i.Item, System.Math.Max(0, i.Count - padForTrip.Inv.Count(i.Item)));
             }
+
+            // And the drills and fuel it carries, once worked out.
+            foreach ((string item, int n) in (_expeditionKit ?? []).OrderBy(kv => kv.Key, StringComparer.Ordinal))
+            {
+                Add(item, System.Math.Max(0, n - padForTrip.Inv.Count(item)));
+            }
         }
 
         foreach (ItemAmount i in OutpostDemand().Concat(ClimateDemand()))
@@ -1051,11 +1071,13 @@ public sealed partial class GoalBot : IBot
 
         // Raw materials this planet doesn't have: fetch them on an expedition to a planet that does.
         _offPlanet = null;
+        _offPlanetAlso = [];
         foreach (string res in plan.RawDeficit.Keys.Where(r => (P.HasResource(r) == false) && (ShippedHome(r) == false)).Order(StringComparer.Ordinal))
         {
             if (_w.Planets.FirstOrDefault(p => (p != P) && p.HasResource(res)) is { } there)
             {
                 _offPlanet = (res, there.Id);
+                _offPlanetAlso = plan.RawDeficit.Keys.Where(r => (r != res) && there.HasResource(r) && (P.HasResource(r) == false) && (ShippedHome(r) == false)).Order(StringComparer.Ordinal).ToList();
                 break;
             }
 
@@ -1316,11 +1338,10 @@ public sealed partial class GoalBot : IBot
         if (_w.Research.Current is { } techId)
         {
             TechDef tech = C.Techs[techId];
-            // One lab hauler at a time: feed the lab that is closest to running dry.
-            Building? hungry = P.Buildings.Where(b => (b.Def.Kind == BuildingKind.Lab) && (b.NetworkId != 0))
+            // A hauler for each lab that is running dry.
+            foreach (Building hungry in P.Buildings.Where(b => (b.Def.Kind == BuildingKind.Lab) && (b.NetworkId != 0))
                 .Where(lab => (lab.Inv.Has(tech.UnitCostList) == false) && tech.UnitCostList.Any(c => (lab.Inv.Count(c.Item) < c.Count) && (WorldProbe.StorageCount(P, c.Item) > 0)))
-                .OrderBy(lab => lab.Id).FirstOrDefault();
-            if (hungry is not null)
+                .OrderBy(lab => lab.Id))
             {
                 needs.Add(new Job(JobKind.Haul, FromId: SourceFor(tech.UnitCostList.Where(c => hungry.Inv.Count(c.Item) < c.Count).Select(c => c.Item).ToArray()), ToId: hungry.Id));
             }
@@ -1386,9 +1407,12 @@ public sealed partial class GoalBot : IBot
         foreach (Building? bc in P.Buildings.Where(b => (b.Def.Kind is BuildingKind.RobotBay or BuildingKind.Terraformer or BuildingKind.Uplink) && (b.Status != MachineStatus.Complete))
                      .Where(b => (b.Def.Kind != BuildingKind.RobotBay) || moreHelpers))
         {
-            if ((bc.Recipe is { } r) && (bc.Crafting == false) && r.Inputs.Any(c => (bc.Inv.Count(c.Item) < c.Count) && (WorldProbe.StorageCount(P, c.Item) > 0)))
+            // Climate engines surge every few seconds: keep several surges' worth in them, not just the next one.
+            int stock = IsClimateEngine(bc) ? 5 : 1;
+            if ((bc.Recipe is { } r) && ((bc.Crafting == false) || (stock > 1))
+                && r.Inputs.Any(c => (bc.Inv.Count(c.Item) < c.Count * stock) && (P.AcceptAmount(bc, c.Item) > 0) && (WorldProbe.StorageCount(P, c.Item) > 0)))
             {
-                needs.Add(new Job(JobKind.Haul, FromId: SourceFor(r.Inputs.Where(c => bc.Inv.Count(c.Item) < c.Count).Select(c => c.Item).ToArray()), ToId: bc.Id));
+                needs.Add(new Job(JobKind.Haul, FromId: SourceFor(r.Inputs.Where(c => bc.Inv.Count(c.Item) < c.Count * stock).Select(c => c.Item).ToArray()), ToId: bc.Id));
             }
         }
 

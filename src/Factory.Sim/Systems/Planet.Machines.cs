@@ -60,7 +60,10 @@ public sealed partial class Planet
                         return 0;
                     }
 
-                    return Cap(need * (b.Def.Kind == BuildingKind.Assembler ? 4 : 2));
+                    // Fabricators hold four crafts' worth; climate engines, whose surges are quick, ten; the rest two.
+                    int crafts = b.Def.Kind == BuildingKind.Assembler ? 4 : (b.Def.Kind == BuildingKind.Terraformer) && (b.Def.Recipe is null) ? 10 : 2;
+
+                    return Cap(need * crafts);
                 }
             case BuildingKind.Lab:
                 {

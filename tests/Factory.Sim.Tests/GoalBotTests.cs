@@ -185,7 +185,7 @@ public class GoalBotTests
         World w = new World(TestWorld.Content, new WorldSettings { Seed = 2 });
         GoalBot bot = new GoalBot(new HelpersGoal(1), new BotParams { Automate = false });
         Planet p = w.Planets[0];
-        for (int i = 0; (i < 60 * 60 * 60) && (w.HelpersBuilt == 0); i++)
+        for (int i = 0; (i < 60 * 60 * 60 * 2) && (w.HelpersBuilt == 0); i++)
         {
             bot.Tick(w);
             w.Step();

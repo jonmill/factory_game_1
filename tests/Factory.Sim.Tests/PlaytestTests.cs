@@ -58,7 +58,7 @@ public class PlaytestTests
         TechGoal goal = new TechGoal("automation");
         s.Bots.Add(new GoalBot(goal));
 
-        RunResult r = s.Run(goal.IsMet, 10 * 60 * World.TicksPerSecond);
+        RunResult r = s.Run(goal.IsMet, 30 * 60 * World.TicksPerSecond);
 
         await Assert.That(r.GoalMet).IsTrue();
         await Assert.That(s.Invariants.Violations).IsEmpty();

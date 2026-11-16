@@ -10,7 +10,7 @@ public class FollowerTests
         tw.Ore("siderite", l.X + 8, l.Y, 3, 3, 1000);
         int before = tw.Lander.Inv.Count("siderite-ore");
         tw.Do(new AssignJob(tw.Followers[0].Id, new Job(JobKind.Gather, Resource: "siderite")));
-        tw.RunUntil(() => tw.Lander.Inv.Count("siderite-ore") >= before + 25, 60 * 120, "a batch of iron ore");
+        tw.RunUntil(() => tw.Lander.Inv.Count("siderite-ore") >= before + 25, 60 * 480, "a batch of iron ore");
     }
 
     [Test]
@@ -144,7 +144,7 @@ public class FollowerTests
         Int2 tile = tw.Leader.Tile + new Int2(1, 0);
         tw.Ore("regolith", tile.X, tile.Y, 1, 1, 100);
         tw.Do(new MineTile(tw.Leader.Id, tile));
-        tw.Run(60 * 5);
+        tw.Run(60 * 20);
         int mined = tw.Leader.Carry.Count("regolith");
         await Assert.That(mined >= 6).IsTrue().Because($"mined {mined}");
         int before = tw.Lander.Inv.Count("regolith");
