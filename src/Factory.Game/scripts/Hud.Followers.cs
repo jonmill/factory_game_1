@@ -201,6 +201,8 @@ public partial class Hud
                 Button job = HudStyle.Button("", () => { }, "Change job");
                 job.AddThemeFontSizeOverride("font_size", 10);
                 job.CustomMinimumSize = new Vector2(92, 0);
+                job.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
+                job.ClipText = true;
                 job.ClipText = true;
                 job.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
                 job.Pressed += () => OpenJobMenu(unit, job);

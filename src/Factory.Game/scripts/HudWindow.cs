@@ -23,4 +23,6 @@ public enum HudWindow
     Victory,
     /// <summary>The game menu: resume, save, load, controls, quit. Pauses the game while open.</summary>
     Menu,
+    /// <summary>The planet map, opened from the minimap: drag to pan, wheel to zoom.</summary>
+    Map,
 }

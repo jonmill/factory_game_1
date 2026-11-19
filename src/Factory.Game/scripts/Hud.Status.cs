@@ -14,7 +14,7 @@ public partial class Hud
     private Label _powerText = null!, _batteryText = null!;
     private ProgressBar _powerBar = null!, _batteryBar = null!;
 
-    private Minimap _minimap = null!;
+    private MapView _minimap = null!;
     private VBoxContainer _planetDetails = null!;
     private Label _powerIcon = null!;
 
@@ -57,7 +57,8 @@ public partial class Hud
         VBoxContainer rv = new VBoxContainer();
         rv.AddThemeConstantOverride("separation", 3);
         _researchCard.AddChild(rv);
-        _minimap = new Minimap { Root = Root, CustomMinimumSize = new Vector2(MinimapSize, MinimapSize) };
+        _minimap = new MapView { Root = Root, TilesAcross = 72, CustomMinimumSize = new Vector2(MinimapSize, MinimapSize), TooltipText = "Minimap  ·  click to open the map" };
+        _minimap.Clicked += () => Toggle(HudWindow.Map);
         rv.AddChild(_minimap);
 
         VBoxContainer research = new VBoxContainer { MouseFilter = Control.MouseFilterEnum.Stop, TooltipText = "Research: click to open the tech tree (T)" };

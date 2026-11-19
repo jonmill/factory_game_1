@@ -463,7 +463,7 @@ public partial class GameRoot : Node2D
         // Over a scrolling HUD panel (the help), the wheel scrolls it instead of zooming the map.
         for (Node? n = GetViewport().GuiGetHoveredControl(); n is not null; n = n.GetParent())
         {
-            if (n is ScrollContainer)
+            if (n is ScrollContainer or Ui.MapView)
             {
                 return;
             }
@@ -1115,7 +1115,7 @@ public partial class GameRoot : Node2D
             }
         }
 
-        // FACTORY_WINDOW=inventory|replicator|tech|help|victory|system and FACTORY_CATEGORY=<1-7> open HUD panels for screenshots;
+        // FACTORY_WINDOW=inventory|replicator|tech|help|victory|system|map and FACTORY_CATEGORY=<1-7> open HUD panels for screenshots;
         // FACTORY_SELECT=<building id> selects the nearest building of that type to the commander; "helper" selects a helper bot.
         if ((_uiHooksDone == false) && (Clock > 0.5))
         {

@@ -62,6 +62,7 @@ public partial class Hud : CanvasLayer
         _windows[HudWindow.Menu] = BuildMenu();
         _windows[HudWindow.Victory] = BuildVictory();
         _windows[HudWindow.System] = BuildSystem();
+        _windows[HudWindow.Map] = BuildMap();
         ShowOnly(_open);
     }
 
@@ -105,6 +106,11 @@ public partial class Hud : CanvasLayer
 
     private void ShowOnly(HudWindow which)
     {
+        if ((which == HudWindow.Map) && (_open != HudWindow.Map))
+        {
+            CentreMap();
+        }
+
         // Closing a machine window lets go of the building it showed, as closing a machine's panel does.
         // (Unless the selection has already moved on to something else.)
         if ((_open == HudWindow.Machine) && (which != HudWindow.Machine))
@@ -304,6 +310,7 @@ public partial class Hud : CanvasLayer
         // window is shrunk to fit rather than running off the edge.
         Vector2 room = vs - new Vector2(2 * Gap, 2 * Gap);
         FitHelp(room);
+        FitMap(room);
         foreach (PanelContainer win in _windows.Values)
         {
             if (win.Visible)
