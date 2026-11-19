@@ -211,15 +211,30 @@ public partial class Hud
             return;
         }
 
+        // The craft under way has left the queue, but it is shown together with the same crafts still
+        // waiting behind it: one tile with the progress ring whose count goes down as each one finishes.
+        int i = 0;
         if (lander.Crafting && (lander.Recipe is { } current))
         {
-            _queueHead = new Slot(44) { Icon = RecipeIcon(current), Count = 1, TooltipText = $"Making {current.Name}" };
+            CraftEntry making = new CraftEntry(current.Id, lander.CraftingIntermediate);
+            while ((i < lander.CraftQueue.Count) && (lander.CraftQueue[i] == making))
+            {
+                i++;
+            }
+
+            int count = 1 + i;
+            _queueHead = new Slot(44)
+            {
+                Icon = RecipeIcon(current),
+                Count = count,
+                TooltipText = lander.CraftingIntermediate ? $"Making {current.Name} ×{count}: parts for the next craft" : $"Making {current.Name} ×{count}",
+                Modulate = lander.CraftingIntermediate ? new Color(1, 1, 1, 0.6f) : Colors.White,
+            };
             _queueRow.AddChild(_queueHead);
         }
 
         // Group consecutive entries so a queue of twenty gears is one tile. Parts made for a later craft are
         // dimmed: they go to that craft, not to storage.
-        int i = 0;
         while ((i < lander.CraftQueue.Count) && (_queueRow.GetChildCount() < 14))
         {
             CraftEntry e = lander.CraftQueue[i];

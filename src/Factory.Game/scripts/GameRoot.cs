@@ -1146,6 +1146,13 @@ public partial class GameRoot : Node2D
                 _hud.Toggle(window);
             }
 
+            // FACTORY_QUEUE=<recipe>:<count> queues crafts on the lander (screenshots of the replicator queue).
+            if ((System.Environment.GetEnvironmentVariable("FACTORY_QUEUE") is { } queue) && (queue.Split(':') is [string recipe, string n]) &&
+                int.TryParse(n, out int count))
+            {
+                Send(new QueueCraft(Planet.LanderId, recipe, count));
+            }
+
             if (System.Environment.GetEnvironmentVariable("FACTORY_JOBMENU") == "1")
             {
                 _hud.DebugOpenJobMenu();
