@@ -118,7 +118,7 @@ public partial class GameRoot : Node2D
         AddChild(_view);
         _hud = new Hud { Root = this };
         AddChild(_hud);
-        Notify($"Platform: {PlatformServices.Name}. Press H for help.", Colors.LightSkyBlue);
+        Notify($"Platform: {PlatformServices.Name}. Press H for controls, G for the guide.", Colors.LightSkyBlue);
     }
 
     /// <summary>
@@ -456,6 +456,15 @@ public partial class GameRoot : Node2D
             return;
         }
 
+        // Over a scrolling HUD panel (the help), the wheel scrolls it instead of zooming the map.
+        for (Node? n = GetViewport().GuiGetHoveredControl(); n is not null; n = n.GetParent())
+        {
+            if (n is ScrollContainer)
+            {
+                return;
+            }
+        }
+
         Zoom = Mathf.Clamp(Zoom * Mathf.Pow(1.1f, steps), MinZoom, MaxZoom);
         GetViewport().SetInputAsHandled();
     }
@@ -567,6 +576,10 @@ public partial class GameRoot : Node2D
         else if (k.IsAction("help"))
         {
             _hud.ToggleHelp();
+        }
+        else if (k.IsAction("guide"))
+        {
+            _hud.ToggleHints();
         }
         else if (k.IsAction("quicksave"))
         {
@@ -865,7 +878,7 @@ public partial class GameRoot : Node2D
                 Zoom = zoom;
             }
 
-            _hud.ToggleHelp();
+            _hud.CloseWindows();
         }
 
         string? demo = System.Environment.GetEnvironmentVariable("FACTORY_DEMO");
@@ -1083,7 +1096,7 @@ public partial class GameRoot : Node2D
             }
 
             SelectedId = Planet.Trains.FirstOrDefault()?.Id ?? Planet.LanderId;
-            _hud.ToggleHelp();
+            _hud.CloseWindows();
             Zoom = 1.4f;
             if (demo == "6")
             {
@@ -1209,6 +1222,7 @@ public partial class GameRoot : Node2D
         Bind("research", Key.T);
         Bind("system", Key.M);
         Bind("help", Key.H);
+        Bind("guide", Key.G);
         Bind("zoom_in", Key.Pageup);
         Bind("zoom_out", Key.Pagedown);
         Bind("quicksave", Key.F5);

@@ -15,7 +15,9 @@ public partial class Hud : CanvasLayer
 {
     private Control _ui = null!;
     private Label _messages = null!;
-    private HudWindow _open = HudWindow.Help;
+    private HudWindow _open = HudWindow.None;
+    private Theme _theme = null!;
+    private float _scale; // canvas units of the game viewport per HUD unit
     private readonly Dictionary<HudWindow, PanelContainer> _windows = [];
 
     /// <summary>The game root this HUD reads state from and sends commands through.</summary>
@@ -32,15 +34,18 @@ public partial class Hud : CanvasLayer
     /// <inheritdoc />
     public override void _Ready()
     {
-        _ui = new Control { MouseFilter = Control.MouseFilterEnum.Ignore, Theme = HudStyle.BuildTheme() };
-        _ui.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+        // Not anchored to the viewport: the HUD is scaled (see UpdateScale), so its root is sized by hand.
+        _theme = HudStyle.BuildTheme();
+        _ui = new Control { MouseFilter = Control.MouseFilterEnum.Ignore, Theme = _theme };
         AddChild(_ui);
+        UpdateScale();
 
         BuildStatus();
         BuildFollowers();
         BuildInspector();
         BuildBuildBar();
         BuildCommander();
+        BuildGuide();
 
         _messages = new Label { VerticalAlignment = VerticalAlignment.Bottom, MouseFilter = Control.MouseFilterEnum.Ignore };
         _messages.AddThemeColorOverride("font_outline_color", Colors.Black);
@@ -157,6 +162,9 @@ public partial class Hud : CanvasLayer
     /// <summary>Shows or hides the tech tree.</summary>
     public void ToggleResearch() => Toggle(HudWindow.Tech);
 
+    /// <summary>Closes whichever window is open.</summary>
+    public void CloseWindows() => ShowOnly(HudWindow.None);
+
     /// <summary>Shows or hides the help window.</summary>
     public void ToggleHelp() => Toggle(HudWindow.Help);
 
@@ -182,6 +190,7 @@ public partial class Hud : CanvasLayer
     /// <inheritdoc />
     public override void _Process(double delta)
     {
+        UpdateScale();
         WatchSelection();
         UpdateStatus();
         UpdateBuildBar();
@@ -189,6 +198,7 @@ public partial class Hud : CanvasLayer
         UpdateInspector();
         UpdateCommander();
         UpdateMessages();
+        UpdateGuide();
         switch (_open)
         {
             case HudWindow.Inventory:
@@ -215,10 +225,39 @@ public partial class Hud : CanvasLayer
         Layout();
     }
 
+    /// <summary>
+    /// Sizes the HUD from the actual game window, not the screen or the 1600×900 design size: text and
+    /// panels get bigger in a bigger window and on high-DPI displays, never drop below a readable size in a
+    /// small one (unless they would no longer fit), and the player's interface-size setting multiplies the
+    /// result. The whole HUD layer is scaled, so every panel, slot and font grows together.
+    /// </summary>
+    private void UpdateScale()
+    {
+        Vector2 vs = GetViewport().GetVisibleRect().Size;
+        Vector2 win = GetWindow().Size;
+        if ((vs.Y <= 0) || (win.Y <= 0))
+        {
+            return;
+        }
+
+        // The canvas_items stretch already maps the viewport onto the window at this many pixels per unit.
+        float stretch = win.Y / vs.Y;
+        float s = Mathf.Snapped(HudStyle.PixelsPerUnit(win) * GameSettings.UiScale / stretch, 0.01f);
+        if (Mathf.IsEqualApprox(s, _scale) == false)
+        {
+            _scale = s;
+            Scale = new Vector2(s, s);
+            HudStyle.ScaleTheme(_theme, s);
+        }
+
+        _ui.Position = Vector2.Zero;
+        _ui.Size = vs / s;
+    }
+
     /// <summary>Explicit layout every frame: panels shrink-wrap their content and are pinned to screen edges.</summary>
     private void Layout()
     {
-        Vector2 vs = _ui.GetViewportRect().Size;
+        Vector2 vs = _ui.Size;
         static Vector2 Min(Control c) => c.GetCombinedMinimumSize();
         static void Put(Control c, Vector2 pos, float? width = null)
         {
@@ -232,7 +271,9 @@ public partial class Hud : CanvasLayer
         Put(_followerPanel, new Vector2(Gap, _planetCard.Position.Y + _planetCard.Size.Y + 8));
         Put(_researchCard, new Vector2(vs.X - Gap - Min(_researchCard).X, Gap));
         Put(_powerCard, new Vector2(vs.X - Gap - Min(_powerCard).X, _researchCard.Position.Y + _researchCard.Size.Y + 8));
-        Put(_inspector, new Vector2(vs.X - Gap - Min(_inspector).X, _powerCard.Position.Y + _powerCard.Size.Y + 8));
+        // The guide sits under the status cards on the right, and the hover inspector below it.
+        float rightY = LayoutGuide(vs, Gap, _powerCard.Position.Y + _powerCard.Size.Y + 8);
+        Put(_inspector, new Vector2(vs.X - Gap - Min(_inspector).X, rightY));
 
         _buildPanel.Size = Vector2.Zero;
         Put(_buildPanel, new Vector2(Mathf.Max(Gap, (vs.X - Min(_buildPanel).X) / 2), vs.Y - Gap - Min(_buildPanel).Y));
@@ -243,10 +284,18 @@ public partial class Hud : CanvasLayer
             _commanderPanel.Position = new Vector2(Gap, _buildPanel.Position.Y - Gap - _commanderPanel.Size.Y);
         }
 
+        // Messages stack up from the commander panel; only as many as fit under the helper bots panel show.
+        float messagesBottom = _commanderPanel.Position.Y - Gap;
+        float messagesTop = _followerPanel.Position.Y + _followerPanel.Size.Y + Gap;
+        _messageRoom = System.Math.Max(0, (int)((messagesBottom - messagesTop) / System.Math.Max(1, _messages.GetLineHeight())));
         Vector2 mm = Min(_messages);
         _messages.Size = mm;
-        _messages.Position = new Vector2(Gap + 4, _commanderPanel.Position.Y - Gap - mm.Y);
+        _messages.Position = new Vector2(Gap + 4, messagesBottom - mm.Y);
 
+        // Centred windows always fit: long ones scroll (help), and anything still too big for a small
+        // window is shrunk to fit rather than running off the edge.
+        Vector2 room = vs - new Vector2(2 * Gap, 2 * Gap);
+        FitHelp(room);
         foreach (PanelContainer win in _windows.Values)
         {
             if (win.Visible)
@@ -254,7 +303,9 @@ public partial class Hud : CanvasLayer
                 win.Size = Vector2.Zero;
                 Vector2 size = Min(win);
                 win.Size = size;
-                win.Position = ((vs - size) / 2).Floor();
+                float fit = Mathf.Min(1f, Mathf.Min(room.X / size.X, room.Y / size.Y));
+                win.Scale = new Vector2(fit, fit);
+                win.Position = ((vs - (size * fit)) / 2).Floor().Max(Vector2.Zero);
             }
         }
     }
@@ -287,15 +338,15 @@ public partial class Hud : CanvasLayer
         }
     }
 
+    private int _messageRoom = 8;
+
     private void UpdateMessages()
     {
         StringBuilder sb = new StringBuilder();
-        foreach (Message m in Root.Messages)
+        List<Message> recent = Root.Messages.Where(m => Root.Clock - m.Time < 12).ToList();
+        foreach (Message m in recent.Skip(System.Math.Max(0, recent.Count - _messageRoom)))
         {
-            if (Root.Clock - m.Time < 12)
-            {
-                sb.AppendLine(m.Text);
-            }
+            sb.AppendLine(m.Text);
         }
 
         _messages.Text = sb.ToString();

@@ -71,6 +71,40 @@ public static class HudStyle
         return theme;
     }
 
+    /// <summary>
+    /// How many physical pixels one HUD unit should cover in a window of this size. It follows the window's
+    /// height (a 700 px tall window is 1:1), never drops below a readable size for the display's DPI, and
+    /// shrinks only when the window is too small for the HUD to fit at that size.
+    /// </summary>
+    /// <param name="window">The game window's size in physical pixels.</param>
+    /// <returns>Physical pixels per HUD unit.</returns>
+    public static float PixelsPerUnit(Vector2 window)
+    {
+        // macOS reports Retina as scale 2; Windows reports 1 there, but gives the DPI its display scaling implies.
+        float dpi = OS.GetName() == "Windows" ? DisplayServer.ScreenGetDpi() / 96f : DisplayServer.ScreenGetScale();
+        dpi = Mathf.Clamp(dpi, 1f, 3f);
+        float px = Mathf.Max(window.Y / 700f, 1.2f * dpi);
+
+        return Mathf.Min(px, Mathf.Min(window.X / 1100f, window.Y / 620f));
+    }
+
+    /// <summary>
+    /// Popups and tooltips open in their own windows outside the scaled HUD layer, so their fonts and
+    /// padding are scaled in the theme to match.
+    /// </summary>
+    /// <param name="theme">The HUD theme.</param>
+    /// <param name="scale">The HUD's scale.</param>
+    public static void ScaleTheme(Theme theme, float scale)
+    {
+        int Px(float v) => Mathf.RoundToInt(v * scale);
+        theme.SetFontSize("font_size", "TooltipLabel", Px(13));
+        theme.SetStylebox("panel", "TooltipPanel", Box(new Color(0.02f, 0.04f, 0.07f, 0.97f), LineBright, Px(2), Px(8), Px(6)));
+        theme.SetFontSize("font_size", "PopupMenu", Px(13));
+        theme.SetConstant("v_separation", "PopupMenu", Px(4));
+        theme.SetStylebox("panel", "PopupMenu", Box(new Color(0.03f, 0.06f, 0.1f, 0.98f), LineBright, Px(2), Px(4), Px(4)));
+        theme.SetStylebox("hover", "PopupMenu", Box(new Color(0.12f, 0.22f, 0.32f), LineBright, 1, Px(4), Px(2)));
+    }
+
     /// <summary>A flat box with a hairline border.</summary>
     /// <param name="fill">Background colour.</param>
     /// <param name="border">Border colour.</param>

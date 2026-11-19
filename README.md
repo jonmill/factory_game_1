@@ -48,8 +48,17 @@ flies the ferry to Rime, `5` adds the Clean Age set: solar, wind, a payload laun
 `FACTORY_SEED=<n>` (pins the map seed), `FACTORY_WINDOW=inventory|replicator|tech|help|victory|system` and
 `FACTORY_CATEGORY=<1-7>` (open a HUD window or build category), `FACTORY_SELECT=<building id>` (selects the
 nearest building of that type, e.g. `burner-smelter`, or `helper` for a helper bot), `FACTORY_REPLAY=/path.replay.json`
-(loads a headless replay and centres on the lander) and `FACTORY_ZOOM=<f>` (initial camera zoom,
-used with the replay).
+(loads a headless replay and centres on the lander) `FACTORY_ZOOM=<f>` (initial camera zoom,
+used with the replay) and `FACTORY_HINTS=0|1|fresh` (force the guide off or on; `fresh` also ignores and never writes
+`settings.cfg`, so every tip shows again).
+
+### Interface size and the guide
+
+The HUD is sized from the actual game window (its height, with a floor for the display's DPI), not the
+screen or the 1600×900 design size, and windows that still don't fit scroll or shrink. The pause menu (Esc)
+has an interface-size setting on top of that and turns the guide on or off; both are kept in
+`user://settings.cfg` (`GameSettings`) for the future options screen. The guide (`Hud.Guide.cs`) ticks
+objectives off by watching the world, so a loaded game picks up at the right step.
 
 ### Controls
 
@@ -61,6 +70,7 @@ used with the replay).
 | X · Q | Dismantle tool · pipette (pick the building under the cursor to place another) |
 | Esc | Step back out of the tool, category, window or selection; then the game menu |
 | E, I or Tab · C · T · M · H | Inventory (pockets + module slots + replicator + colony storage) · Replicator tab · Tech tree · System map · Help |
+| G | Show or hide the guide: the next objective and how to do it, plus one-off tips for common snags |
 | Left-click a machine, crate or helper bot | Opens it beside your pockets (a bot shows its module slots); hover anything for quick info |
 | Drag · Shift-click · Ctrl/Cmd-click · right-click | Move a stack between pockets and a machine or storage · one stack · all of that item · half |
 | F | Unload pockets into the nearest lander or crate |

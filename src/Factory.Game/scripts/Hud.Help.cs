@@ -34,6 +34,7 @@ public partial class Hud
             ("T", "Technology tree."),
             ("M", "System map: every planet, its readiness and resources. View one from there."),
             ("H", "This help."),
+            ("G", "Show or hide the guide: your next objective, and tips."),
             ("Space", "Pause.   + / –  game speed.   F5 / F9  save / load."),
         ]),
     ];
@@ -53,12 +54,36 @@ public partial class Hud
         ("Trains", "Lay track, place a Rail Stop facing it, then a train. Select the train to set its schedule. Hand carts need a helper bot to pump them; steam locomotives need water (a Water Tower near a stop) and fuel (compacted carbon in the stop)."),
     ];
 
+    private ScrollContainer _helpScroll = null!;
+    private Control _helpCols = null!;
+
+    /// <summary>Gives the help as much height as the window has room for; the rest scrolls.</summary>
+    /// <param name="room">Space available for a centred window, in HUD units.</param>
+    private void FitHelp(Vector2 room)
+    {
+        if (_windows[HudWindow.Help].Visible == false)
+        {
+            return;
+        }
+
+        Vector2 content = _helpCols.GetCombinedMinimumSize();
+        _helpScroll.CustomMinimumSize = new Vector2(content.X, 0);
+        float chrome = _windows[HudWindow.Help].GetCombinedMinimumSize().Y;
+        float height = Mathf.Min(content.Y, Mathf.Max(160, room.Y - chrome));
+        // Leave room for the scroll bar when there is one.
+        float bar = height < content.Y ? 14 : 0;
+        _helpScroll.CustomMinimumSize = new Vector2(content.X + bar, height);
+    }
+
     private PanelContainer BuildHelp()
     {
         PanelContainer win = MakeWindow(HudWindow.Help, "How to play", "H", out VBoxContainer body);
+        _helpScroll = new ScrollContainer { HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
+        body.AddChild(_helpScroll);
         HBoxContainer cols = new HBoxContainer();
         cols.AddThemeConstantOverride("separation", 24);
-        body.AddChild(cols);
+        _helpCols = cols;
+        _helpScroll.AddChild(cols);
 
         VBoxContainer left = new VBoxContainer();
         left.AddThemeConstantOverride("separation", 4);

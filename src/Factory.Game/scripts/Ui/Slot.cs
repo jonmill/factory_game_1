@@ -129,7 +129,8 @@ public partial class Slot : Control
 
         _dragged = true;
         Dragging = drag;
-        Control holder = new Control { MouseFilter = MouseFilterEnum.Ignore };
+        // The preview is drawn outside the HUD layer, so give it the slot's on-screen scale.
+        Control holder = new Control { MouseFilter = MouseFilterEnum.Ignore, Scale = GetGlobalTransformWithCanvas().Scale };
         Slot preview = new Slot(Size.X) { Icon = Icon, Count = drag.Count, Position = -Size / 2, Modulate = new Color(1, 1, 1, 0.85f) };
         holder.AddChild(preview);
         SetDragPreview(holder);
