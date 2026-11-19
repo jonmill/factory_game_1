@@ -228,7 +228,7 @@ public partial class Hud
         _steps.Add(new GuideStep(
             "Fly to another planet",
             "Refine crude kerogen (from fen shale) into Kerogen Fuel, research Orbital Ferry and build a Launch Pad. " +
-            "Load it with a Ferry Rocket and 20 Kerogen Fuel, pick a planet and launch. M shows the system map.",
+            "Load it with a Ferry Rocket and 20 Kerogen Fuel, pick a planet and launch. P shows the star system.",
             () => W.Planets.Any(p => (p.Id != _homePlanet) && p.Units.Any(u => u.OwnerPlayer == GameRoot.LocalPlayer)),
             () => ResearchProgress("orbital-ferry"),
             Past: () => Researched("synthesis-cores")));
@@ -259,7 +259,7 @@ public partial class Hud
         _steps.Add(new GuideStep(
             "Call the settlers",
             "Make three of the four terraformable planets ready: Climate Engines on each planet finish the job fast. " +
-            "Then build a Settler Uplink and call the settlers. M shows every planet's readiness.",
+            "Then build a Settler Uplink and call the settlers. P shows every planet's readiness.",
             () => W.SettlersCalled,
             () => $"{W.ReadyPlanetCount} / {W.PlanetsNeeded} planets ready · {W.SystemReadiness}% overall"));
     }

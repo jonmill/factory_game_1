@@ -549,6 +549,10 @@ public partial class GameRoot : Node2D
         {
             _hud.Toggle(HudWindow.Replicator);
         }
+        else if (k.IsAction("map"))
+        {
+            _hud.Toggle(HudWindow.Map);
+        }
         else if (k.IsAction("system"))
         {
             _hud.Toggle(HudWindow.System);
@@ -1229,7 +1233,8 @@ public partial class GameRoot : Node2D
         Bind("speed_up", Key.Equal, Key.KpAdd);
         Bind("speed_down", Key.Minus, Key.KpSubtract);
         Bind("research", Key.T);
-        Bind("system", Key.M);
+        Bind("map", Key.M);
+        Bind("system", Key.P);
         Bind("help", Key.H);
         Bind("guide", Key.G);
         Bind("zoom_in", Key.Pageup);

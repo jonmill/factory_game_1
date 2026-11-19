@@ -5,7 +5,7 @@ using Godot;
 namespace Factory.Game;
 
 /// <summary>
-/// The star system window (M): every body in the system, nearest the star first, with its type, what
+/// The star system window (P): every body in the system, nearest the star first, with its type, what
 /// it holds, and how ready it is for settlers. Surface planets can be viewed from orbit.
 /// </summary>
 public partial class Hud
@@ -14,7 +14,7 @@ public partial class Hud
 
     private PanelContainer BuildSystem()
     {
-        PanelContainer win = MakeWindow(HudWindow.System, "Star system", "M", out VBoxContainer body);
+        PanelContainer win = MakeWindow(HudWindow.System, "Star system", "P", out VBoxContainer body);
         body.AddChild(HudStyle.Caption("Any three of the four terraformable planets must reach the readiness bar before the settlers can be called.", HudStyle.TextDim, 11));
         GridContainer grid = new GridContainer { Columns = 3 };
         grid.AddThemeConstantOverride("h_separation", 10);

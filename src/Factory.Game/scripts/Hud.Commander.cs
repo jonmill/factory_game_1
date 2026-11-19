@@ -40,13 +40,14 @@ public partial class Hud
 
         // Window shortcuts, right end of the dock, as in a shortcut bar.
         _dock.AddChild(VLine());
-        GridContainer menu = new GridContainer { Columns = 3, SizeFlagsVertical = Control.SizeFlags.ShrinkCenter };
+        GridContainer menu = new GridContainer { Columns = 4, SizeFlagsVertical = Control.SizeFlags.ShrinkCenter };
         menu.AddThemeConstantOverride("h_separation", 2);
         menu.AddThemeConstantOverride("v_separation", 2);
         foreach ((HudWindow w, string label, string key) in new[]
         {
             (HudWindow.Inventory, "Inventory", "E"), (HudWindow.Replicator, "Replicator", "C"), (HudWindow.Tech, "Tech tree", "T"),
-            (HudWindow.System, "System map", "M"), (HudWindow.Help, "Help", "H"), (HudWindow.Menu, "Menu", "Esc"),
+            (HudWindow.Map, "Map", "M"),
+            (HudWindow.System, "Star system", "P"), (HudWindow.Help, "Help", "H"), (HudWindow.Menu, "Menu", "Esc"),
         })
         {
             HudWindow which = w;

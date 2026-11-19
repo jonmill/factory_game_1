@@ -57,7 +57,7 @@ public partial class Hud
         VBoxContainer rv = new VBoxContainer();
         rv.AddThemeConstantOverride("separation", 3);
         _researchCard.AddChild(rv);
-        _minimap = new MapView { Root = Root, TilesAcross = 72, CustomMinimumSize = new Vector2(MinimapSize, MinimapSize), TooltipText = "Minimap  ·  click to open the map" };
+        _minimap = new MapView { Root = Root, TilesAcross = 72, CustomMinimumSize = new Vector2(MinimapSize, MinimapSize), TooltipText = "Minimap  ·  click or press M to open the map" };
         _minimap.Clicked += () => Toggle(HudWindow.Map);
         rv.AddChild(_minimap);
 

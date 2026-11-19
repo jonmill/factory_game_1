@@ -62,7 +62,7 @@ objectives off by watching the world, so a loaded game picks up at the right ste
 
 The layout follows Factorio and DSP and keeps the play area clear: a one-line planet strip (click for the
 terraform bars) and a slim helper bot list with per-bot job menus top-left; the minimap (a 72-tile local
-radar with fog; click it for the full planet map, which pans and zooms) with research and power lines top-right, the guide and hover/selection
+radar with fog; click it or press M for the full planet map, which pans and zooms) with research and power lines top-right, the guide and hover/selection
 info under it; one dock along the bottom with the commander's activity (pockets only in the inventory, E), the build categories and
 window shortcuts; and up to five message lines that fade out.
 
@@ -75,7 +75,7 @@ window shortcuts; and up to five message lines that fade out.
 | 1 – 7, then 1 – 0 | Open a build category, then pick a building; left-click places, R rotates. The commander builds ghosts within 8 tiles by itself |
 | X · Q | Dismantle tool · pipette (pick the building under the cursor to place another) |
 | Esc | Step back out of the tool, category, window or selection; then the game menu |
-| E, I or Tab · C · T · M · H | Inventory (pockets + module slots + replicator + colony storage) · Replicator tab · Tech tree · System map · Help |
+| E, I or Tab · C · T · M · P · H | Inventory (pockets + module slots + replicator + colony storage) · Replicator tab · Tech tree · Planet map · Star system map · Help |
 | G | Show or hide the guide: the next objective and how to do it, plus one-off tips for common snags |
 | Left-click a machine, crate or helper bot | Opens it beside your pockets (a bot shows its module slots); hover anything for quick info |
 | Drag · Shift-click · Ctrl/Cmd-click · right-click | Move a stack between pockets and a machine or storage · one stack · all of that item · half |
@@ -137,7 +137,7 @@ the native `steam_api` library from the Steamworks SDK next to the executable, a
 Included: a star system of fixed planets with seeded variation (Kepler's Rest, the 128×128 start world,
 plus Cinder, Rime, Dune, the gas giant Vesper and the Shards belt), each with its own biomes and its own
 share of the raw resources (siderite, cuprite, carbon, regolith, galena, xylo trees, kerogen, brimstone,
-titanium, silica, lanthanide, deuterium, hafnium, tantalite, helium-3, osmiridium); a System map (M) to
+titanium, silica, lanthanide, deuterium, hafnium, tantalite, helium-3, osmiridium); a star system map (P) to
 view them; **fog of war** (only the landing site starts explored; robots uncover the map around them as they
 move and buildings around them once built; nothing is built, mined or gathered on unexplored ground; a helper
 bot on the Explore job walks an outward spiral from the lander; fog is tracked in 32-tile chunks so it scales

@@ -4,7 +4,7 @@ using Godot;
 namespace Factory.Game;
 
 /// <summary>
-/// The planet map, as Factorio's: opened by clicking the minimap, a big view of everything explored on
+/// The planet map (M), as Factorio's: opened with M or by clicking the minimap, a big view of everything explored on
 /// the planet you're looking at. Drag to pan, wheel to zoom, hover for what's there.
 /// </summary>
 public partial class Hud
@@ -13,7 +13,7 @@ public partial class Hud
 
     private PanelContainer BuildMap()
     {
-        PanelContainer win = MakeWindow(HudWindow.Map, "Map", null, out VBoxContainer body, out _);
+        PanelContainer win = MakeWindow(HudWindow.Map, "Map", "M", out VBoxContainer body, out _);
         _mapView = new MapView { Root = Root, FollowCamera = false, Interactive = true, RepaintSeconds = 0.5 };
         body.AddChild(_mapView);
         HBoxContainer foot = new HBoxContainer();
@@ -26,7 +26,7 @@ public partial class Hud
             _mapView.Center = new Vector2(Root.Planet.Width, Root.Planet.Height) / 2;
             _mapView.TilesAcross = Root.Planet.Width;
         }));
-        foot.AddChild(HudStyle.Button("Star system  [M]", () => Toggle(HudWindow.System)));
+        foot.AddChild(HudStyle.Button("Star system  [P]", () => Toggle(HudWindow.System)));
         body.AddChild(foot);
 
         return win;
