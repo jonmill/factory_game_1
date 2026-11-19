@@ -143,16 +143,15 @@ hand-pump carts (need an operator, 1500 kg pull limit), steam locomotives (water
 carts, a Kerogen Refinery (Kerogen Fuel, Polymer Resin), Kerogen Generators (no water, 80% efficient),
 Lattice Pylons (20-tile reach), a Launch Pad and reusable Ferry Rocket to fly the commander, helper bots
 and cargo to the other planets (a landed ferry always flies home); in the Clean Age Solar Panels (scaled by each planet's sunlight),
-Wind Turbines (scaled by its atmosphere), a Hover Module (float over water and lava) and a Payload Launcher that
-terraforms another planet from home, Conveyor Belts (sorter arms load and unload them), Planetary Logistics
+Wind Turbines (scaled by its atmosphere), a Hover Module (float over water and lava), the first terraformers
+(Atmosphere Processor, Hydrosphere Seeder, Bio Incubator), Conveyor Belts (sorter arms load and unload them), Planetary Logistics
 Stations (drones carry supplied items to stations that demand them) and Orbital Logistics Stations (vessels
 between planets); in the Stellar Age an Orbital Collector (helium-3 from the gas giant Vesper, osmiridium from
-the Shards), Plasma Smelters and Drills, a Fusion Reactor (12 MW on Fusion Cells), the Space Elevator (free
+the Shards), a Payload Launcher that terraforms another planet from home, Plasma Smelters and Drills, a Fusion Reactor (12 MW on Fusion Cells), the Space Elevator (free
 launches, faster collectors and vessels), Precision and Plasma Fabricators (2x and 4x), the Climate Engine
 (terraforms the planet it stands on 60x faster than the first terraformers), Climate Amplifier modules for it
 (burn Lanthanide Accelerant from Dune's lanthanide and Cinder's brimstone to double its speed), Climate
-Acceleration and Vein Utilization (infinite research); terraformers (Atmosphere Processor, Hydrosphere Seeder,
-Bio Incubator), a system readiness meter and the Settler Uplink (Stellar Age) to win.
+Acceleration and Vein Utilization (infinite research), a system readiness meter and the Settler Uplink (Stellar Age) to win.
 
 Win condition: any 3 of the 4 terraformable planets (Kepler's Rest, Cinder, Rime, Dune) ready. Each stat runs
 to 10,000 points. The first terraformers and the Payload Launcher add 2 points per 20 s or 10 s and only 2 of

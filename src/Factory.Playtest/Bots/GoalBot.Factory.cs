@@ -19,7 +19,7 @@ public sealed partial class GoalBot
     private static readonly string[] _factoryPath =
     [
         "automation", "mechanical-arms", "robot-modules", "analysis-cores", "electric-mining", "robotics", "arc-smelting", "kerogen-refining",
-        "atmospheric-processing", "hydro-seeding", "bio-engineering", "advanced-helpers", "precision-fabrication", "solar-power",
+        "advanced-helpers", "atmospheric-processing", "hydro-seeding", "bio-engineering", "precision-fabrication", "solar-power",
         "fusion-power", "climate-engineering", "plasma-smelting", "plasma-mining", "plasma-fabrication", "lanthanide-catalysis",
     ];
 

@@ -213,7 +213,7 @@ public partial class Hud
         _steps.Add(new GuideStep(
             "Reach the Combustion Age",
             "Research Analytical Engines (it needs Automated Fabrication). It unlocks Analysis Cores " +
-            "(logic board, ballast plate, charge cell) and the Combustion Age: grid power, rail, robotics and terraforming.",
+            "(logic board, ballast plate, charge cell) and the Combustion Age: grid power, rail and robotics.",
             () => Researched("analysis-cores"),
             () => ResearchProgress("analysis-cores")));
 
@@ -223,14 +223,6 @@ public partial class Hud
             "slot, then set its job to Build: it builds ghosts anywhere on the planet, so you don't have to walk.",
             () => MyHelpers.Any(u => u.Modules.Contains("construction-module")),
             () => ResearchProgress("robot-modules"),
-            Past: () => Researched("synthesis-cores")));
-
-        _steps.Add(new GuideStep(
-            "Start terraforming",
-            "Research Atmospheric Processing and build an Atmosphere Processor (6, Terraform). Feed it Atmospheric " +
-            "Catalysts. The bars on the planet card (top left) show how close this planet is to ready.",
-            () => BuiltOfKind(BuildingKind.Terraformer) > 0,
-            () => ResearchProgress("atmospheric-processing"),
             Past: () => Researched("synthesis-cores")));
 
         _steps.Add(new GuideStep(
@@ -244,9 +236,17 @@ public partial class Hud
         _steps.Add(new GuideStep(
             "Reach the Clean Age",
             "Research Synthesis Cores. They need photonic wafers (smelted from Dune's silica sand) and polymer resin " +
-            "(refined from crude kerogen). Clean power, belts and logistics stations follow.",
+            "(refined from crude kerogen). Terraforming, clean power, belts and logistics stations follow.",
             () => Researched("synthesis-cores"),
             () => ResearchProgress("synthesis-cores"),
+            Past: () => Researched("stellar-cores")));
+
+        _steps.Add(new GuideStep(
+            "Start terraforming",
+            "Research Atmospheric Processing (a Clean Age tech) and build an Atmosphere Processor (6, Terraform). Feed it Atmospheric " +
+            "Catalysts. The bars on the planet card (top left) show how close this planet is to ready.",
+            () => BuiltOfKind(BuildingKind.Terraformer) > 0,
+            () => ResearchProgress("atmospheric-processing"),
             Past: () => Researched("stellar-cores")));
 
         _steps.Add(new GuideStep(
