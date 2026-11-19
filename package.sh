@@ -29,6 +29,9 @@ fi
 
 rm -rf "$out"
 mkdir -p "$out"
+# The game stamps this into every save (BuildInfo.Version, see src/Factory.Sim/Factory.Sim.csproj),
+# so a tester's save names the same build as VERSION.txt.
+export FACTORY_BUILD_VERSION="$name$dirty"
 "$godot" --headless --path "$project" --export-release "Windows Desktop" "$out/Factory.exe" >"$root/exports/export.log" 2>&1 || {
     tail -30 "$root/exports/export.log" >&2
     exit 1

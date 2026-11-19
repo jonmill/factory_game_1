@@ -26,16 +26,11 @@ public partial class Hud
         }
 
         MenuButton("Resume", () => ShowOnly(HudWindow.None));
-        MenuButton("Save game   [F5]", () =>
-        {
-            Root.QuickSave();
-            ShowOnly(HudWindow.None);
-        });
-        MenuButton("Load game   [F9]", () =>
-        {
-            ShowOnly(HudWindow.None);
-            Root.QuickLoad();
-        });
+        MenuButton("Save game", () => ShowOnly(HudWindow.Save));
+        MenuButton("Load game", () => ShowOnly(HudWindow.Load));
+        Label quick = HudStyle.Caption("F5 quicksave  ·  F9 quickload", HudStyle.TextDim, 11);
+        quick.HorizontalAlignment = HorizontalAlignment.Center;
+        body.AddChild(quick);
         MenuButton("Controls and how to play   [H]", () => ShowOnly(HudWindow.Help));
         body.AddChild(HudStyle.Divider());
 

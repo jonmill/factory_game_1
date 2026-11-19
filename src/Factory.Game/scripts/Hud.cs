@@ -48,7 +48,7 @@ public partial class Hud : CanvasLayer
         BuildCommander();
         BuildGuide();
 
-        _messages = new Label { VerticalAlignment = VerticalAlignment.Bottom, MouseFilter = Control.MouseFilterEnum.Ignore, ClipText = true };
+        _messages = new Label { VerticalAlignment = VerticalAlignment.Bottom, MouseFilter = Control.MouseFilterEnum.Ignore, AutowrapMode = TextServer.AutowrapMode.WordSmart };
         _messages.AddThemeColorOverride("font_outline_color", Colors.Black);
         _messages.AddThemeConstantOverride("outline_size", 4);
         _messages.AddThemeFontSizeOverride("font_size", 11);
@@ -63,6 +63,7 @@ public partial class Hud : CanvasLayer
         _windows[HudWindow.Victory] = BuildVictory();
         _windows[HudWindow.System] = BuildSystem();
         _windows[HudWindow.Map] = BuildMap();
+        BuildSaveWindows();
         ShowOnly(_open);
     }
 
@@ -133,8 +134,8 @@ public partial class Hud : CanvasLayer
             _robotId = 0;
         }
 
-        bool wasMenu = _open == HudWindow.Menu;
-        bool isMenu = which == HudWindow.Menu;
+        bool wasMenu = PausesGame(_open);
+        bool isMenu = PausesGame(which);
         if (wasMenu != isMenu)
         {
             if (isMenu)
@@ -185,7 +186,8 @@ public partial class Hud : CanvasLayer
     {
         if (_open != HudWindow.None)
         {
-            ShowOnly(HudWindow.None);
+            // The save and load windows step back to the game menu they were opened from.
+            ShowOnly(_open is HudWindow.Save or HudWindow.Load ? HudWindow.Menu : HudWindow.None);
 
             return true;
         }
@@ -208,6 +210,7 @@ public partial class Hud : CanvasLayer
         UpdateCommander();
         UpdateMessages();
         UpdateGuide();
+        UpdateSaves();
         switch (_open)
         {
             case HudWindow.Inventory:
@@ -303,9 +306,15 @@ public partial class Hud : CanvasLayer
 
         float messagesTop = _followerPanel.Visible ? _followerPanel.Position.Y + _followerPanel.Size.Y + Gap : botsTop;
         _messageRoom = System.Math.Clamp((int)((messagesBottom - messagesTop) / lineH), 0, MessageLines);
-        Vector2 mm = Min(_messages);
-        _messages.Size = new Vector2(Mathf.Min(mm.X, Mathf.Max(200, _buildPanel.Position.X - Gap - 4)), mm.Y);
-        _messages.Position = new Vector2(Gap + 2, messagesBottom - mm.Y);
+        // Long messages wrap within the room left of the dock (at most 420 wide); only the newest lines that fit are shown.
+        float messagesWidth = Mathf.Clamp(_buildPanel.Position.X - Gap - 4, 200, 420);
+        _messages.CustomMinimumSize = new Vector2(messagesWidth, 0);
+        _messages.Size = new Vector2(messagesWidth, 0);
+        _messages.MaxLinesVisible = System.Math.Max(1, _messageRoom);
+        _messages.LinesSkipped = System.Math.Max(0, _messages.GetLineCount() - _messageRoom);
+        float messagesH = System.Math.Min(_messages.GetLineCount(), _messageRoom) * lineH;
+        _messages.Size = new Vector2(messagesWidth, messagesH);
+        _messages.Position = new Vector2(Gap + 2, messagesBottom - messagesH);
 
         // Centred windows always fit: long ones scroll (help), and anything still too big for a small
         // window is shrunk to fit rather than running off the edge.

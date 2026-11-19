@@ -158,14 +158,23 @@ public partial class GameRoot : Node2D
     /// <param name="replay">Optional replay to restore instead of generating a fresh world.</param>
     public void NewGame(ulong seed, Replay? replay = null)
     {
-        World = replay is null ? new World(Content, new WorldSettings { Seed = seed }) : replay.Play(Content);
+        Adopt(replay is null ? new World(Content, new WorldSettings { Seed = seed }) : replay.Play(Content));
+        Notify("Landing complete. Your helper bots await orders.", Colors.Cyan);
+    }
+
+    /// <summary>Makes <paramref name="world"/> the running game and resets the view to the commander.</summary>
+    /// <param name="world">A new or freshly loaded world.</param>
+    private void Adopt(World world)
+    {
+        World = world;
         PlanetId = 0;
         _leaderPlanet = Leader.Planet.Id;
         ViewPlanet(_leaderPlanet);
         SelectedId = 0;
         SetTool(ToolKind.Select);
         Messages.Clear();
-        Notify("Landing complete. Your helper bots await orders.", Colors.Cyan);
+        _acc = 0;
+        _hud?.OnWorldReplaced();
     }
 
     /// <summary>The planet the commander was on last frame, to follow it when it flies.</summary>
@@ -271,6 +280,16 @@ public partial class GameRoot : Node2D
     {
         Clock += delta;
         PlatformServices.Update();
+        if (IsLoading)
+        {
+            // The old game stays on screen, frozen, under the loading overlay until the new one is ready.
+            StepLoading();
+            TakeScreenshotWhenDue();
+
+            return;
+        }
+
+        TickAutosave(delta);
         HoverTile = _hoverOverride ?? ScreenToTile(GetViewport().GetMousePosition());
         SendLeaderIntent();
         HandleCameraKeys();
@@ -458,7 +477,7 @@ public partial class GameRoot : Node2D
             InputEventMagnifyGesture mag => Mathf.Log(mag.Factor) / Mathf.Log(1.1f),
             _ => 0,
         };
-        if (steps == 0)
+        if ((steps == 0) || IsLoading)
         {
             return;
         }
@@ -479,6 +498,11 @@ public partial class GameRoot : Node2D
     /// <inheritdoc />
     public override void _UnhandledInput(InputEvent @event)
     {
+        if (IsLoading)
+        {
+            return;
+        }
+
         if (@event is InputEventMouseButton mb)
         {
             if ((mb.ButtonIndex == MouseButton.Left) && mb.Pressed)
@@ -1144,6 +1168,7 @@ public partial class GameRoot : Node2D
                 ViewPlanet(index);
             }
 
+            // FACTORY_WINDOW=save|load open the save and load windows.
             if (System.Enum.TryParse(System.Environment.GetEnvironmentVariable("FACTORY_WINDOW"), true, out HudWindow window))
             {
                 _hud.Toggle(window);
@@ -1173,8 +1198,16 @@ public partial class GameRoot : Node2D
             {
                 _hud.BuildKey(category - 1);
             }
+
+            SaveLoadHooks();
         }
 
+        TakeScreenshotWhenDue();
+    }
+
+    /// <summary>FACTORY_SCREENSHOT=/path.png: saves a frame after about 3 s and quits.</summary>
+    private void TakeScreenshotWhenDue()
+    {
         string? shot = System.Environment.GetEnvironmentVariable("FACTORY_SCREENSHOT");
         if ((shot is not null) && (Clock > 3.0))
         {
@@ -1190,33 +1223,6 @@ public partial class GameRoot : Node2D
             frame.SavePng(shot);
             GetTree().Quit();
         }
-    }
-
-    // ------------------------------------------------------------------ save / load (replay based)
-
-    private const string SavePath = "user://quicksave.replay.json";
-
-    /// <summary>Saves the game as a replay to the quicksave slot.</summary>
-    public void QuickSave()
-    {
-        using Godot.FileAccess f = Godot.FileAccess.Open(SavePath, Godot.FileAccess.ModeFlags.Write);
-        f.StoreString(Replay.Capture(World).ToJson());
-        Notify($"Saved ({ProjectSettings.GlobalizePath(SavePath)})", Colors.LightGreen);
-    }
-
-    /// <summary>Loads the quicksave slot, replaying it from the start.</summary>
-    public void QuickLoad()
-    {
-        if (Godot.FileAccess.FileExists(SavePath) == false)
-        {
-            Notify("No quicksave yet (F5)", Colors.OrangeRed);
-
-            return;
-        }
-
-        Replay replay = Replay.FromJson(Godot.FileAccess.GetFileAsString(SavePath));
-        NewGame(replay.Seed, replay);
-        Notify(World.Checksum() == replay.FinalChecksum ? "Loaded quicksave" : "Loaded, but checksum mismatch (content changed?)", Colors.LightGreen);
     }
 
     // ------------------------------------------------------------------ input map

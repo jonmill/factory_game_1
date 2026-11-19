@@ -25,4 +25,8 @@ public enum HudWindow
     Menu,
     /// <summary>The planet map, opened from the minimap: drag to pan, wheel to zoom.</summary>
     Map,
+    /// <summary>Save the game: the saves so far, a name and Save. Opened from the game menu; pauses the game.</summary>
+    Save,
+    /// <summary>Load a save, or delete one. Opened from the game menu; pauses the game.</summary>
+    Load,
 }
