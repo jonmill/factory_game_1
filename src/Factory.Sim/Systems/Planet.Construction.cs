@@ -151,7 +151,7 @@ public sealed partial class Planet
                             }
                         }
 
-                        if ((b.Recipe is { } rr) && b.Crafting && (b.Def.Kind != BuildingKind.Lab))
+                        if ((b.Recipe is { } rr) && b.Crafting)
                         {
                             Refund(builder, rr.Inputs);
                         }

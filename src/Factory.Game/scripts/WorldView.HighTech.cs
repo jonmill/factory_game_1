@@ -366,9 +366,7 @@ public partial class WorldView
 
     private void DrawProgressRing(Building b, Vector2 c, float radius, Color accent)
     {
-        long need = b.Def.Kind == BuildingKind.Lab
-            ? (Root.World.Research.Current is { } id ? Root.Content.Techs[id].UnitTicks * 100L : 0)
-            : (b.Recipe?.Ticks ?? 0) * 100L;
+        long need = (b.Recipe?.Ticks ?? 0) * 100L;
         if ((need <= 0) || (b.Crafting == false))
         {
             return;

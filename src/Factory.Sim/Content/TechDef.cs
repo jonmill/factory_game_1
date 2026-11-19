@@ -32,4 +32,10 @@ public sealed class TechDef
     public bool Repeatable { get; init; }
     /// <summary><see cref="UnitCost"/> as an id-sorted list, for deterministic iteration.</summary>
     [JsonIgnore] public ItemAmount[] UnitCostList { get; internal set; } = [];
+    /// <summary>
+    /// One research unit as a recipe: the unit cost in, nothing out, <see cref="UnitTicks"/> long, and a
+    /// <c>research:&lt;id&gt;</c> effect. Labs craft it like any machine; it is in <see cref="ContentDb.Recipes"/>
+    /// but not <see cref="ContentDb.RecipeList"/>, so no recipe picker offers it.
+    /// </summary>
+    [JsonIgnore] public RecipeDef UnitRecipe { get; internal set; } = null!;
 }

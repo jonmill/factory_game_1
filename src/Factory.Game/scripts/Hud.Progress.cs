@@ -16,14 +16,9 @@ public partial class Hud
 
     private static float Fraction(long done, long total) => total <= 0 ? -1 : Mathf.Clamp(done / (float)total, 0, 1);
 
-    /// <summary>How far along a building's current cycle is: a craft, a research unit or the next ore.</summary>
-    private float WorkProgress(Building b)
+    /// <summary>How far along a building's current cycle is: a craft (a lab's research unit is one too) or the next ore.</summary>
+    private static float WorkProgress(Building b)
     {
-        if (b.Def.Kind == BuildingKind.Lab)
-        {
-            return b.Crafting && (W.Research.Current is { } tech) && C.Techs.TryGetValue(tech, out TechDef? t) ? Fraction(b.Progress, t.UnitTicks * 100L) : -1;
-        }
-
         if (b.Def.Kind == BuildingKind.Drill)
         {
             return (b.Progress > 0) || (b.Status == MachineStatus.Working) ? Fraction(b.Progress, b.Def.MiningTicks * 100L) : -1;

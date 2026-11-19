@@ -323,17 +323,7 @@ public partial class Hud
                 .DistinctBy(i => i.Item).ToArray();
         }
 
-        if (b.Recipe is { } r)
-        {
-            return r.Inputs;
-        }
-
-        if ((b.Def.Kind == BuildingKind.Lab) && (W.Research.Current is { } tech))
-        {
-            return C.Techs[tech].UnitCostList;
-        }
-
-        return [];
+        return b.Recipe?.Inputs ?? [];
     }
 
     private static VBoxContainer Section(string title, IEnumerable<Control> slots)

@@ -253,9 +253,11 @@ public partial class Hud
             sb.AppendLine($"Charge: {b.StoredJ / 1000} / {b.Def.CapacityKj} kJ");
         }
 
-        if ((b.Recipe is { } r) && (b.Def.Kind != BuildingKind.Lab))
+        if (b.Recipe is { } r)
         {
-            sb.AppendLine($"Recipe: {r.Name}  ({Costs(r.Inputs)} → {(r.Outputs.Length > 0 ? Costs(r.Outputs) : r.Effect)})");
+            sb.AppendLine(ContentDb.TechForEffect(r.Effect) is not null
+                ? $"Researching: {r.Name}  ({Costs(r.Inputs)} per unit)"
+                : $"Recipe: {r.Name}  ({Costs(r.Inputs)} → {(r.Outputs.Length > 0 ? Costs(r.Outputs) : r.Effect)})");
         }
 
         if ((b.Def.Kind == BuildingKind.Lander) && (b.CraftQueue.Count > 0))

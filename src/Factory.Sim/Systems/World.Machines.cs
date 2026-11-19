@@ -2,9 +2,20 @@ namespace Factory.Sim;
 
 public sealed partial class World
 {
-    internal void AddResearchUnit()
+    /// <summary>
+    /// Adds a finished research unit to a technology: the one the lab started it for, or the current research
+    /// when none is given. Progress belongs to the tech, as in Factorio, so switching research mid-unit doesn't
+    /// lose it. If other labs finished that tech in the meantime, the unit counts toward the current research.
+    /// </summary>
+    /// <param name="techId">The tech the unit was started for, or null for the current research.</param>
+    internal void AddResearchUnit(string? techId = null)
     {
-        string? id = Research.Current;
+        string? id = techId ?? Research.Current;
+        if ((id is not null) && Content.Techs.TryGetValue(id, out TechDef? started) && (started.Repeatable == false) && Research.Completed.Contains(id))
+        {
+            id = Research.Current;
+        }
+
         if (id is null)
         {
             return;
@@ -38,7 +49,11 @@ public sealed partial class World
             Research.Unlocked.Add(u);
         }
 
-        Research.Current = null;
+        if (Research.Current == id)
+        {
+            Research.Current = null;
+        }
+
         Emit($"Research complete: {tech.Name}");
     }
 }

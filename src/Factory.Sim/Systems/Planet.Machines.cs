@@ -88,6 +88,9 @@ public sealed partial class Planet
 
     private TechDef? CurrentTech => World.Research.Current is { } id ? World.Content.Techs[id] : null;
 
+    /// <summary>The research unit labs start next: the current technology's unit recipe, or null.</summary>
+    private RecipeDef? CurrentResearchUnit => CurrentTech?.UnitRecipe;
+
     /// <summary>Whether an electric building wants power this tick (drives network demand).</summary>
     private bool WantsPower(Building b)
     {
@@ -98,7 +101,7 @@ public sealed partial class Planet
             case BuildingKind.Assembler or BuildingKind.RobotBay or BuildingKind.Terraformer or BuildingKind.Uplink:
                 return b.Crafting || ((b.Recipe is { } r) && b.Inv.Has(r.Inputs) && b.Out.CanAddAll(r.Outputs));
             case BuildingKind.Lab:
-                return b.Crafting || ((CurrentTech is { } t) && b.Inv.Has(t.UnitCostList));
+                return b.Crafting || ((CurrentResearchUnit is { } u) && b.Inv.Has(u.Inputs));
             case BuildingKind.PayloadLauncher:
                 return b.Crafting || (NextPayload(b) is not null);
             case BuildingKind.Sorter:
@@ -186,11 +189,8 @@ public sealed partial class Planet
             case BuildingKind.Drill:
                 UpdateDrill(b);
                 break;
-            case BuildingKind.Furnace or BuildingKind.Assembler or BuildingKind.RobotBay or BuildingKind.Terraformer or BuildingKind.Uplink or BuildingKind.Lander or BuildingKind.PayloadLauncher:
+            case BuildingKind.Furnace or BuildingKind.Assembler or BuildingKind.RobotBay or BuildingKind.Terraformer or BuildingKind.Uplink or BuildingKind.Lander or BuildingKind.PayloadLauncher or BuildingKind.Lab:
                 UpdateCrafter(b);
-                break;
-            case BuildingKind.Lab:
-                UpdateLab(b);
                 break;
             case BuildingKind.Sorter:
                 UpdateSorter(b);
@@ -356,6 +356,19 @@ public sealed partial class Planet
 
             b.RecipeId = r.Id;
         }
+        else if (b.Def.Kind == BuildingKind.Lab)
+        {
+            // A lab crafts research units of the current technology. A unit already under way keeps its
+            // recipe (and so its tech) until it finishes; the switch applies from the next one.
+            r = CurrentResearchUnit;
+            b.RecipeId = r?.Id;
+            if (r is null)
+            {
+                b.Status = MachineStatus.NoResearch;
+
+                return false;
+            }
+        }
         else if (b.Def.Kind == BuildingKind.Furnace)
         {
             r = (b.Recipe is { } cur) && b.Inv.Has(cur.Inputs) ? cur
@@ -411,7 +424,10 @@ public sealed partial class Planet
             b.Inv.RemoveAll(r.Inputs);
         }
 
-        World.Stats.Record(r.Category == "smelting" ? ItemFlow.SmeltInput : ItemFlow.CraftInput, r.Inputs, 1, b.Def.Id, r.Id, Id);
+        // Research units are logged as research, against the technology, as they always were.
+        string? researching = ContentDb.TechForEffect(r.Effect);
+        ItemFlow used = researching is not null ? ItemFlow.Research : r.Category == "smelting" ? ItemFlow.SmeltInput : ItemFlow.CraftInput;
+        World.Stats.Record(used, r.Inputs, 1, b.Def.Id, researching ?? r.Id, Id);
         SupplyModules(b);
         if (isLander)
         {
@@ -468,6 +484,10 @@ public sealed partial class Planet
         }
 
         ApplyTerraformEffect(b, r);
+        if (ContentDb.TechForEffect(r.Effect) is { } tech)
+        {
+            World.AddResearchUnit(tech);
+        }
 
         if ((b.Def.Kind == BuildingKind.Lander) && (b.CraftQueue.Count == 0))
         {
@@ -475,49 +495,6 @@ public sealed partial class Planet
             // Spare parts (a craft that makes two when one was needed) go back to storage.
             ReleaseCraftReserve(b);
         }
-    }
-
-    private void UpdateLab(Building b)
-    {
-        TechDef? tech = CurrentTech;
-        if (tech is null)
-        {
-            b.Status = MachineStatus.NoResearch;
-
-            return;
-        }
-
-        if (b.Crafting == false)
-        {
-            if (b.Inv.Has(tech.UnitCostList) == false)
-            {
-                b.Status = MachineStatus.NoInput;
-
-                return;
-            }
-
-            b.Inv.RemoveAll(tech.UnitCostList);
-            World.Stats.Record(ItemFlow.Research, tech.UnitCostList, 1, b.Def.Id, tech.Id, Id);
-            b.Crafting = true;
-            b.Progress = 0;
-        }
-
-        int f = EnergyFactor(b);
-        if (f == 0)
-        {
-            return;
-        }
-
-        b.Status = MachineStatus.Working;
-        b.Progress += b.Def.Speed * f / 1000;
-        if (b.Progress < tech.UnitTicks * 100L)
-        {
-            return;
-        }
-
-        b.Crafting = false;
-        b.Progress = 0;
-        World.AddResearchUnit();
     }
 
     private void UpdateSorter(Building b)

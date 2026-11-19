@@ -64,6 +64,22 @@ public sealed class ContentDb
     /// <summary>True if the item id exists and has a fuel value.</summary>
     public bool IsFuel(string id) => Items.TryGetValue(id, out ItemDef? d) && (d.FuelKj > 0);
 
+    /// <summary>Recipe category of the research units labs craft (see <see cref="TechDef.UnitRecipe"/>).</summary>
+    public const string ResearchCategory = "research";
+
+    private const string ResearchPrefix = "research:";
+
+    /// <summary>The effect (and recipe id) of one research unit for a technology.</summary>
+    /// <param name="techId">The technology.</param>
+    /// <returns><c>research:&lt;tech id&gt;</c>.</returns>
+    public static string ResearchEffect(string techId) => ResearchPrefix + techId;
+
+    /// <summary>The technology a recipe effect researches a unit of ("research:&lt;tech id&gt;"), or null.</summary>
+    /// <param name="effect">The recipe's effect.</param>
+    /// <returns>The tech id, if the effect is research.</returns>
+    public static string? TechForEffect(string? effect) =>
+        (effect is not null) && effect.StartsWith(ResearchPrefix, StringComparison.Ordinal) ? effect[ResearchPrefix.Length..] : null;
+
     /// <summary>The robot model a recipe effect assembles ("helper:&lt;robot id&gt;"), or null.</summary>
     /// <param name="effect">The recipe's effect.</param>
     /// <returns>The robot id, if the effect builds one.</returns>
@@ -165,6 +181,17 @@ public sealed class ContentDb
         foreach (TechDef t in TechList)
         {
             t.UnitCostList = Sorted(t.UnitCost);
+            t.UnitRecipe = new RecipeDef
+            {
+                Id = ResearchEffect(t.Id),
+                Name = t.Name,
+                Category = ResearchCategory,
+                In = t.UnitCost,
+                Ticks = t.UnitTicks,
+                Effect = ResearchEffect(t.Id),
+                Inputs = t.UnitCostList,
+            };
+            Recipes[t.UnitRecipe.Id] = t.UnitRecipe;
         }
 
         // A building or vehicle belongs to the age of the technology that unlocks it, unless it says otherwise.
