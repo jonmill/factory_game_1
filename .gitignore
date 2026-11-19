@@ -51,3 +51,4 @@ Thumbs.db
 
 # Headless playtest output
 playtest-results/
+.claude/worktrees/
