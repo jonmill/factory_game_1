@@ -9,11 +9,11 @@ public class RegressionTests
         tw.Lander.Inv.Remove("cupral-filament", 1000);
         tw.Lander.Inv.Remove("cupral-bar", 1000);
         int gears = tw.Lander.Inv.Count("drive-cog");
-        tw.Do(new QueueCraft(tw.Lander.Id, "logic-board", 1)); // no wire: can't start
+        tw.Do(new QueueCraft(tw.Lander.Id, "logic-board", 1)); // no wire, and no bars to make it: can't start
         tw.Do(new QueueCraft(tw.Lander.Id, "drive-cog", 2));
         tw.Run(200);
         await Assert.That(tw.Lander.Inv.Count("drive-cog")).IsEqualTo(gears + 2);
-        await Assert.That(tw.Lander.CraftQueue).IsEquivalentTo(["logic-board"]);
+        await Assert.That(tw.Lander.CraftQueue.Where(e => e.Intermediate == false).Select(e => e.RecipeId)).IsEquivalentTo(["logic-board"]);
     }
 
     [Test]

@@ -133,7 +133,7 @@ if (command == "trace")
         }
 
         Building landerB = s.World.Get<Building>(p.LanderId)!;
-        Console.WriteLine($"    lander {landerB.Status} queue=[{string.Join(",", landerB.CraftQueue)}] crafting={landerB.RecipeId} inv=[{string.Join(",", landerB.Inv.Items.Select(kv => kv.Key + "=" + kv.Value))}]");
+        Console.WriteLine($"    lander {landerB.Status} queue=[{string.Join(",", landerB.CraftQueue.Select(e => e.Intermediate ? "(" + e.RecipeId + ")" : e.RecipeId))}] crafting={landerB.RecipeId} inv=[{string.Join(",", landerB.Inv.Items.Select(kv => kv.Key + "=" + kv.Value))}]");
         foreach (ConstructionSite site in p.Sites.Take(6))
         {
             Console.WriteLine($"    site {site.Kind} {site.DefId} @{site.Origin.X},{site.Origin.Y} missing=[{string.Join(",", site.Missing().Select(m => m.Item + "=" + m.Count))}]");

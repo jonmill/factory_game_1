@@ -325,7 +325,7 @@ public sealed partial class Planet
                 return false;
             }
             // Skip past entries whose ingredients are missing so one stalled recipe can't jam the queue.
-            int ready = b.CraftQueue.FindIndex(id => b.Inv.Has(c.Recipes[id].Inputs));
+            int ready = b.CraftQueue.FindIndex(e => LanderHas(b, c.Recipes[e.RecipeId].Inputs));
             if (ready < 0)
             {
                 b.Status = MachineStatus.NoInput;
@@ -335,12 +335,12 @@ public sealed partial class Planet
 
             if (ready > 0)
             {
-                string id = b.CraftQueue[ready];
+                CraftEntry e = b.CraftQueue[ready];
                 b.CraftQueue.RemoveAt(ready);
-                b.CraftQueue.Insert(0, id);
+                b.CraftQueue.Insert(0, e);
             }
 
-            r = c.Recipes[b.CraftQueue[0]];
+            r = c.Recipes[b.CraftQueue[0].RecipeId];
         }
         else if (b.Def.Kind == BuildingKind.PayloadLauncher)
         {
@@ -386,7 +386,8 @@ public sealed partial class Planet
             return false;
         }
 
-        if (b.Inv.Has(r.Inputs) == false)
+        bool isLander = b.Def.Kind == BuildingKind.Lander;
+        if ((isLander ? LanderHas(b, r.Inputs) : b.Inv.Has(r.Inputs)) == false)
         {
             b.Status = MachineStatus.NoInput;
 
@@ -400,11 +401,20 @@ public sealed partial class Planet
             return false;
         }
 
-        b.Inv.RemoveAll(r.Inputs);
+        if (isLander)
+        {
+            LanderTake(b, r.Inputs);
+        }
+        else
+        {
+            b.Inv.RemoveAll(r.Inputs);
+        }
+
         World.Stats.Record(r.Category == "smelting" ? ItemFlow.SmeltInput : ItemFlow.CraftInput, r.Inputs, 1, b.Def.Id, r.Id, Id);
         SupplyModules(b);
-        if (b.Def.Kind == BuildingKind.Lander)
+        if (isLander)
         {
+            b.CraftingIntermediate = b.CraftQueue[0].Intermediate;
             b.CraftQueue.RemoveAt(0);
             b.RecipeId = r.Id;
         }
@@ -438,9 +448,12 @@ public sealed partial class Planet
             return;
         }
 
+        // A part for a queued lander craft goes into its reserve, unless the queue was cleared meanwhile.
+        Inventory into = b.CraftingIntermediate && (b.CraftQueue.Count > 0) ? b.CraftReserve! : b.Out;
+        b.CraftingIntermediate = false;
         foreach (ItemAmount o in r.Outputs)
         {
-            b.Out.AddUnchecked(o.Item, o.Count);
+            into.AddUnchecked(o.Item, o.Count);
         }
 
         World.Stats.Record(r.Category == "smelting" ? ItemFlow.Smelted : ItemFlow.Crafted, r.Outputs, 1, b.Def.Id, r.Id, Id);
@@ -458,6 +471,8 @@ public sealed partial class Planet
         if ((b.Def.Kind == BuildingKind.Lander) && (b.CraftQueue.Count == 0))
         {
             b.RecipeId = null;
+            // Spare parts (a craft that makes two when one was needed) go back to storage.
+            ReleaseCraftReserve(b);
         }
     }
 

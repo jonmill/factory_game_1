@@ -61,7 +61,7 @@ public class GoalBotTests
 
         Think(tw, bot);
 
-        await Assert.That(tw.Lander.CraftQueue).Contains("logic-board");
+        await Assert.That(tw.Lander.CraftQueue.Select(e => e.RecipeId)).Contains("logic-board");
     }
 
     [Test]

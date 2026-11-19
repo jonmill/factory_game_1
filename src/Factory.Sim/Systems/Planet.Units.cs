@@ -234,11 +234,11 @@ public sealed partial class Planet
             return;
         }
 
-        foreach (string recipeId in lander.CraftQueue.Distinct().ToList())
+        foreach (string recipeId in lander.CraftQueue.Select(e => e.RecipeId).Distinct().ToList())
         {
             foreach (ItemAmount input in World.Content.Recipes[recipeId].Inputs)
             {
-                int need = input.Count - lander.Inv.Count(input.Item);
+                int need = input.Count - LanderCanUse(lander, input.Item);
                 if (need > 0)
                 {
                     u.Carry.MoveTo(lander.Inv, input.Item, need);

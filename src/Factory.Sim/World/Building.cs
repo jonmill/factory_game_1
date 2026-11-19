@@ -32,8 +32,19 @@ public sealed class Building : Entity
     public int NetworkId { get; internal set; }
     /// <summary>Display name shown to the player.</summary>
     public string Name { get; internal set; } = "";
-    /// <summary>Lander craft queue (recipe ids).</summary>
-    public List<string> CraftQueue { get; } = [];
+    /// <summary>
+    /// The lander's craft queue, in order. Queueing a recipe puts the parts it is missing ahead of it, as
+    /// intermediate entries (see <see cref="Planet.QueueLanderCraft"/>).
+    /// </summary>
+    public List<CraftEntry> CraftQueue { get; } = [];
+    /// <summary>
+    /// The lander's ingredients set aside for its queued crafts, and the parts made for them. Not storage:
+    /// nothing else can take them. Clearing the queue (or finishing it) puts what's left back in storage.
+    /// Null on every other building.
+    /// </summary>
+    public Inventory? CraftReserve { get; internal set; }
+    /// <summary>True while the lander's current craft is an intermediate part (its output goes to <see cref="CraftReserve"/>).</summary>
+    public bool CraftingIntermediate { get; internal set; }
     /// <summary>Landed ferries: the launch pad it flew from (0 if that pad is gone).</summary>
     public int HomePadId { get; internal set; }
     /// <summary>Landed ferries: the planet it flew from, where it returns.</summary>

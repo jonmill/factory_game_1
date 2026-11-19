@@ -27,20 +27,20 @@ public sealed record QueueCraft(int BuildingId, string RecipeId, int Count) : Co
             return $"{r.Name} has not been researched";
         }
 
-        if ((Count < 1) || (b.CraftQueue.Count + Count > 100))
+        if ((Count < 1) || (b.CraftQueue.Count(e => e.Intermediate == false) + Count > 100))
         {
             return "Queue limit is 100";
         }
 
         return null;
     }
-    /// <summary>Appends the recipe to the craft queue <see cref="Count"/> times.</summary>
+    /// <summary>
+    /// Sets the ingredients aside from the lander's storage and appends the recipe <see cref="Count"/> times,
+    /// preceded by crafts of any parts that are missing.
+    /// </summary>
     public override void Apply(World w)
     {
         Building b = w.Get<Building>(BuildingId)!;
-        for (int i = 0; i < Count; i++)
-        {
-            b.CraftQueue.Add(RecipeId);
-        }
+        b.Planet.QueueLanderCraft(b, w.Content.Recipes[RecipeId], Count);
     }
 }

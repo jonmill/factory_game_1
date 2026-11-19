@@ -211,6 +211,11 @@ public sealed partial class Planet
         };
         b.Inv = new Inventory(content, def.Slots);
         b.Out = def.IsStorage ? b.Inv : new Inventory(content, def.OutSlots);
+        if (def.Kind == BuildingKind.Lander)
+        {
+            b.CraftReserve = new Inventory(content, int.MaxValue);
+        }
+
         if (def.Kind == BuildingKind.RailStop)
         {
             b.Name = $"Stop {Buildings.Count(x => x.Def.Kind == BuildingKind.RailStop) + 1}";
@@ -446,6 +451,15 @@ public sealed partial class Planet
             }
 
             b.Inv.Hash(h);
+            h.Add(b.CraftQueue.Count);
+            foreach (CraftEntry e in b.CraftQueue)
+            {
+                h.Add(e.RecipeId);
+                h.Add(e.Intermediate);
+            }
+
+            h.Add(b.CraftingIntermediate);
+            b.CraftReserve?.Hash(h);
             if (b.Def.IsStorage == false)
             {
                 b.Out.Hash(h);

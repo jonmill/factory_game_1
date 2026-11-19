@@ -260,7 +260,7 @@ public partial class Hud
 
         if ((b.Def.Kind == BuildingKind.Lander) && (b.CraftQueue.Count > 0))
         {
-            sb.AppendLine("Queue: " + string.Join(", ", b.CraftQueue.GroupBy(x => x).Select(g => $"{C.Recipes[g.Key].Name} ×{g.Count()}")));
+            sb.AppendLine("Queue: " + string.Join(", ", b.CraftQueue.Where(e => e.Intermediate == false).GroupBy(e => e.RecipeId).Select(g => $"{C.Recipes[g.Key].Name} ×{g.Count()}")));
         }
 
         if (b.Def.Kind == BuildingKind.LaunchPad)

@@ -44,6 +44,11 @@ public static class WorldProbe
             foreach (Building b in p.Buildings)
             {
                 Add(b.Inv);
+                if (b.CraftReserve is { } reserve)
+                {
+                    Add(reserve);
+                }
+
                 if (ReferenceEquals(b.Inv, b.Out) == false)
                 {
                     Add(b.Out);

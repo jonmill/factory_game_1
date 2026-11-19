@@ -1053,7 +1053,10 @@ public sealed partial class GoalBot : IBot
         // Count crafts already queued/in progress as incoming, so the bot doesn't over-queue.
         if (_w.Get<Building>(P.LanderId) is { } lander)
         {
-            IEnumerable<string> queued = lander.CraftQueue.Concat(lander.Crafting && (lander.RecipeId is { } cur) ? [cur] : []);
+            // Parts queued for another craft are used up by it, so only the crafts proper count. (Their
+            // ingredients, set aside in the lander's reserve, aren't stock any more.)
+            IEnumerable<string> queued = lander.CraftQueue.Where(e => e.Intermediate == false).Select(e => e.RecipeId)
+                .Concat(lander.Crafting && (lander.CraftingIntermediate == false) && (lander.RecipeId is { } cur) ? [cur] : []);
             foreach (string id in queued)
             {
                 foreach (ItemAmount o in C.Recipes[id].Outputs)
@@ -1255,7 +1258,7 @@ public sealed partial class GoalBot : IBot
     {
         // A queue nothing in it can be crafted from (e.g. inherited from a messy player) blocks every
         // other craft and hides real demand: clear it, the way a player would.
-        if ((lander.Crafting == false) && (lander.CraftQueue.Count > 0) && (lander.CraftQueue.Any(id => lander.Inv.Has(C.Recipes[id].Inputs)) == false))
+        if ((lander.Crafting == false) && (lander.CraftQueue.Count > 0) && (lander.CraftQueue.Any(e => Planet.LanderHas(lander, C.Recipes[e.RecipeId].Inputs)) == false))
         {
             Send(new CancelQueuedCrafts(lander.Id));
             plan.Problems.Add($"cleared a stalled craft queue ({lander.CraftQueue.Count} entries)");

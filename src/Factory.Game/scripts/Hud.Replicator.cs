@@ -70,7 +70,7 @@ public partial class Hud
         string inv = _selectedRecipe is { } sel
             ? string.Join(",", C.Recipes[sel].Inputs.Select(i => $"{lander.Inv.Count(i.Item)}+{Root.Leader.Carry.Count(i.Item)}"))
             : "";
-        string sig = $"{W.Research.Unlocked.Count}|{_selectedRecipe}|{string.Join(",", lander.CraftQueue)}|{inv}|{reach}";
+        string sig = $"{W.Research.Unlocked.Count}|{_selectedRecipe}|{lander.Crafting}:{lander.RecipeId}|{string.Join(",", lander.CraftQueue)}|{inv}|{reach}";
         if (sig != _replicatorSig)
         {
             _replicatorSig = sig;
@@ -79,16 +79,16 @@ public partial class Hud
             RebuildQueue(lander);
         }
 
-        if (_queueHead is not null)
+        // The craft under way has already left the queue: it is the first tile, with its progress.
+        if ((_queueHead is not null) && lander.Crafting && (lander.Recipe is { } head))
         {
-            RecipeDef head = C.Recipes[lander.CraftQueue[0]];
-            float f = lander.Crafting ? lander.Progress / (float)System.Math.Max(1, head.Ticks * 100L) : 0;
-            _queueHead.Set(_queueHead.Count, true, false, f);
+            _queueHead.Set(_queueHead.Count, true, false, lander.Progress / (float)System.Math.Max(1, head.Ticks * 100L));
         }
 
-        _queueStatus.Text = lander.CraftQueue.Count == 0 ? "Empty" :
-            lander.Crafting ? $"Making {C.Recipes[lander.CraftQueue[0]].Name}" :
-            lander.Status == MachineStatus.NoInput ? "Waiting for ingredients" : lander.Status.ToString();
+        _queueStatus.Text = lander.Crafting && (lander.Recipe is { } making)
+            ? $"Making {making.Name}{(lander.CraftingIntermediate ? " (a part)" : "")}"
+            : lander.CraftQueue.Count == 0 ? "Empty"
+            : lander.Status == MachineStatus.NoInput ? "Waiting for ingredients" : lander.Status.ToString();
     }
 
     private void RebuildRecipes(List<RecipeDef> recipes)
@@ -162,13 +162,18 @@ public partial class Hud
             name.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
             row.AddChild(name);
             string have = inPockets > 0 ? $"{inLander} + {inPockets} carried" : $"{inLander}";
-            Label count = HudStyle.Caption($"{have} / {input.Count}", inLander + inPockets >= input.Count ? HudStyle.Good : HudStyle.Bad, 12);
+            bool enough = inLander + inPockets >= input.Count;
+            // Missing parts the lander can make are crafted first, from what's in storage.
+            bool craftable = (enough == false) && C.RecipeList.Any(x => (x.Effect is null) && lander.Def.Categories.Contains(x.Category) &&
+                W.Research.Unlocked.Contains(x.Id) && x.Outputs.Any(o => o.Item == input.Item));
+            Label count = HudStyle.Caption($"{have} / {input.Count}{(craftable ? "  · crafted first" : "")}",
+                enough ? HudStyle.Good : craftable ? HudStyle.Header : HudStyle.Bad, 12);
             count.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
             row.AddChild(count);
             _recipeDetail.AddChild(row);
         }
 
-        Label note = HudStyle.Caption(reach ? "You're close enough: your pockets top up missing ingredients." : "Ingredients come from the lander. Stand near it to add from your pockets.", HudStyle.TextDim, 11);
+        Label note = HudStyle.Caption(reach ? "Queueing sets the ingredients aside and crafts missing parts first. You're close enough: your pockets top up the rest." : "Queueing sets the ingredients aside from the lander's storage and crafts missing parts first. Stand near it to add from your pockets.", HudStyle.TextDim, 11);
         note.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         note.CustomMinimumSize = new Vector2(300, 0);
         _recipeDetail.AddChild(note);
@@ -189,28 +194,40 @@ public partial class Hud
     {
         Clear(_queueRow);
         _queueHead = null;
-        if (lander.CraftQueue.Count == 0)
+        if ((lander.CraftQueue.Count == 0) && (lander.Crafting == false))
         {
             _queueRow.AddChild(HudStyle.Caption("Nothing queued.", HudStyle.TextDim));
 
             return;
         }
 
-        // Group consecutive entries so a queue of twenty gears is one tile.
+        if (lander.Crafting && (lander.Recipe is { } current))
+        {
+            _queueHead = new Slot(44) { Icon = RecipeIcon(current), Count = 1, TooltipText = $"Making {current.Name}" };
+            _queueRow.AddChild(_queueHead);
+        }
+
+        // Group consecutive entries so a queue of twenty gears is one tile. Parts made for a later craft are
+        // dimmed: they go to that craft, not to storage.
         int i = 0;
         while ((i < lander.CraftQueue.Count) && (_queueRow.GetChildCount() < 14))
         {
-            string id = lander.CraftQueue[i];
+            CraftEntry e = lander.CraftQueue[i];
             int run = 1;
-            while ((i + run < lander.CraftQueue.Count) && (lander.CraftQueue[i + run] == id))
+            while ((i + run < lander.CraftQueue.Count) && (lander.CraftQueue[i + run] == e))
             {
                 run++;
             }
 
-            RecipeDef r = C.Recipes[id];
-            Slot slot = new Slot(44) { Icon = RecipeIcon(r), Count = run, TooltipText = $"{r.Name} ×{run}" };
+            RecipeDef r = C.Recipes[e.RecipeId];
+            Slot slot = new Slot(44)
+            {
+                Icon = RecipeIcon(r),
+                Count = run,
+                TooltipText = e.Intermediate ? $"{r.Name} ×{run}: parts for the next craft" : $"{r.Name} ×{run}",
+                Modulate = e.Intermediate ? new Color(1, 1, 1, 0.6f) : Colors.White,
+            };
             _queueRow.AddChild(slot);
-            _queueHead ??= slot;
             i += run;
         }
     }
