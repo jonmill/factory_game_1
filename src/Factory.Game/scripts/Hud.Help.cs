@@ -36,7 +36,8 @@ public partial class Hud
             ("P", "Planetary map of the star system: every planet, its readiness and resources. View one from there."),
             ("H", "This help."),
             ("G", "Show or hide the guide: your next objective, and tips."),
-            ("Space", "Pause.   + / –  game speed.   F5 / F9  save / load."),
+            ("Space", "Pause.   + / –  game speed."),
+            ("F5 / F9", "Quicksave / quickload (the \"Quicksave\" slot). Esc, then Save game or Load game, for named saves."),
         ]),
     ];
 
@@ -55,6 +56,7 @@ public partial class Hud
         ("Logistics", "In the Clean Age, belts carry items four to a tile: drag to lay a run, and use Sorter Arms to load and unload them (a drill facing a belt drops its ore on it). Logistics Stations each supply or demand a few items; their drones fly supplies across the planet. Orbital Stations' vessels fly them between planets."),
         ("Stellar Age", "An Orbital Collector siphons helium-3 from Vesper or mines osmiridium in the Shards. With titanium and hafnium from Cinder they make Stellar Cores, which research plasma smelters and drills, fusion reactors, the Space Elevator (free launches, faster collectors and vessels), the Payload Launcher (fires catalyst packs, hydro cartridges and seed pods to terraform another planet from home), Climate Engines (fast terraforming) and Vein Utilization, which you can research forever."),
         ("Trains", "Lay track, place a Rail Stop facing it, then a train. Select the train to set its schedule. Hand carts need a helper bot to pump them; steam locomotives need water (a Water Tower near a stop) and fuel (compacted carbon in the stop)."),
+        ("Saving", "Esc opens the game menu: Save game names a save (or pick one in the list to save over it), Load game lists every save with when it was made, time played and the planet. F5 quicksaves and F9 loads the quicksave. The game also autosaves every 10 minutes of play, taking turns between three Autosave slots. Saves are kept in the game's user folder, in \"saves\" (the full path is at the bottom of the Save window). A save replays your whole game when it loads, so a long game takes a little while; a bar shows how far it has got."),
     ];
 
     private ScrollContainer _helpScroll = null!;

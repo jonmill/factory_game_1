@@ -38,10 +38,22 @@ F                        Unload pockets into the nearest lander or crate
 Space / + / -            Pause / game speed
 F5 / F9                  Quicksave / quickload
 
+Saving and loading
+------------------
+Press Esc for the game menu, then "Save game": type a name and click Save (or click a save in the list to
+save over it; it asks first). "Load game" lists your saves with the date, time played and planet; click Load.
+F5 quicksaves and F9 loads the quicksave. The game also autosaves every 10 minutes of play into
+"Autosave 1" to "Autosave 3", taking turns, and says so at the bottom left.
+Loading replays your whole game from the start, so a long game takes a while; a progress bar shows how far
+it has got and you can cancel it. Saves are kept in:
+    %APPDATA%\Godot\app_userdata\Factory 1 (working title)\saves\
+A save from a much older or newer build may not load; the Load list greys it out and says why.
+
 Sending feedback
 ----------------
 Tell us what was confusing, what felt slow or too fast, and anything that broke.
 Please include the contents of VERSION.txt from this folder.
-If something went wrong, the quicksave and the log help a lot. They're in:
+If something went wrong, a save and the log help a lot. They're in:
     %APPDATA%\Godot\app_userdata\Factory 1 (working title)\
-(paste that into the File Explorer address bar). Send quicksave.replay.json and the logs folder.
+(paste that into the File Explorer address bar). Send the save from the "saves" folder (the latest
+Autosave is fine) and the "logs" folder.

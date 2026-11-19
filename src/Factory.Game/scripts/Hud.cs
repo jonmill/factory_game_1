@@ -63,6 +63,7 @@ public partial class Hud : CanvasLayer
         _windows[HudWindow.Victory] = BuildVictory();
         _windows[HudWindow.System] = BuildSystem();
         _windows[HudWindow.Map] = BuildMap();
+        BuildSaveWindows();
         ShowOnly(_open);
     }
 
@@ -133,8 +134,8 @@ public partial class Hud : CanvasLayer
             _robotId = 0;
         }
 
-        bool wasMenu = _open == HudWindow.Menu;
-        bool isMenu = which == HudWindow.Menu;
+        bool wasMenu = PausesGame(_open);
+        bool isMenu = PausesGame(which);
         if (wasMenu != isMenu)
         {
             if (isMenu)
@@ -185,7 +186,8 @@ public partial class Hud : CanvasLayer
     {
         if (_open != HudWindow.None)
         {
-            ShowOnly(HudWindow.None);
+            // The save and load windows step back to the game menu they were opened from.
+            ShowOnly(_open is HudWindow.Save or HudWindow.Load ? HudWindow.Menu : HudWindow.None);
 
             return true;
         }
@@ -207,6 +209,7 @@ public partial class Hud : CanvasLayer
         UpdateCommander();
         UpdateMessages();
         UpdateGuide();
+        UpdateSaves();
         switch (_open)
         {
             case HudWindow.Inventory:
@@ -303,7 +306,8 @@ public partial class Hud : CanvasLayer
         float messagesTop = _followerPanel.Visible ? _followerPanel.Position.Y + _followerPanel.Size.Y + Gap : botsTop;
         _messageRoom = System.Math.Clamp((int)((messagesBottom - messagesTop) / lineH), 0, MessageLines);
         Vector2 mm = Min(_messages);
-        _messages.Size = new Vector2(Mathf.Min(mm.X, Mathf.Max(200, _buildPanel.Position.X - Gap - 4)), mm.Y);
+        // A clipping label's minimum width is 0, so give it the room up to the dock rather than its minimum.
+        _messages.Size = new Vector2(Mathf.Max(200, _buildPanel.Position.X - Gap - 4), mm.Y);
         _messages.Position = new Vector2(Gap + 2, messagesBottom - mm.Y);
 
         // Centred windows always fit: long ones scroll (help), and anything still too big for a small

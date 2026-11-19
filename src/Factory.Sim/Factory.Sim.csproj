@@ -10,4 +10,33 @@
   <ItemGroup>
     <EmbeddedResource Include="Content\*.json" LogicalName="Factory.Sim.Content.%(Filename)%(Extension)" />
   </ItemGroup>
+
+  <!--
+    The build version stamped into saves (BuildInfo.Version): Factory-<yyyyMMdd>-<commit>[-dirty], the name
+    package.sh gives the zip and VERSION.txt. package.sh passes its own name through the FACTORY_BUILD_VERSION
+    environment variable so the two always match; otherwise it comes from git, and is "dev" without git.
+  -->
+  <Target Name="StampFactoryBuildVersion" BeforeTargets="GetAssemblyAttributes">
+    <PropertyGroup>
+      <FactoryBuildVersion>$(FACTORY_BUILD_VERSION)</FactoryBuildVersion>
+    </PropertyGroup>
+    <Exec Condition="'$(FactoryBuildVersion)' == ''" Command="git rev-parse --short HEAD" WorkingDirectory="$(MSBuildProjectDirectory)" ConsoleToMSBuild="true" StandardOutputImportance="low" StandardErrorImportance="low" IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true" ContinueOnError="true" EchoOff="true">
+      <Output TaskParameter="ConsoleOutput" PropertyName="_FactoryCommit" />
+      <Output TaskParameter="ExitCode" PropertyName="_FactoryGitExit" />
+    </Exec>
+    <Exec Condition="'$(FactoryBuildVersion)' == '' and '$(_FactoryGitExit)' == '0'" Command="git status --porcelain --untracked-files=no" WorkingDirectory="$(MSBuildProjectDirectory)" ConsoleToMSBuild="true" StandardOutputImportance="low" StandardErrorImportance="low" IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true" ContinueOnError="true" EchoOff="true">
+      <Output TaskParameter="ConsoleOutput" PropertyName="_FactoryDirty" />
+    </Exec>
+    <PropertyGroup Condition="'$(FactoryBuildVersion)' == ''">
+      <FactoryBuildVersion Condition="'$(_FactoryGitExit)' == '0' and '$(_FactoryCommit)' != ''">Factory-$([System.DateTime]::Now.ToString('yyyyMMdd'))-$(_FactoryCommit)</FactoryBuildVersion>
+      <FactoryBuildVersion Condition="'$(FactoryBuildVersion)' != '' and '$(_FactoryDirty)' != ''">$(FactoryBuildVersion)-dirty</FactoryBuildVersion>
+      <FactoryBuildVersion Condition="'$(FactoryBuildVersion)' == ''">dev</FactoryBuildVersion>
+    </PropertyGroup>
+    <ItemGroup>
+      <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+        <_Parameter1>FactoryBuildVersion</_Parameter1>
+        <_Parameter2>$(FactoryBuildVersion)</_Parameter2>
+      </AssemblyAttribute>
+    </ItemGroup>
+  </Target>
 </Project>

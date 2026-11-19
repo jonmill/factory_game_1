@@ -23,7 +23,7 @@ biosphere) until any three of the four terraformable planets are ready. Then you
    multiplayer = exchange commands per tick; host-authoritative = send commands to the host.
 2. **Determinism:** fixed 60 Hz ticks, integer/fixed-point math only (1 tile = 1024 sub-units), seeded
    `Rng`, sorted iteration. `World.Checksum()` hashes state for desync detection and regression tests.
-3. **Replays are saves:** seed + command log (`Replay`). F5/F9 in game. Snapshot saves are a later
+3. **Replays are saves:** seed + command log (`Replay`); see [Saves](#saves). Snapshot saves are a later
    optimization for long games.
 4. Planets update independently (`Planet.Update`). Research is colony-wide; units have an `OwnerPlayer`.
 
@@ -50,7 +50,37 @@ flies the ferry to Rime, `5` adds the Clean Age set: solar, wind, a payload laun
 nearest building of that type, e.g. `burner-smelter`, or `helper` for a helper bot), `FACTORY_REPLAY=/path.replay.json`
 (loads a headless replay and centres on the lander) `FACTORY_ZOOM=<f>` (initial camera zoom,
 used with the replay) and `FACTORY_HINTS=0|1|fresh` (force the guide off or on; `fresh` also ignores and never writes
-`settings.cfg`, so every tip shows again).
+`settings.cfg`, so every tip shows again). For saves: `FACTORY_WINDOW=save|load`, `FACTORY_SAVE=<name>` (saves once
+the game is set up, e.g. after a demo), `FACTORY_LOAD=<name>` (starts loading a save), `FACTORY_SAVE_DIR=<dir>` (use
+another saves folder, so automated runs leave the real one alone), `FACTORY_AUTOSAVE_SECONDS=<n>` and
+`FACTORY_LOAD_BUDGET_MS=<ms>` (replay time per frame; small values slow loading down to screenshot the bar).
+
+### Saves
+
+Esc opens the game menu; **Save game** lists the saves and takes a name (picking a save in the list, or typing
+an existing name, asks before overwriting it), and **Load game** lists them with the time saved, in-game time
+played, the planet being viewed and the build that wrote each one, plus Load and Delete (which asks first,
+inline). F5 / F9 quicksave and quickload the "Quicksave" slot, and the game autosaves every 10 minutes of
+unpaused play into the oldest of "Autosave 1" to "Autosave 3".
+
+Saves are `user://saves/<name>.json`: on Windows `%APPDATA%\Godot\app_userdata\Factory 1 (working title)\saves\`,
+on macOS `~/Library/Application Support/Godot/app_userdata/Factory 1 (working title)/saves/`. A quicksave from an
+older build (`user://quicksave.replay.json`) shows up as "Quicksave". Each file is one `Replay` as JSON:
+`Version`, `Build`, `Meta` (name, real time saved, viewed planet), the world settings, `ContentHash`, `FinalTick`,
+`FinalChecksum`, then `Commands` last, so the lists read just the header (`Replay.ReadHeader`).
+
+Versioning: `Replay.CurrentVersion` (2) is written; `Replay.MinSupportedVersion` (1) is the oldest that loads.
+`Replay.Check` runs on the header before the commands are parsed: a format outside that range is refused with a
+reason (greyed out in the list), a different `ContentHash` (the game data changed) loads with a warning, and a
+checksum that doesn't match `FinalChecksum` after loading is reported. Format 1 is format 2 without `Build` and
+`Meta`. Bump `CurrentVersion` whenever an older build couldn't read what a newer one writes (a new or changed
+command, a new world setting), and raise `MinSupportedVersion` only when old saves can no longer replay. `Build`
+is `BuildInfo.Version`: `Factory-<date>-<commit>[-dirty]` from git at build time (`package.sh` passes the same name
+it writes to `VERSION.txt`), or `dev` without git.
+
+Loading replays the command log (`ReplayPlayback`) about 20 ms per frame behind a progress bar, with input
+blocked; the old game stays frozen underneath until the new world is ready, and Cancel goes back to it. Stepping
+in batches gives exactly the world `Replay.Play` does (a test checks the checksum).
 
 ### Interface size and the guide
 
@@ -80,7 +110,7 @@ window shortcuts; and up to five message lines that fade out.
 | Left-click a machine, crate or helper bot | Opens it beside your pockets (a bot shows its module slots); hover anything for quick info |
 | Drag · Shift-click · Ctrl/Cmd-click · right-click | Move a stack between pockets and a machine or storage · one stack · all of that item · half |
 | F | Unload pockets into the nearest lander or crate |
-| Space · + / − · F5 / F9 | Pause · game speed · quicksave / quickload |
+| Space · + / − · F5 / F9 | Pause · game speed · quicksave / quickload (named saves: Esc → Save game / Load game) |
 
 ## Packaging a playtest build (Windows)
 
