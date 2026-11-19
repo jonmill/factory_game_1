@@ -9,7 +9,7 @@ namespace Factory.Sim;
 public sealed partial class Planet
 {
     /// <summary>Jobs a helper bot can take with no modules at all.</summary>
-    private static readonly JobKind[] _baseJobs = [JobKind.Idle, JobKind.Gather, JobKind.Haul];
+    private static readonly JobKind[] _baseJobs = [JobKind.Idle, JobKind.Gather, JobKind.Haul, JobKind.Explore];
 
     /// <summary>How many module slots a robot has: its chassis, plus research for the commander.</summary>
     /// <param name="u">The robot.</param>

@@ -82,6 +82,9 @@ public sealed partial class Planet
             case JobKind.OperateTrain:
                 UpdateOperator(u);
                 break;
+            case JobKind.Explore:
+                UpdateExplore(u);
+                break;
             default:
                 // Idle followers drop off anything they carry so nothing gets stranded.
                 if (u.Carry.IsEmpty == false)
@@ -288,7 +291,7 @@ public sealed partial class Planet
         return u.Carry.IsEmpty;
     }
 
-    /// <summary>Nearest unoccupied tile holding the given resource, or null if none remain.</summary>
+    /// <summary>Nearest explored, unoccupied tile holding the given resource, or null if none has been found.</summary>
     /// <param name="fromTile">Tile to measure distance from (wrapped).</param>
     /// <param name="res">Resource to look for.</param>
     public Int2? FindNearestResource(Int2 fromTile, ResourceDef res)
@@ -300,7 +303,7 @@ public sealed partial class Planet
             for (int x = 0; x < Width; x++)
             {
                 Int2 t = new Int2(x, y);
-                if ((ResourceAt(t) != res) || (OccupantAt(t) != 0))
+                if ((ResourceAt(t) != res) || (OccupantAt(t) != 0) || (IsExplored(t) == false))
                 {
                     continue;
                 }
@@ -342,7 +345,7 @@ public sealed partial class Planet
                     Int2? t = FindNearestResource(u.Tile, res);
                     if (t is null)
                     {
-                        u.Status = $"No {res.Name} left nearby";
+                        u.Status = HasResource(res.Id) ? $"No {res.Name} found yet: explore to find more" : $"No {res.Name} left nearby";
                         u.Phase = UnitPhase.Wait;
                         u.WaitTicks = 180;
 

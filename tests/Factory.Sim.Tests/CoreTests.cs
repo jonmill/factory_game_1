@@ -72,6 +72,7 @@ public class CoreTests
     {
         World w = new World(TestWorld.Content, new WorldSettings { Seed = 42 });
         Planet p = w.Planets[0];
+        p.RevealAll(); // look at the whole map, not just what has been explored
         Int2 center = new Int2(p.Width / 2, p.Height / 2);
         foreach (string? id in new[] { "siderite", "cuprite", "carbon", "regolith" })
         {

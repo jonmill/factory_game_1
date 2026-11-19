@@ -191,7 +191,7 @@ public sealed partial class GoalBot
                     continue;
                 }
 
-                if (Tiles(there, drill, o, Dir.North).Count(t => there.ResourceAt(t) == res) >= 2)
+                if (Tiles(there, drill, o, Dir.North).Count(t => there.KnownResourceAt(t) == res) >= 2)
                 {
                     chosen.Add((drill, o, Dir.North));
                 }

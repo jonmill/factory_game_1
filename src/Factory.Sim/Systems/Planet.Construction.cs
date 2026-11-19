@@ -26,6 +26,11 @@ public sealed partial class Planet
         }
 
         (int w, int h) = SizeOf(def, rot);
+        if (IsAreaExplored(origin, def.Kind == BuildingKind.Rail ? 1 : w, def.Kind == BuildingKind.Rail ? 1 : h) == false)
+        {
+            return "That area hasn't been explored yet";
+        }
+
         if (def.Kind == BuildingKind.Rail)
         {
             if (IsRail(origin))

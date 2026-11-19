@@ -72,6 +72,10 @@ public sealed class BuildingDef
     public string[] Fuels { get; init; } = [];
     /// <summary>Machine module slots (climate amplifiers and the like); 0 for none.</summary>
     public int ModuleSlots { get; init; }
+    /// <summary>How far, in tiles, the building uncovers the map around it once built; 0 picks a default from its size.</summary>
+    public int Sight { get; init; }
+    /// <summary>The sight radius in effect: <see cref="Sight"/>, or three tiles past the edge of the footprint.</summary>
+    [System.Text.Json.Serialization.JsonIgnore] public int SightTiles => Sight > 0 ? Sight : (System.Math.Max(W, H) / 2) + 3;
     /// <summary>The most of this building that can stand on one planet; 0 for no limit.</summary>
     public int MaxPerPlanet { get; init; }
     /// <summary>Logistics stations: how many drones fly its supplies around the planet.</summary>

@@ -13,6 +13,8 @@ public enum JobKind
     Haul,
     /// <summary>Board a train and operate it (hand carts need an operator aboard to move).</summary>
     OperateTrain,
+    /// <summary>Walk an outward spiral from the base, uncovering the map.</summary>
+    Explore,
     /// <summary>Directly controlled by the player (the leader); no AI runs.</summary>
     Manual,
 }

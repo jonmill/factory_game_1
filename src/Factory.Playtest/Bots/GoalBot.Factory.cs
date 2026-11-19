@@ -36,7 +36,7 @@ public sealed partial class GoalBot
     private int AgeReached() => C.AgeList.Select((a, i) => (a, i)).Where(x => C.TechList.Any(t => (t.Age == x.a.Id) && _w.Research.Completed.Contains(t.Id))).Select(x => x.i).DefaultIfEmpty(0).Max();
 
     private List<Column> Columns() => P.Buildings.Where(b => b.Def.Kind == BuildingKind.Drill)
-        .Select(b => new Column(b, P.BuildingAt(b.FrontTile()), b.Footprint().Select(t => P.ResourceAt(t)).FirstOrDefault(r => r is { IsTree: false })?.Id ?? ""))
+        .Select(b => new Column(b, P.BuildingAt(b.FrontTile()), b.Footprint().Select(t => P.KnownResourceAt(t)).FirstOrDefault(r => r is { IsTree: false })?.Id ?? ""))
         .ToList();
 
     /// <summary>Furnaces fed by a drill: nobody needs to carry ore to them.</summary>
@@ -227,7 +227,7 @@ public sealed partial class GoalBot
             {
                 (int dw, int dh) = Planet.SizeOf(drill, rot);
                 Int2 d = t;
-                if (Enumerable.Range(0, dw).SelectMany(x => Enumerable.Range(0, dh).Select(y => P.Torus.Wrap(d + new Int2(x, y)))).Count(x => P.ResourceAt(x) == rd) < 3)
+                if (Enumerable.Range(0, dw).SelectMany(x => Enumerable.Range(0, dh).Select(y => P.Torus.Wrap(d + new Int2(x, y)))).Count(x => P.KnownResourceAt(x) == rd) < 3)
                 {
                     continue;
                 }
@@ -327,7 +327,7 @@ public sealed partial class GoalBot
             foreach (Int2 d in Placement.Ring(r))
             {
                 Int2 t = P.Torus.Wrap(near + d);
-                if ((P.ResourceAt(t) == res) && (P.OccupantAt(t) == 0))
+                if ((P.KnownResourceAt(t) == res) && (P.OccupantAt(t) == 0))
                 {
                     found.Add(t);
                 }
@@ -444,7 +444,7 @@ public sealed partial class GoalBot
     }
 
     private bool HasOreUnder(Int2 origin, int w, int h) =>
-        Enumerable.Range(0, w).SelectMany(x => Enumerable.Range(0, h).Select(y => P.Torus.Wrap(origin + new Int2(x, y)))).Any(t => P.ResourceAt(t) is { IsTree: false });
+        Enumerable.Range(0, w).SelectMany(x => Enumerable.Range(0, h).Select(y => P.Torus.Wrap(origin + new Int2(x, y)))).Any(t => P.KnownResourceAt(t) is { IsTree: false });
 
     /// <summary>
     /// Refineries, orbital collectors and the like run whatever recipe of their category is most wanted; a

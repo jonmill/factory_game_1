@@ -19,7 +19,12 @@ public sealed record MineTile(int UnitId, Int2? Tile) : Command
             return "Not your leader";
         }
 
-        if ((Tile is { } t) && (u.Planet.ResourceAt(t) is null))
+        if ((Tile is { } t) && (u.Planet.IsExplored(t) == false))
+        {
+            return "That area hasn't been explored yet";
+        }
+
+        if ((Tile is { } t2) && (u.Planet.ResourceAt(t2) is null))
         {
             return "Nothing to mine there";
         }

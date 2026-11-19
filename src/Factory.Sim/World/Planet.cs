@@ -70,6 +70,9 @@ public sealed partial class Planet
         _amount = new int[n];
         _rail = new bool[n];
         _occupant = new int[n];
+        _explored = new bool[n];
+        _fogChunksX = (width + FogChunk - 1) / FogChunk;
+        _fogVersions = new int[_fogChunksX * ((height + FogChunk - 1) / FogChunk)];
     }
 
     private int Index(Int2 t)
@@ -226,6 +229,7 @@ public sealed partial class Planet
             SetOccupant(t, b.Id);
         }
 
+        Reveal(Fixed.ToTile(b.CenterSub), def.SightTiles);
         Buildings.Add(b);
         World.Register(b);
         World.Stats.RecordBuilt(def.Id, Id, Buildings.Count(x => x.Def.Id == def.Id));
@@ -395,6 +399,7 @@ public sealed partial class Planet
         foreach (Unit u in Units.ToArray())
         {
             UpdateUnit(u);
+            RevealAround(u);
         }
 
         UpdateTrains();
@@ -415,6 +420,7 @@ public sealed partial class Planet
         {
             h.Add(_amount[i]);
             h.Add(_rail[i]);
+            h.Add(_explored[i]);
         }
 
         foreach (Building b in Buildings)
@@ -495,6 +501,7 @@ public sealed partial class Planet
             h.Add(string.Join(",", u.Modules));
             h.Add(u.BuildingSiteId);
             h.Add(u.WalkTarget ?? new Int2(-1, -1));
+            h.Add(u.ExploreIndex);
             u.Carry.Hash(h);
         }
 

@@ -8,8 +8,9 @@ namespace Factory.Game;
 public partial class Hud
 {
     private const int BuildOption = 1;
+    private const int ExploreOption = 2;
 
-    /// <summary>The job picker's entries: Idle, Build, one Gather per resource on this planet, then Haul and Operate train.</summary>
+    /// <summary>The job picker's entries: Idle, Build, Explore, one Gather per resource on this planet, then Haul and Operate train.</summary>
     private readonly List<(string Label, Job? Job)> _jobOptions = [];
     private int _jobOptionsPlanet = -1;
 
@@ -29,6 +30,7 @@ public partial class Hud
         _jobOptions.Clear();
         _jobOptions.Add(("Idle", Job.Idle));
         _jobOptions.Add(("Build", new Job(JobKind.Build)));
+        _jobOptions.Add(("Explore", new Job(JobKind.Explore)));
         HashSet<string> here = P.Def.Resources.Select(r => r.Resource).ToHashSet();
         if (P.Def.Biomes.Any(b => C.Biomes.TryGetValue(b.Biome, out BiomeDef? def) && (def.Trees > 0)))
         {
@@ -65,6 +67,7 @@ public partial class Hud
     private int JobIndex(Job j) => j.Kind switch
     {
         JobKind.Build => BuildOption,
+        JobKind.Explore => ExploreOption,
         JobKind.Gather => System.Math.Max(0, _jobOptions.FindIndex(o => o.Job?.Resource == j.Resource)),
         JobKind.Haul => HaulOption,
         JobKind.OperateTrain => TrainOption,

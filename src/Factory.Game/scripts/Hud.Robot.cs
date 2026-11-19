@@ -126,7 +126,7 @@ public partial class Hud
         if (u.IsLeader == false)
         {
             sb.AppendLine($"Job: {JobLabel(u.Job)}");
-            string[] jobs = [.. new[] { JobKind.Gather, JobKind.Haul, JobKind.Build, JobKind.OperateTrain }.Where(k => P.CanTakeJob(u, k)).Select(k => JobLabel(new Job(k)))];
+            string[] jobs = [.. new[] { JobKind.Gather, JobKind.Haul, JobKind.Explore, JobKind.Build, JobKind.OperateTrain }.Where(k => P.CanTakeJob(u, k)).Select(k => JobLabel(new Job(k)))];
             sb.AppendLine($"Can do: {string.Join(", ", jobs)}");
         }
 

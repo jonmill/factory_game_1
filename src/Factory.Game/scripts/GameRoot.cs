@@ -73,6 +73,7 @@ public partial class GameRoot : Node2D
 
     private TerrainLayer _terrain = null!;
     private WorldView _view = null!;
+    private FogLayer _fog = null!;
     private Hud _hud = null!;
     private double _acc;
     private Int2 _lastIntent;
@@ -116,6 +117,8 @@ public partial class GameRoot : Node2D
         AddChild(_terrain);
         _view = new WorldView { Root = this };
         AddChild(_view);
+        _fog = new FogLayer { Root = this };
+        AddChild(_fog);
         _hud = new Hud { Root = this };
         AddChild(_hud);
         Notify($"Platform: {PlatformServices.Name}. Press H for controls, G for the guide.", Colors.LightSkyBlue);
@@ -330,6 +333,7 @@ public partial class GameRoot : Node2D
         }
 
         _terrain.Refresh(delta);
+        _fog.Refresh(delta);
 
         _view.QueueRedraw();
     }
@@ -753,7 +757,7 @@ public partial class GameRoot : Node2D
         }
     }
 
-    private bool Mineable(Int2 tile) => (Planet.ResourceAt(tile) is not null) && (Planet.OccupantAt(tile) == 0);
+    private bool Mineable(Int2 tile) => (Planet.KnownResourceAt(tile) is not null) && (Planet.OccupantAt(tile) == 0);
 
     /// <summary>Holding right-click and sweeping over ore retargets mining to the tile under the cursor.</summary>
     private void SweepMining()

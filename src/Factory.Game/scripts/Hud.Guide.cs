@@ -269,6 +269,10 @@ public partial class Hud
         IEnumerable<Building> Mine() => Root.Leader.Planet.Buildings;
         bool Any(MachineStatus s, System.Func<Building, bool>? filter = null) => Mine().Any(b => (b.Status == s) && (filter?.Invoke(b) ?? true));
 
+        _tips.Add(new GuideTip("explore",
+            "Most of the planet is still unexplored, and robots only work ground that has been seen. Set a helper " +
+            "bot's job to Explore (left panel) and it walks an outward spiral from the lander, uncovering deposits.",
+            () => (W.Tick > 3 * 60 * World.TicksPerSecond) || P.Units.Any(u => u.Status.Contains("found yet", System.StringComparison.Ordinal))));
         _tips.Add(new GuideTip("no-fuel",
             "A burner machine has stopped for fuel. Click it and drag biomass or compacted carbon into its fuel slot; " +
             "a helper bot set to Haul… can keep it topped up.",

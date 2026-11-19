@@ -70,7 +70,7 @@ public sealed partial class GoalBot
 
     /// <summary>The outpost ores the drills facing this station mine.</summary>
     private List<ResourceDef> StationOres(Planet p, Building station) => OutpostOres(p)
-        .Where(r => p.Buildings.Any(d => (d.Def.Kind == BuildingKind.Drill) && (p.BuildingAt(d.FrontTile())?.Id == station.Id) && Tiles(p, d.Def, d.Origin, d.Rot).Any(t => p.ResourceAt(t) == r)))
+        .Where(r => p.Buildings.Any(d => (d.Def.Kind == BuildingKind.Drill) && (p.BuildingAt(d.FrontTile())?.Id == station.Id) && Tiles(p, d.Def, d.Origin, d.Rot).Any(t => p.KnownResourceAt(t) == r)))
         .ToList();
 
     /// <summary>Whether a planet gets a climate engine: it is one of the planets being terraformed.</summary>
@@ -413,6 +413,20 @@ public sealed partial class GoalBot
             BotPlan plan = new BotPlan();
             if (placed == false)
             {
+                // Find the ores first: the layout can only use ground that has been explored.
+                if (OutpostOres(there).Any(r => there.FindNearestResource(Placement.Center(ferry), r) is null))
+                {
+                    foreach (Unit h in there.Units.Where(u => (u.IsLeader == false) && (u.OwnerPlayer == Player) && (u.Job.Kind != JobKind.Explore)))
+                    {
+                        Send(new AssignJob(h.Id, new Job(JobKind.Explore)));
+                    }
+
+                    if (Scout(leader, there, Placement.Center(ferry)))
+                    {
+                        return true;
+                    }
+                }
+
                 foreach ((BuildingDef def, Int2 origin, Dir rot) in LayOutOutpost(there, ferry))
                 {
                     Send(new PlaceBuilding(def.Id, origin, rot));
@@ -545,7 +559,7 @@ public sealed partial class GoalBot
                 foreach ((Int2 at, Dir rot) in slots)
                 {
                     Int2 origin = there.Torus.Wrap(o + at);
-                    int ore = Enumerable.Range(0, 2).SelectMany(x => Enumerable.Range(0, 2).Select(y => there.Torus.Wrap(origin + new Int2(x, y)))).Count(t => ores.Contains(there.ResourceAt(t)!));
+                    int ore = Enumerable.Range(0, 2).SelectMany(x => Enumerable.Range(0, 2).Select(y => there.Torus.Wrap(origin + new Int2(x, y)))).Count(t => ores.Contains(there.KnownResourceAt(t)!));
                     if ((parts.Count(p => p.Def == drill) < OutpostDrills) && (ore >= 2) && Free(drill, origin, rot))
                     {
                         parts.Add((drill, origin, rot));

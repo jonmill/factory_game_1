@@ -59,6 +59,10 @@ public sealed class Unit : Entity
     // Walking
     /// <summary>Waypoints (sub-unit positions) of the path being walked, next one first; empty when walking straight.</summary>
     public List<Int2> Path { get; } = [];
+    /// <summary>Explore job: the index of the spiral point the robot is heading for or will look at next.</summary>
+    public int ExploreIndex { get; internal set; }
+    /// <summary>The tile and planet the robot last uncovered the map from, so it only does so when it moves.</summary>
+    internal (int Planet, Int2 Tile)? SightFrom { get; set; }
     /// <summary>Where the current path leads, so a moved target triggers a new one.</summary>
     internal Int2 PathGoal { get; set; }
     /// <summary>How close the current path needs to get, so a changed reach triggers a new one.</summary>

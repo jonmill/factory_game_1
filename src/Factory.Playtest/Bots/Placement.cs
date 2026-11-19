@@ -74,7 +74,7 @@ public static class Placement
         {
             for (int x = 0; x < w; x++)
             {
-                if (p.ResourceAt(new Int2(origin.X + x, origin.Y + y)) is { IsTree: false })
+                if (p.KnownResourceAt(new Int2(origin.X + x, origin.Y + y)) is { IsTree: false })
                 {
                     return true;
                 }

@@ -93,6 +93,15 @@ public sealed partial class World
             WorldGen.Generate(planet, new Rng(planetSeed), settings);
         }
 
+        if (settings.EmptyPlanet)
+        {
+            // Empty worlds are test benches: nothing to discover, so everything is in view.
+            foreach (Planet p in Planets)
+            {
+                p.RevealAll();
+            }
+        }
+
         SetupStart(Planets[0]);
     }
 

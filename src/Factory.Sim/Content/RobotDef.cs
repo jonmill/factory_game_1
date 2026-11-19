@@ -17,6 +17,8 @@ public sealed class RobotDef
     public int CarrySlots { get; init; } = 4;
     /// <summary>How far, in tiles, the robot builds ghosts by itself as it goes; 0 for none.</summary>
     public int BuildReach { get; init; }
+    /// <summary>How far, in tiles, the robot uncovers the map around it as it moves.</summary>
+    public int Sight { get; init; } = 7;
     /// <summary>Short description for the robot window.</summary>
     public string Description { get; init; } = "";
 }

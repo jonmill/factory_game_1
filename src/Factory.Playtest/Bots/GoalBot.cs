@@ -138,6 +138,11 @@ public sealed partial class GoalBot : IBot
                     {
                         Send(new MineTile(away.Id, tile));
                     }
+                    else if ((away.MiningTile is null) && (there.FindNearestResource(away.Tile, res) is null))
+                    {
+                        // Not found yet: go and look for it.
+                        Scout(away, there, Placement.Center(ferry));
+                    }
 
                     return true;
                 }
@@ -478,7 +483,7 @@ public sealed partial class GoalBot : IBot
                 Int2 t = P.Torus.Wrap(at + new Int2(dx, dy));
                 long d = P.SubTorus.DistSq(Fixed.TileCenter(t), Fixed.TileCenter(goal));
                 bool inReach = P.SubTorus.DistSq(leader.Pos, Fixed.TileCenter(t)) <= (long)Planet.LeaderMineReachTiles * Fixed.One * Planet.LeaderMineReachTiles * Fixed.One;
-                if (inReach && (P.ResourceAt(t) is { IsTree: true }) && (d < bestDist))
+                if (inReach && (P.KnownResourceAt(t) is { IsTree: true }) && (d < bestDist))
                 {
                     best = t;
                     bestDist = d;
@@ -1477,6 +1482,12 @@ public sealed partial class GoalBot : IBot
             {
                 needs.Add(new Job(JobKind.Haul, FromId: other.Id, ToId: lander.Id, Item: item));
             }
+        }
+
+        // Something this planet has hasn't turned up yet: send a helper bot to explore.
+        if (WantExplorer())
+        {
+            needs.Add(new Job(JobKind.Explore));
         }
 
         // Raw materials, biggest gathering backlog first.

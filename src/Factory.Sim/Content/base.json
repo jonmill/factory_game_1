@@ -170,7 +170,7 @@
   ],
 
   "buildings": [
-    { "id": "lander", "name": "Colony Lander", "kind": "Lander", "look": "HighTech", "w": 3, "h": 3, "buildable": false,
+    { "id": "lander", "name": "Colony Lander", "kind": "Lander", "look": "HighTech", "w": 3, "h": 3, "buildable": false, "sight": 18,
       "slots": 64, "speed": 50, "categories": ["crafting"], "color": "#7fd8ff",
       "description": "Your ship. Stores supplies and has a slow fabricator for crafting." },
 
@@ -264,7 +264,7 @@
       "slots": 32, "vessel": "ferry-rocket", "launchFuel": { "kerogen-fuel": 20 }, "landsAs": "ferry", "color": "#b0b4bc",
       "description": "Load a Ferry Rocket and 20 Kerogen Fuel, plus any cargo, then fly to another planet. The ferry can always fly home." },
 
-    { "id": "ferry", "name": "Landed Ferry", "kind": "Ferry", "age": "combustion", "w": 3, "h": 3, "buildable": false,
+    { "id": "ferry", "name": "Landed Ferry", "kind": "Ferry", "age": "combustion", "w": 3, "h": 3, "sight": 12, "buildable": false,
       "slots": 32, "color": "#e0e0e8",
       "description": "Your ferry, landed. Its hold is storage. Fly home from here at any time: it carries return fuel and recalls your helper bots." },
 
@@ -613,7 +613,7 @@
   },
 
   "robots": [
-    { "id": "commander", "name": "Commander", "moduleSlots": 2, "speed": 130, "carrySlots": 20, "buildReach": 8, "miningPct": 120,
+    { "id": "commander", "name": "Commander", "moduleSlots": 2, "speed": 130, "carrySlots": 20, "buildReach": 8, "miningPct": 120, "sight": 10,
       "description": "Sent ahead by the settlers. Builds ghosts within reach by itself and supplies them from its pockets." },
     { "id": "helper-mk1", "name": "Helper Bot Mk1", "moduleSlots": 1, "speed": 90, "carrySlots": 4, "miningPct": 50,
       "description": "A simple tracked worker. Gathers and hauls; modules teach it more." },

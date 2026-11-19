@@ -120,10 +120,12 @@ public sealed class ChaosBot(ulong seed, int actionsPerMinute = 30, int player =
     private Job RandomJob(World w, Planet p)
     {
         ContentDb c = w.Content;
-        switch (_rng.Range(0, 6))
+        switch (_rng.Range(0, 7))
         {
             case 0:
                 return Job.Idle;
+            case 6:
+                return new Job(JobKind.Explore);
             case 1:
                 return new Job(JobKind.Build);
             case 2:
