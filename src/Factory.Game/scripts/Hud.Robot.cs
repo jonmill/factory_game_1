@@ -18,6 +18,7 @@ public partial class Hud
     private Label _robotTitle = null!, _robotInfo = null!, _robotReach = null!;
     private GridContainer _robotPockets = null!, _robotCargo = null!;
     private HBoxContainer _robotModules = null!;
+    private Slot _robotWork = null!;
     private string? _robotSig;
     private int _robotId;
 
@@ -48,7 +49,15 @@ public partial class Hud
         _robotModules = new HBoxContainer();
         _robotModules.AddThemeConstantOverride("separation", 4);
         right.AddChild(_robotModules);
-        right.AddChild(HudStyle.Title("Cargo", 11));
+        // Cargo, with what the bot is gathering or building (and its progress ring) at the end of the row.
+        HBoxContainer cargoHead = new HBoxContainer();
+        Label cargoTitle = HudStyle.Title("Cargo", 11);
+        cargoTitle.SizeFlagsVertical = Control.SizeFlags.ShrinkEnd;
+        cargoHead.AddChild(cargoTitle);
+        cargoHead.AddChild(new Control { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill });
+        _robotWork = new Slot(34) { MouseFilter = Control.MouseFilterEnum.Pass };
+        cargoHead.AddChild(_robotWork);
+        right.AddChild(cargoHead);
         _robotCargo = new GridContainer { Columns = 6 };
         _robotCargo.AddThemeConstantOverride("h_separation", 4);
         right.AddChild(_robotCargo);
@@ -78,6 +87,7 @@ public partial class Hud
             ? "Drag a module onto a free slot, or click it in your pockets.   Click a module slot to take it out."
             : "Out of reach: walk the commander closer to change its modules.";
         _robotReach.AddThemeColorOverride("font_color", reach ? HudStyle.TextDim : HudStyle.Bad);
+        ShowActivity(_robotWork, u);
 
         if (Slot.Dragging is not null)
         {

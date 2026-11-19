@@ -30,6 +30,11 @@ public sealed class Building : Entity
     public int Satisfaction { get; internal set; }
     /// <summary>Id of the power network the building belongs to, or 0 when it is not connected.</summary>
     public int NetworkId { get; internal set; }
+    /// <summary>
+    /// The fuel item the stored <see cref="FuelJ"/> came from, so the HUD can show how much of it is left.
+    /// Display only: not part of the state hash.
+    /// </summary>
+    public string? BurningFuel { get; internal set; }
     /// <summary>Display name shown to the player.</summary>
     public string Name { get; internal set; } = "";
     /// <summary>

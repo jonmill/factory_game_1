@@ -19,7 +19,8 @@ public partial class Hud
     private Label _machineTitle = null!, _machineInfo = null!, _machineReach = null!;
     private GridContainer _machinePockets = null!;
     private VBoxContainer _machineBody = null!, _machineActions = null!;
-    private ProgressBar _machineProgress = null!;
+    /// <summary>The fuel slots (ring: what's left of the fuel burning) and the slots that show the current cycle's progress.</summary>
+    private readonly List<Slot> _fuelSlots = [], _workSlots = [];
     private string? _machineSig, _machinePocketSig;
     private int _machineId;
 
@@ -54,9 +55,6 @@ public partial class Hud
         _machineBody = new VBoxContainer();
         _machineBody.AddThemeConstantOverride("separation", 6);
         right.AddChild(_machineBody);
-        _machineProgress = HudStyle.Bar(380, 6);
-        HudStyle.Tint(_machineProgress, HudStyle.Orange);
-        right.AddChild(_machineProgress);
         _machineActions = new VBoxContainer();
         right.AddChild(_machineActions);
         cols.AddChild(right);
@@ -121,9 +119,10 @@ public partial class Hud
             ? TransferHint
             : "Out of reach: walk the commander closer to move items by hand. Sorter arms still feed and empty it.";
         _machineReach.AddThemeColorOverride("font_color", reach ? HudStyle.TextDim : HudStyle.Bad);
-        float progress = (b.Crafting && (b.Recipe is { } r)) ? Mathf.Clamp(b.Progress / (float)(r.Ticks * 100), 0, 1) : 0;
-        _machineProgress.Value = progress;
-        _machineProgress.Visible = b.Def.IsStorage == false;
+        // Progress rings, as in the replicator: the cycle under way, and the fuel burning down.
+        float work = WorkProgress(b), fuel = FuelLeft(b);
+        _workSlots.ForEach(s => Ring(s, work));
+        _fuelSlots.ForEach(s => Ring(s, fuel));
 
         // Rebuilding mid-drag would free the slot being dragged, so the slots wait until it's dropped.
         if (Slot.Dragging is not null)
@@ -141,7 +140,7 @@ public partial class Hud
 
         // The third part changes whenever the action controls need rebuilding: recipe, launch target or station settings.
         string actionsKey = $"{b.RecipeId};{b.TargetPlanetId};{string.Join(",", b.Modules)};" + string.Join(",", b.StationSlots.Select(s => $"{s.Item}:{s.Mode}"));
-        string sig = $"{b.Id}|{reach}|{actionsKey}|" + string.Join(",", b.Inv.Items.Select(kv => $"{kv.Key}:{kv.Value}")) + "|" +
+        string sig = $"{b.Id}|{reach}|{actionsKey}|{b.BurningFuel}|" + string.Join(",", b.Inv.Items.Select(kv => $"{kv.Key}:{kv.Value}")) + "|" +
                      string.Join(",", b.Out.Items.Select(kv => $"{kv.Key}:{kv.Value}"));
         if (sig != _machineSig)
         {
@@ -228,6 +227,8 @@ public partial class Hud
     private void FillMachine(Building b, bool reach)
     {
         Clear(_machineBody);
+        _fuelSlots.Clear();
+        _workSlots.Clear();
         if (b.Def.IsStorage)
         {
             _machineBody.AddChild(HudStyle.Title($"Contents   {b.Inv.UsedSlots} / {b.Inv.Slots}", 11));
@@ -258,9 +259,16 @@ public partial class Hud
 
         if (burner)
         {
-            List<(string Item, int Count, int Index)> fuel = Stacks(b.Inv).Where(s => C.IsFuel(s.Item)).ToList();
-            row.AddChild(Section("Fuel", fuel.Select(s => MachineItemSlot(b, s.Item, s.Count, InventoryPart.Input, reach, acceptsDrops: true))
-                .DefaultIfEmpty(EmptyMachineSlot(b, reach, null))));
+            List<Slot> fuel = Stacks(b.Inv).Where(s => C.IsFuel(s.Item))
+                .Select(s => MachineItemSlot(b, s.Item, s.Count, InventoryPart.Input, reach, acceptsDrops: true)).ToList();
+            if (fuel.Count == 0)
+            {
+                // The last piece of fuel is still burning: show it faintly, with its countdown.
+                fuel.Add(EmptyMachineSlot(b, reach, b.BurningFuel is { } burning ? new ItemAmount(burning, 1) : null));
+            }
+
+            _fuelSlots.AddRange(fuel.Take(1));
+            row.AddChild(Section("Fuel", fuel));
         }
 
         if (b.Def.Kind is BuildingKind.Furnace or BuildingKind.Assembler or BuildingKind.Lab or BuildingKind.RobotBay or BuildingKind.Terraformer or BuildingKind.Uplink or BuildingKind.PayloadLauncher)
@@ -278,6 +286,12 @@ public partial class Hud
                 inputs.Add(EmptyMachineSlot(b, reach, null));
             }
 
+            // Machines without an output (labs, terraformers, bays) show their progress on what they use up.
+            if (b.Def.Kind is not (BuildingKind.Furnace or BuildingKind.Assembler))
+            {
+                _workSlots.AddRange(inputs.OfType<Slot>());
+            }
+
             row.AddChild(Section("Input", inputs));
         }
 
@@ -291,6 +305,9 @@ public partial class Hud
             {
                 outputs.Add(new Slot(MachineSlot) { TooltipText = "Output" });
             }
+
+            // The ring goes on the product being made (the first output slot), as in the replicator.
+            _workSlots.AddRange(outputs.OfType<Slot>().Take(1));
 
             row.AddChild(Section("Output", outputs));
         }

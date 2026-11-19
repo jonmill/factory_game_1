@@ -48,7 +48,7 @@ public partial class Hud
     private PanelContainer _followerPanel = null!;
     private VBoxContainer _followers = null!;
     private int _followerSig = -1;
-    private readonly List<(Unit Unit, Label Name, Label Status, OptionButton Job)> _followerRows = [];
+    private readonly List<(Unit Unit, Label Name, Label Status, OptionButton Job, Slot Work)> _followerRows = [];
 
     private void BuildFollowers()
     {
@@ -111,15 +111,19 @@ public partial class Hud
 
                 opt.ItemSelected += i => OnJobPicked(unit, (int)i);
                 opt.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
+                // What the bot is gathering or building, with its progress ring.
+                Slot work = new Slot(28) { MouseFilter = Control.MouseFilterEnum.Pass, SizeFlagsVertical = Control.SizeFlags.ShrinkCenter };
                 row.AddChild(text);
+                row.AddChild(work);
                 row.AddChild(opt);
                 _followers.AddChild(row);
-                _followerRows.Add((unit, name, status, opt));
+                _followerRows.Add((unit, name, status, opt, work));
             }
         }
 
-        foreach ((Unit u, Label name, Label status, OptionButton opt) in _followerRows)
+        foreach ((Unit u, Label name, Label status, OptionButton opt, Slot work) in _followerRows)
         {
+            ShowActivity(work, u);
             status.Text = u.Status;
             status.TooltipText = u.Status;
             name.AddThemeColorOverride("font_color", Root.SelectedId == u.Id ? HudStyle.Orange : HudStyle.Text);

@@ -14,6 +14,7 @@ public partial class Hud
     private Label _commanderStatus = null!, _pocketText = null!;
     private ProgressBar _pocketBar = null!;
     private HBoxContainer _pocketPeek = null!;
+    private Slot _commanderWork = null!;
     private string? _peekSig;
     private readonly List<(HudWindow Window, Button Button)> _menuButtons = [];
 
@@ -43,10 +44,16 @@ public partial class Hud
         pockets.AddChild(_pocketText);
         v.AddChild(pockets);
 
+        // What the commander is mining or building, with its progress ring, then the fullest stacks.
+        HBoxContainer peekRow = new HBoxContainer();
+        peekRow.AddThemeConstantOverride("separation", 8);
+        _commanderWork = new Slot(34) { MouseFilter = Control.MouseFilterEnum.Pass };
+        peekRow.AddChild(_commanderWork);
         _pocketPeek = new HBoxContainer();
         _pocketPeek.AddThemeConstantOverride("separation", 3);
         _pocketPeek.CustomMinimumSize = new Vector2(0, 34);
-        v.AddChild(_pocketPeek);
+        peekRow.AddChild(_pocketPeek);
+        v.AddChild(peekRow);
 
         HBoxContainer menu = new HBoxContainer();
         menu.AddThemeConstantOverride("separation", 4);
@@ -74,6 +81,7 @@ public partial class Hud
         _commanderStatus.Text = leader.Status;
         _commanderStatus.AddThemeColorOverride("font_color", leader.MiningTile is null ? HudStyle.TextDim : HudStyle.Orange);
         _pocketText.Text = $"{carry.UsedSlots}/{carry.Slots}";
+        ShowActivity(_commanderWork, leader);
         double fill = carry.UsedSlots / (double)System.Math.Max(1, carry.Slots);
         _pocketBar.Value = fill;
         HudStyle.Tint(_pocketBar, fill >= 1 ? HudStyle.Bad : fill > 0.75 ? HudStyle.Orange : HudStyle.Header);

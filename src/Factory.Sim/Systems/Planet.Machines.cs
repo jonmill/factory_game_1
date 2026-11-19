@@ -140,6 +140,7 @@ public sealed partial class Planet
             b.Inv.Remove(fuel, 1);
             World.Stats.Record(ItemFlow.Fuel, fuel, 1, b.Def.Id, "", Id);
             b.FuelJ += c.Item(fuel).FuelKj * 1000L;
+            b.BurningFuel = fuel;
         }
 
         return true;
