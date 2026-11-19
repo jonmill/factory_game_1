@@ -57,22 +57,39 @@ public partial class Hud
     }
 
     /// <summary>Shows a robot's activity in a slot: its icon and progress ring, hidden when it's idle.</summary>
-    private void ShowActivity(Slot slot, Unit u)
+    /// <param name="slot">The slot.</param>
+    /// <param name="u">The robot.</param>
+    /// <param name="keepIdle">Show an idle robot's slot faded instead of hiding it (the compact bots grid).</param>
+    private void ShowActivity(Slot slot, Unit u, bool keepIdle = false)
     {
         Activity? a = UnitActivity(u);
         // Keep the slot's space while hidden so the panel doesn't jump as work starts and stops.
-        slot.Modulate = a is null ? Colors.Transparent : Colors.White;
+        slot.Modulate = a is not null ? Colors.White : keepIdle ? new Color(1, 1, 1, 0.5f) : Colors.Transparent;
         if (a is null)
         {
-            slot.TooltipText = "";
+            if (keepIdle && (slot.Icon is not null))
+            {
+                slot.Icon = null;
+                slot.QueueRedraw();
+            }
+
+            if (keepIdle == false)
+            {
+                slot.TooltipText = "";
+            }
 
             return;
         }
 
-        if (slot.TooltipText != a.What)
+        if ((slot.Icon is null) || (slot.GetMeta("what", "").AsString() != a.What))
         {
             slot.Icon = a.Icon;
-            slot.TooltipText = a.What;
+            slot.SetMeta("what", a.What);
+            if (keepIdle == false)
+            {
+                slot.TooltipText = a.What;
+            }
+
             slot.QueueRedraw();
         }
 

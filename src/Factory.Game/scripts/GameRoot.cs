@@ -1142,6 +1142,11 @@ public partial class GameRoot : Node2D
                 _hud.Toggle(window);
             }
 
+            if (System.Environment.GetEnvironmentVariable("FACTORY_JOBMENU") == "1")
+            {
+                _hud.DebugOpenJobMenu();
+            }
+
             if (int.TryParse(System.Environment.GetEnvironmentVariable("FACTORY_CATEGORY"), out int category))
             {
                 _hud.BuildKey(category - 1);

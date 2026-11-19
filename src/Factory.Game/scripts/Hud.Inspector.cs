@@ -18,15 +18,22 @@ public partial class Hud
     {
         _inspector = new PanelContainer();
         _ui.AddChild(_inspector);
+        _inspector.AddThemeStyleboxOverride("panel", HudStyle.Box(HudStyle.Bg, HudStyle.Line, 2, 7, 6));
         VBoxContainer v = new VBoxContainer();
-        v.AddThemeConstantOverride("separation", 6);
+        v.AddThemeConstantOverride("separation", 4);
         _inspector.AddChild(v);
-        _inspTitle = HudStyle.Title("", 14);
-        _inspBody = HudStyle.Caption("", null, 12);
+        _inspTitle = HudStyle.Title("", 12);
+        _inspBody = HudStyle.Caption("", null, 11);
         _inspBody.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-        _inspBody.CustomMinimumSize = new Vector2(320, 0);
+        _inspBody.CustomMinimumSize = new Vector2(MinimapSize + 10, 0);
         _inspGrids = new VBoxContainer();
         _inspActions = new VBoxContainer();
+        // Compact buttons, as in an entity info panel; the rest of the HUD theme still applies.
+        Theme compact = new Theme();
+        compact.SetFontSize("font_size", "Button", 11);
+        compact.SetFontSize("font_size", "Label", 11);
+        _inspActions.Theme = compact;
+        _inspGrids.Theme = compact;
         v.AddChild(_inspTitle);
         v.AddChild(HudStyle.Divider());
         v.AddChild(_inspBody);

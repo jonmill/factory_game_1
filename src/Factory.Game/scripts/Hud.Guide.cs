@@ -22,7 +22,7 @@ public partial class Hud
     /// <summary>A one-off tip, shown the first time its trigger holds and never again once seen.</summary>
     private sealed record GuideTip(string Id, string Text, System.Func<bool> Trigger);
 
-    private const float GuideWidth = 300;
+    private const float GuideWidth = MinimapSize + 50;
     private const double TipSeconds = 30;
 
     private readonly List<GuideStep> _steps = [];
@@ -40,7 +40,7 @@ public partial class Hud
     private void BuildGuide()
     {
         _guideCard = new PanelContainer { MouseFilter = Control.MouseFilterEnum.Stop };
-        _guideCard.AddThemeStyleboxOverride("panel", HudStyle.Box(HudStyle.Bg, HudStyle.Orange with { A = 0.6f }, 2, 12, 9));
+        _guideCard.AddThemeStyleboxOverride("panel", HudStyle.Box(HudStyle.Bg, HudStyle.Orange with { A = 0.6f }, 2, 8, 6));
         _ui.AddChild(_guideCard);
         VBoxContainer v = new VBoxContainer();
         v.AddThemeConstantOverride("separation", 4);
@@ -59,11 +59,11 @@ public partial class Hud
         header.AddChild(close);
         v.AddChild(header);
 
-        _guideTitle = HudStyle.Caption("", HudStyle.Orange, 14);
+        _guideTitle = HudStyle.Caption("", HudStyle.Orange, 12);
         _guideTitle.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         _guideTitle.CustomMinimumSize = new Vector2(GuideWidth, 0);
         v.AddChild(_guideTitle);
-        _guideHow = HudStyle.Caption("", HudStyle.Text, 12);
+        _guideHow = HudStyle.Caption("", HudStyle.Text, 11);
         _guideHow.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         _guideHow.CustomMinimumSize = new Vector2(GuideWidth, 0);
         v.AddChild(_guideHow);
@@ -80,7 +80,7 @@ public partial class Hud
         gotIt.AddThemeFontSizeOverride("font_size", 11);
         tipHeader.AddChild(gotIt);
         _tipBox.AddChild(tipHeader);
-        _tipText = HudStyle.Caption("", HudStyle.Good, 12);
+        _tipText = HudStyle.Caption("", HudStyle.Good, 11);
         _tipText.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         _tipText.CustomMinimumSize = new Vector2(GuideWidth, 0);
         _tipBox.AddChild(_tipText);
@@ -148,7 +148,7 @@ public partial class Hud
 
         _steps.Add(new GuideStep(
             "Put your helper bots to work",
-            "In the Helper Bots panel (top left), pick a job for each bot: \"Gather Fibrous Biomass\" for fuel, " +
+            "In the Helper Bots list (top left), click a bot's job button and pick a job: \"Gather Fibrous Biomass\" for fuel, " +
             "or an ore. They carry what they gather to the lander or the nearest crate.",
             () => MyHelpers.Any(u => u.Job.Kind == JobKind.Gather),
             Past: AnyResearch));
@@ -244,7 +244,7 @@ public partial class Hud
         _steps.Add(new GuideStep(
             "Start terraforming",
             "Research Atmospheric Processing (a Clean Age tech) and build an Atmosphere Processor (6, Terraform). Feed it Atmospheric " +
-            "Catalysts. The bars on the planet card (top left) show how close this planet is to ready.",
+            "Catalysts. The Settlers bar on the planet strip (top left) shows how close the system is; click the strip for this planet's bars.",
             () => BuiltOfKind(BuildingKind.Terraformer) > 0,
             () => ResearchProgress("atmospheric-processing"),
             Past: () => Researched("stellar-cores")));
@@ -396,6 +396,11 @@ public partial class Hud
         {
             return y;
         }
+
+        // While the inspector shows something, the guide shrinks to its objective so both fit the column.
+        bool compact = _inspector.Visible;
+        _guideHow.Visible = compact == false;
+        _guideProgress.Visible = compact == false;
 
         _guideCard.Size = Vector2.Zero;
         Vector2 m = _guideCard.GetCombinedMinimumSize();

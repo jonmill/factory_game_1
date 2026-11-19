@@ -5,8 +5,8 @@ using Godot;
 namespace Factory.Game;
 
 /// <summary>
-/// Terraforming on the planet card: the system-wide settler readiness meter, then this planet's stats
-/// (atmosphere, hydrosphere, biosphere) as bars. Every planet has to reach the bar before a Settler
+/// Terraforming on the planet strip: the system-wide settler readiness meter, and in its details this
+/// planet's stats (atmosphere, hydrosphere, biosphere) as bars. Every planet has to reach the bar before a Settler
 /// Uplink can call the settlers; once it has, a window announces the win.
 /// </summary>
 public partial class Hud
@@ -16,30 +16,35 @@ public partial class Hud
     private readonly List<(PlanetStatDef Stat, ProgressBar Bar, Label Value)> _statRows = [];
     private bool _victoryShown;
 
-    private void BuildTerraform(VBoxContainer into)
+    private void BuildTerraform(VBoxContainer into, VBoxContainer details)
     {
-        into.AddChild(new Control { CustomMinimumSize = new Vector2(0, 6) });
+        // The readiness meter always shows; this planet's stats are in the details the strip opens.
         HBoxContainer head = new HBoxContainer();
-        head.AddChild(HudStyle.Title("Settler readiness", 11));
-        head.AddChild(new Control { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill });
-        _readinessText = HudStyle.Caption("", HudStyle.Text, 11);
+        head.AddThemeConstantOverride("separation", 6);
+        Label title = HudStyle.Caption("Settlers", HudStyle.TextDim, 10);
+        _readinessBar = HudStyle.Bar(120, 4);
+        _readinessBar.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
+        _readinessBar.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        HudStyle.Tint(_readinessBar, new Color(1f, 0.85f, 0.4f));
+        _readinessText = HudStyle.Caption("", HudStyle.Text, 10);
+        head.AddChild(title);
+        head.AddChild(_readinessBar);
         head.AddChild(_readinessText);
         into.AddChild(head);
-        _readinessBar = HudStyle.Bar(250, 7);
-        HudStyle.Tint(_readinessBar, new Color(1f, 0.85f, 0.4f));
-        into.AddChild(_readinessBar);
+        into = details;
+        into.AddChild(new Control { CustomMinimumSize = new Vector2(0, 3) });
         foreach (PlanetStatDef stat in C.Terraform.Stats)
         {
             HBoxContainer row = new HBoxContainer { TooltipText = $"{stat.Name}: {stat.Description}", MouseFilter = Control.MouseFilterEnum.Stop };
             row.AddThemeConstantOverride("separation", 6);
-            Label name = HudStyle.Caption(stat.Name, HudStyle.TextDim, 11);
-            name.CustomMinimumSize = new Vector2(78, 0);
+            Label name = HudStyle.Caption(stat.Name, HudStyle.TextDim, 10);
+            name.CustomMinimumSize = new Vector2(72, 0);
             name.MouseFilter = Control.MouseFilterEnum.Pass;
-            ProgressBar bar = HudStyle.Bar(130, 5);
+            ProgressBar bar = HudStyle.Bar(90, 4);
             bar.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
             bar.MouseFilter = Control.MouseFilterEnum.Pass;
             HudStyle.Tint(bar, WorldView.Hex(stat.Color));
-            Label value = HudStyle.Caption("", HudStyle.TextDim, 11);
+            Label value = HudStyle.Caption("", HudStyle.TextDim, 10);
             value.MouseFilter = Control.MouseFilterEnum.Pass;
             row.AddChild(name);
             row.AddChild(bar);
@@ -57,8 +62,8 @@ public partial class Hud
         int ready = W.ReadyPlanetCount;
         int need = W.PlanetsNeeded;
         _readinessBar.Value = system / 100.0;
-        _readinessText.Text = $"{system}%   ·   {ready}/{need} planet{(need == 1 ? "" : "s")} ready";
-        _readinessBar.TooltipText = $"Bring any {need} of the {targets.Count} terraformable planets to {bar}% readiness, then call the settlers from a Settler Uplink. " +
+        _readinessText.Text = $"{system}%  {ready}/{need}";
+        _planetCard.TooltipText = "Settler readiness (click for this planet's details)\n" + $"Bring any {need} of the {targets.Count} terraformable planets to {bar}% readiness, then call the settlers from a Settler Uplink. " +
                                     $"The meter averages your {need} most terraformed planets.\n" +
                                     string.Join("\n", targets.Select(p => $"{p.Name}: {p.Readiness}%"));
         foreach ((PlanetStatDef stat, ProgressBar b, Label value) in _statRows)

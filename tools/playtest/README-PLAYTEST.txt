@@ -20,7 +20,7 @@ You are a robot commander sent ahead of human settlers. Build up from hand-minin
 factories, reach the other planets, and terraform three of the four habitable ones so the settlers
 can be called. Press H in game for help.
 
-New to the game? The GUIDE card (top right) gives you the next objective and how to do it, and ticks
+New to the game? The GUIDE card (top right, under the minimap) gives you the next objective and how to do it, and ticks
 it off when you've done it. G hides or shows it. If text is too small or too big, press Esc and use
 "Interface size" (it's saved for next time).
 

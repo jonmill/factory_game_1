@@ -24,7 +24,7 @@ public partial class Hud
 
     private PanelContainer _buildPanel = null!;
     private Label _hint = null!, _categoryTitle = null!;
-    private HBoxContainer _categoryRow = null!, _itemRow = null!;
+    private HBoxContainer _categoryRow = null!, _itemRow = null!, _dock = null!;
     private VBoxContainer _itemBox = null!;
     private readonly List<List<BuildEntry>> _entries = [];
     private readonly List<Slot> _categorySlots = [];
@@ -35,11 +35,12 @@ public partial class Hud
     private void BuildBuildBar()
     {
         _buildPanel = new PanelContainer();
+        _buildPanel.AddThemeStyleboxOverride("panel", HudStyle.Box(HudStyle.Bg, HudStyle.Line, 2, 6, 5));
         _ui.AddChild(_buildPanel);
         VBoxContainer v = new VBoxContainer();
-        v.AddThemeConstantOverride("separation", 6);
+        v.AddThemeConstantOverride("separation", 4);
         _buildPanel.AddChild(v);
-        _hint = HudStyle.Caption("", HudStyle.TextDim, 12);
+        _hint = HudStyle.Caption("", HudStyle.TextDim, 11);
         _hint.HorizontalAlignment = HorizontalAlignment.Center;
         v.AddChild(_hint);
 
@@ -54,8 +55,12 @@ public partial class Hud
         v.AddChild(_itemBox);
 
         _categoryRow = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.Center };
-        _categoryRow.AddThemeConstantOverride("separation", 4);
-        v.AddChild(_categoryRow);
+        _categoryRow.AddThemeConstantOverride("separation", 3);
+        // The dock: the commander on the left, the build categories, then the window shortcuts (see BuildCommander).
+        _dock = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.Center };
+        _dock.AddThemeConstantOverride("separation", 8);
+        _dock.AddChild(_categoryRow);
+        v.AddChild(_dock);
     }
 
     /// <summary>Handles a number key: opens a category, or picks a building in the open one.</summary>
@@ -158,9 +163,7 @@ public partial class Hud
         {
             int index = i;
             List<BuildEntry> list = _entries[i];
-            VBoxContainer cell = new VBoxContainer();
-            cell.AddThemeConstantOverride("separation", 1);
-            Slot slot = new Slot(44)
+            Slot slot = new Slot(40)
             {
                 Icon = list.Count > 0 ? list[0].Icon : null,
                 KeyHint = $"{i + 1}",
@@ -168,13 +171,8 @@ public partial class Hud
                 TooltipText = list.Count == 0 ? $"{_categories[i].Name} (nothing unlocked yet)" : $"{_categories[i].Name}  [{i + 1}]",
             };
             slot.Clicked += (_, _) => OpenCategory(index);
-            Label name = HudStyle.Caption(_categories[i].Name, HudStyle.TextDim, 11);
-            name.HorizontalAlignment = HorizontalAlignment.Center;
-            name.CustomMinimumSize = new Vector2(70, 0);
-            slot.SizeFlagsHorizontal = Control.SizeFlags.ShrinkCenter;
-            cell.AddChild(slot);
-            cell.AddChild(name);
-            _categoryRow.AddChild(cell);
+            slot.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
+            _categoryRow.AddChild(slot);
             _categorySlots.Add(slot);
         }
     }
@@ -190,11 +188,12 @@ public partial class Hud
         }
 
         _categoryTitle.Text = $"{_categories[_openCategory].Name.ToUpperInvariant()}   ·   number keys pick, Esc goes back";
+        _categoryTitle.AddThemeFontSizeOverride("font_size", 11);
         List<BuildEntry> list = _entries[_openCategory];
         for (int i = 0; i < list.Count; i++)
         {
             BuildEntry e = list[i];
-            Slot slot = new Slot(52) { Icon = e.Icon, KeyHint = i < 9 ? $"{i + 1}" : i == 9 ? "0" : null, TooltipText = e.Tooltip };
+            Slot slot = new Slot(44) { Icon = e.Icon, KeyHint = i < 9 ? $"{i + 1}" : i == 9 ? "0" : null, TooltipText = e.Tooltip };
             slot.Clicked += (_, _) => e.Activate();
             _itemRow.AddChild(slot);
             _itemSlots.Add((slot, e));
@@ -223,7 +222,9 @@ public partial class Hud
             slot.Set(null, entry.IsActive());
         }
 
+        // The hint line is for using a tool, or for new players (with the guide on); otherwise it stays out of the way.
         _hint.Text = ToolHint();
+        _hint.Visible = (Root.Tool != ToolKind.Select) || GameSettings.ShowHints;
     }
 
     private string ToolHint() => Root.Tool switch

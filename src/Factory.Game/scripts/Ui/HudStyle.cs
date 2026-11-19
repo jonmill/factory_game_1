@@ -99,8 +99,8 @@ public static class HudStyle
         int Px(float v) => Mathf.RoundToInt(v * scale);
         theme.SetFontSize("font_size", "TooltipLabel", Px(13));
         theme.SetStylebox("panel", "TooltipPanel", Box(new Color(0.02f, 0.04f, 0.07f, 0.97f), LineBright, Px(2), Px(8), Px(6)));
-        theme.SetFontSize("font_size", "PopupMenu", Px(13));
-        theme.SetConstant("v_separation", "PopupMenu", Px(4));
+        theme.SetFontSize("font_size", "PopupMenu", Px(11));
+        theme.SetConstant("v_separation", "PopupMenu", Px(2));
         theme.SetStylebox("panel", "PopupMenu", Box(new Color(0.03f, 0.06f, 0.1f, 0.98f), LineBright, Px(2), Px(4), Px(4)));
         theme.SetStylebox("hover", "PopupMenu", Box(new Color(0.12f, 0.22f, 0.32f), LineBright, 1, Px(4), Px(2)));
     }

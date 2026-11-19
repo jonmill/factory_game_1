@@ -6,9 +6,10 @@ using Godot;
 namespace Factory.Game;
 
 /// <summary>
-/// Code-built UI in the style of a sci-fi factory game: status cards at the top, the commander's panel
-/// bottom-left, the build bar bottom-centre, and centred windows for the inventory, replicator, tech
-/// tree and help. It only reads simulation state; every action goes out as a Command via
+/// Code-built UI laid out like Factorio's and DSP's: a compact planet strip and helper bot list on the
+/// left, the minimap with research and power top-right (hover info under it), one dock along the bottom
+/// (commander, build categories, window shortcuts), a few fading message lines, and centred windows for
+/// the inventory, replicator, tech tree and help. The play area stays clear. It only reads simulation state; every action goes out as a Command via
 /// <see cref="GameRoot.Send"/>.
 /// </summary>
 public partial class Hud : CanvasLayer
@@ -47,9 +48,10 @@ public partial class Hud : CanvasLayer
         BuildCommander();
         BuildGuide();
 
-        _messages = new Label { VerticalAlignment = VerticalAlignment.Bottom, MouseFilter = Control.MouseFilterEnum.Ignore };
+        _messages = new Label { VerticalAlignment = VerticalAlignment.Bottom, MouseFilter = Control.MouseFilterEnum.Ignore, ClipText = true };
         _messages.AddThemeColorOverride("font_outline_color", Colors.Black);
         _messages.AddThemeConstantOverride("outline_size", 4);
+        _messages.AddThemeFontSizeOverride("font_size", 11);
         _ui.AddChild(_messages);
 
         _windows[HudWindow.Inventory] = BuildInventory();
@@ -266,31 +268,37 @@ public partial class Hud : CanvasLayer
             c.Position = pos;
         }
 
-        const float Gap = 10;
+        const float Gap = 8;
+        // Top-left: the planet strip, and the helper bots list under it.
         Put(_planetCard, new Vector2(Gap, Gap));
-        Put(_followerPanel, new Vector2(Gap, _planetCard.Position.Y + _planetCard.Size.Y + 8));
+        // Top-right: the minimap with research and power, then the guide and the inspector below it.
         Put(_researchCard, new Vector2(vs.X - Gap - Min(_researchCard).X, Gap));
-        Put(_powerCard, new Vector2(vs.X - Gap - Min(_powerCard).X, _researchCard.Position.Y + _researchCard.Size.Y + 8));
-        // The guide sits under the status cards on the right, and the hover inspector below it.
-        float rightY = LayoutGuide(vs, Gap, _powerCard.Position.Y + _powerCard.Size.Y + 8);
+        float rightY = LayoutGuide(vs, Gap, _researchCard.Position.Y + _researchCard.Size.Y + 6);
         Put(_inspector, new Vector2(vs.X - Gap - Min(_inspector).X, rightY));
 
+        // Bottom-centre: the dock (commander, build categories, shortcuts), with an open category above it.
         _buildPanel.Size = Vector2.Zero;
         Put(_buildPanel, new Vector2(Mathf.Max(Gap, (vs.X - Min(_buildPanel).X) / 2), vs.Y - Gap - Min(_buildPanel).Y));
-        Put(_commanderPanel, new Vector2(Gap, vs.Y - Gap - Min(_commanderPanel).Y));
-        // Keep the commander panel clear of the build bar on narrow windows.
-        if (_commanderPanel.Position.X + _commanderPanel.Size.X + Gap > _buildPanel.Position.X)
+
+        // The bots list gets the left edge down to the messages; past that it scrolls.
+        float botsTop = _planetCard.Position.Y + _planetCard.Size.Y + 6;
+        float messagesBottom = vs.Y - Gap;
+        if (_buildPanel.Position.X < 440)
         {
-            _commanderPanel.Position = new Vector2(Gap, _buildPanel.Position.Y - Gap - _commanderPanel.Size.Y);
+            messagesBottom = _buildPanel.Position.Y - 6; // narrow window: messages go above the dock
         }
 
-        // Messages stack up from the commander panel; only as many as fit under the helper bots panel show.
-        float messagesBottom = _commanderPanel.Position.Y - Gap;
-        float messagesTop = _followerPanel.Position.Y + _followerPanel.Size.Y + Gap;
-        _messageRoom = System.Math.Max(0, (int)((messagesBottom - messagesTop) / System.Math.Max(1, _messages.GetLineHeight())));
+        const int MessageLines = 5;
+        float lineH = System.Math.Max(1, _messages.GetLineHeight());
+        float botsRoom = Mathf.Max(60, messagesBottom - (MessageLines * lineH) - Gap - botsTop - 40);
+        _followerScroll.CustomMinimumSize = new Vector2(0, Mathf.Min(_followers.GetCombinedMinimumSize().Y, botsRoom));
+        Put(_followerPanel, new Vector2(Gap, botsTop));
+
+        float messagesTop = _followerPanel.Visible ? _followerPanel.Position.Y + _followerPanel.Size.Y + Gap : botsTop;
+        _messageRoom = System.Math.Clamp((int)((messagesBottom - messagesTop) / lineH), 0, MessageLines);
         Vector2 mm = Min(_messages);
-        _messages.Size = mm;
-        _messages.Position = new Vector2(Gap + 4, messagesBottom - mm.Y);
+        _messages.Size = new Vector2(Mathf.Min(mm.X, Mathf.Max(200, _buildPanel.Position.X - Gap - 4)), mm.Y);
+        _messages.Position = new Vector2(Gap + 2, messagesBottom - mm.Y);
 
         // Centred windows always fit: long ones scroll (help), and anything still too big for a small
         // window is shrunk to fit rather than running off the edge.
@@ -342,13 +350,17 @@ public partial class Hud : CanvasLayer
 
     private void UpdateMessages()
     {
+        // A few recent lines that fade out, as a console does: they report, they don't stay in the way.
+        const double Show = 8, Fade = 2;
         StringBuilder sb = new StringBuilder();
-        List<Message> recent = Root.Messages.Where(m => Root.Clock - m.Time < 12).ToList();
+        List<Message> recent = Root.Messages.Where(m => Root.Clock - m.Time < Show).ToList();
         foreach (Message m in recent.Skip(System.Math.Max(0, recent.Count - _messageRoom)))
         {
             sb.AppendLine(m.Text);
         }
 
-        _messages.Text = sb.ToString();
+        _messages.Text = sb.ToString().TrimEnd();
+        double newest = recent.Count > 0 ? Root.Clock - recent[^1].Time : Show;
+        _messages.Modulate = new Color(1, 1, 1, (float)Mathf.Clamp((Show - newest) / Fade, 0.35, 1));
     }
 }
