@@ -63,9 +63,18 @@ public partial class Hud
         List<(string Title, Inventory Inv)> grids = [];
         Entity? e = W.Get<Building>(id) ?? W.Get<Unit>(id) ?? W.Get<Train>(id) ?? (Entity?)W.Get<ConstructionSite>(id);
         // A centred window takes over; the panel comes back when it closes.
-        if ((e is null) || (_open != HudWindow.None))
+        if (_open != HudWindow.None)
         {
             _inspector.Visible = false;
+
+            return;
+        }
+
+        // Nothing there: pointing at ore or a tree shows the deposit, as hovering a vein does in DSP.
+        if (e is null)
+        {
+            bool overGround = (Root.SelectedId == 0) && (GetViewport().GuiGetHoveredControl() is null);
+            _inspector.Visible = overGround && ShowDeposit(Root.HoverTile);
 
             return;
         }
@@ -177,6 +186,49 @@ public partial class Hud
         _inspTitle.Text = title.ToUpperInvariant();
         _inspBody.Text = sb.ToString().TrimEnd();
         UpdateInspectorGrids(grids);
+    }
+
+    /// <summary>Fills the panel with the deposit under a tile, if it is explored ore or a tree.</summary>
+    /// <param name="t">The tile.</param>
+    /// <returns>True if there was something to show.</returns>
+    private bool ShowDeposit(Int2 t)
+    {
+        if ((P.KnownResourceAt(t) is not { } res) || (P.AmountAt(t) <= 0))
+        {
+            return false;
+        }
+
+        string item = ItemName(res.Item);
+        StringBuilder sb = new StringBuilder();
+        if (res.IsTree)
+        {
+            sb.AppendLine($"{P.AmountAt(t)} {item} left");
+            sb.AppendLine("Right-click to harvest. Trees don't grow back.");
+        }
+        else
+        {
+            Deposits.Patch? patch = DepositsHere.At(t);
+            if (patch is not null)
+            {
+                sb.AppendLine($"{patch.Total:N0} {item} left in this deposit ({patch.Tiles.Count} tiles)");
+            }
+
+            sb.AppendLine($"This tile: {P.AmountAt(t):N0}");
+            sb.AppendLine("Right-click to mine by hand, or build a drill over it. Deposits run out.");
+        }
+
+        if (_inspSig != "deposit")
+        {
+            ClearActions();
+        }
+
+        _inspSig = "deposit";
+        _inspActions.Visible = false;
+        _inspTitle.Text = res.Name.ToUpperInvariant();
+        _inspBody.Text = sb.ToString().TrimEnd();
+        UpdateInspectorGrids([]);
+
+        return true;
     }
 
     /// <summary>Shows inventories as slot grids, rebuilt only when their contents change.</summary>

@@ -14,7 +14,7 @@ public partial class Hud
     private PanelContainer BuildMap()
     {
         PanelContainer win = MakeWindow(HudWindow.Map, "Map", "M", out VBoxContainer body, out _);
-        _mapView = new MapView { Root = Root, FollowCamera = false, Interactive = true, RepaintSeconds = 0.5 };
+        _mapView = new MapView { Root = Root, FollowCamera = false, Interactive = true, RepaintSeconds = 0.5, DepositSource = () => DepositsHere };
         body.AddChild(_mapView);
         HBoxContainer foot = new HBoxContainer();
         foot.AddThemeConstantOverride("separation", 8);

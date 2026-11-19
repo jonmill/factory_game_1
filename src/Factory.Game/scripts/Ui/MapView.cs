@@ -36,6 +36,9 @@ public partial class MapView : Control
     /// <summary>The tile at the middle of the control when not following the camera.</summary>
     public Vector2 Center { get; set; }
 
+    /// <summary>Where to get the planet's deposits for labels (the map window), or null for none.</summary>
+    public System.Func<Deposits>? DepositSource { get; set; }
+
     /// <summary>Seconds between repaints of the planet image.</summary>
     public double RepaintSeconds { get; set; } = 0.25;
 
@@ -200,6 +203,8 @@ public partial class MapView : Control
             }
         }
 
+        DrawDepositLabels(r);
+
         // What the screen shows.
         Vector2 view = Root.GetViewportRect().Size / (GameRoot.TilePx * Root.Zoom);
         Rect2 frame = new Rect2(ToLocal(Root.Cam) - (view * k / 2), view * k);
@@ -219,6 +224,46 @@ public partial class MapView : Control
         DrawRect(r, HudStyle.Line, false, 1);
     }
 
+    /// <summary>
+    /// A label on each explored deposit, as on DSP's planet view: the ore's icon and how much is left.
+    /// Labels that would overlap one already drawn are skipped, biggest deposits first.
+    /// </summary>
+    private void DrawDepositLabels(Rect2 r)
+    {
+        if (DepositSource?.Invoke() is not { } deposits)
+        {
+            return;
+        }
+
+        Font font = GetThemeDefaultFont();
+        const int FontSize = 11;
+        float icon = 14;
+        List<Rect2> placed = [];
+        foreach (Deposits.Patch patch in deposits.Patches.OrderByDescending(x => x.Total))
+        {
+            if ((patch.Tiles.Count < 3) || (patch.Total <= 0))
+            {
+                continue;
+            }
+
+            Vector2 at = ToLocal(patch.Center);
+            string text = Deposits.Brief(patch.Total);
+            Vector2 ts = font.GetStringSize(text, HorizontalAlignment.Left, -1, FontSize);
+            Vector2 size = new Vector2(icon + 4 + ts.X + 8, Mathf.Max(icon, ts.Y) + 4);
+            Rect2 box = new Rect2(at - (size / 2), size);
+            if ((r.Encloses(box) == false) || placed.Any(o => o.Grow(2).Intersects(box)))
+            {
+                continue;
+            }
+
+            placed.Add(box);
+            DrawRect(box, new Color(0, 0, 0, 0.7f));
+            DrawRect(box, Color.FromHtml(patch.Resource.Color).Lightened(0.2f), false, 1);
+            Icons.Item(this, new Rect2(box.Position + new Vector2(3, 2), new Vector2(icon, icon)), Root.World.Content.Items[patch.Resource.Item]);
+            DrawString(font, box.Position + new Vector2(icon + 7, (size.Y / 2) + (ts.Y / 2) - 3), text, HorizontalAlignment.Left, -1, FontSize, HudStyle.Text);
+        }
+    }
+
     /// <summary>What a tile holds, as far as anyone knows.</summary>
     private string Describe(Int2 t)
     {
@@ -234,7 +279,9 @@ public partial class MapView : Control
 
         if (P.ResourceAt(t) is { } res)
         {
-            return res.IsTree ? res.Name : $"{res.Name}  ·  {P.AmountAt(t)} left";
+            return res.IsTree ? $"{res.Name}  ·  {P.AmountAt(t)} left" :
+                DepositSource?.Invoke().At(t) is { } patch ? $"{res.Name}  ·  {patch.Total:N0} left in deposit  ·  this tile {P.AmountAt(t)}" :
+                $"{res.Name}  ·  {P.AmountAt(t)} left";
         }
 
         return P.TerrainAt(t) switch

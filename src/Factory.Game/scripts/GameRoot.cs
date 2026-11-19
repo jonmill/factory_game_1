@@ -66,6 +66,9 @@ public partial class GameRoot : Node2D
     public int PickFromId { get; set; }
     /// <summary>Tile under the mouse cursor.</summary>
     public Int2 HoverTile { get; set; }
+
+    /// <summary>A tile to treat as hovered instead of the mouse's (FACTORY_HOVER, for screenshots).</summary>
+    private Int2? _hoverOverride;
     /// <summary>Recent notifications, oldest first; only the last few are kept.</summary>
     public List<Message> Messages { get; } = [];
     /// <summary>Real time elapsed since start, in seconds, used for animation and message fading.</summary>
@@ -268,7 +271,7 @@ public partial class GameRoot : Node2D
     {
         Clock += delta;
         PlatformServices.Update();
-        HoverTile = ScreenToTile(GetViewport().GetMousePosition());
+        HoverTile = _hoverOverride ?? ScreenToTile(GetViewport().GetMousePosition());
         SendLeaderIntent();
         HandleCameraKeys();
         SweepMining();
@@ -1144,6 +1147,14 @@ public partial class GameRoot : Node2D
             if (System.Enum.TryParse(System.Environment.GetEnvironmentVariable("FACTORY_WINDOW"), true, out HudWindow window))
             {
                 _hud.Toggle(window);
+            }
+
+            // FACTORY_HOVER=<resource id> points the hover at the nearest explored tile of that resource.
+            if (System.Environment.GetEnvironmentVariable("FACTORY_HOVER") is { } hoverRes)
+            {
+                Int2 at = Fixed.ToTile(Leader.Pos);
+                _hoverOverride = Enumerable.Range(0, Planet.Width * Planet.Height).Select(i => new Int2(i % Planet.Width, i / Planet.Width))
+                    .Where(t => Planet.KnownResourceAt(t)?.Id == hoverRes).OrderBy(t => Planet.Torus.DistSq(at, t)).Cast<Int2?>().FirstOrDefault();
             }
 
             // FACTORY_QUEUE=<recipe>:<count> queues crafts on the lander (screenshots of the replicator queue).

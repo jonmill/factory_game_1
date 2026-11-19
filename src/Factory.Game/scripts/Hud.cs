@@ -203,6 +203,7 @@ public partial class Hud : CanvasLayer
         UpdateStatus();
         UpdateBuildBar();
         UpdateFollowers();
+        UpdateDrillWarnings();
         UpdateInspector();
         UpdateCommander();
         UpdateMessages();

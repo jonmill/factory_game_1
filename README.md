@@ -62,9 +62,14 @@ objectives off by watching the world, so a loaded game picks up at the right ste
 
 The layout follows Factorio and DSP and keeps the play area clear: a one-line planet strip (click for the
 terraform bars) and a slim helper bot list with per-bot job menus top-left; the minimap (a 72-tile local
-radar with fog; click it or press M for the full planet map, which pans and zooms) with research and power lines top-right, the guide and hover/selection
+radar with fog; click it or press M for the full planet map, which pans and zooms and labels each explored deposit with the ore left in it, as DSP does) with research and power lines top-right, the guide and hover/selection
 info under it; one dock along the bottom with the commander's activity (pockets only in the inventory, E), the build categories and
 window shortcuts; and up to five message lines that fade out.
+
+Ore and trees run out (each tile holds an amount; trees don't regrow). As in DSP, pointing at a deposit shows
+what's left in the whole patch and on that tile, and the map labels every explored patch (`Ui/Deposits.cs`
+groups explored tiles of the same ore into patches, client-side). Drills warn once when the ore within their
+reach drops under 10% of the most they've seen, and again when it runs dry, grouped per planet and ore.
 
 ### Controls
 
