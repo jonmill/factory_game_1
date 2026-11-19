@@ -17,6 +17,7 @@ public partial class Hud
     private const int StorageColumns = 8;
 
     private Label _machineTitle = null!, _machineInfo = null!, _machineReach = null!;
+    private Label _machinePocketsTitle = null!, _machinePocketsEmpty = null!;
     private GridContainer _machinePockets = null!;
     private VBoxContainer _machineBody = null!, _machineActions = null!;
     /// <summary>The fuel slots (ring: what's left of the fuel burning) and the slots that show the current cycle's progress.</summary>
@@ -37,11 +38,17 @@ public partial class Hud
         body.AddChild(cols);
 
         VBoxContainer left = new VBoxContainer();
-        left.AddChild(HudStyle.Title("Pockets"));
+        // The commander's own pockets, so items can be dragged across; says whose, since it isn't the building's.
+        _machinePocketsTitle = HudStyle.Title("Your pockets");
+        left.AddChild(_machinePocketsTitle);
         _machinePockets = new GridContainer { Columns = PocketColumns };
         _machinePockets.AddThemeConstantOverride("h_separation", 4);
         _machinePockets.AddThemeConstantOverride("v_separation", 4);
         left.AddChild(_machinePockets);
+        _machinePocketsEmpty = HudStyle.Caption("Empty: right-click ore or trees to mine, or drag items here.", HudStyle.TextDim, 11);
+        _machinePocketsEmpty.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        _machinePocketsEmpty.CustomMinimumSize = new Vector2(PocketColumns * 60, 0);
+        left.AddChild(_machinePocketsEmpty);
         cols.AddChild(left);
 
         cols.AddChild(new ColorRect { Color = HudStyle.Line, CustomMinimumSize = new Vector2(1, 0) });
@@ -160,6 +167,9 @@ public partial class Hud
     private void FillPockets(Building b, bool reach)
     {
         Clear(_machinePockets);
+        Inventory mine = Root.Leader.Carry;
+        _machinePocketsTitle.Text = $"YOUR POCKETS   {mine.UsedSlots} / {mine.Slots}";
+        _machinePocketsEmpty.Visible = mine.IsEmpty;
         Inventory carry = Root.Leader.Carry;
         int used = 0;
         foreach ((string item, int count, int _) in Stacks(carry))

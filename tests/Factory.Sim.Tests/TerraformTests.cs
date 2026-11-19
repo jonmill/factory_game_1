@@ -19,10 +19,30 @@ public class TerraformTests
         TestWorld tw = new TestWorld();
         await Assert.That(tw.P.Stats["atmosphere"]).IsEqualTo(800);
         await Assert.That(tw.P.Stats["biosphere"]).IsEqualTo(0);
-        await Assert.That(tw.P.Readiness).IsEqualTo((8 + 15 + 0) / 3).Because("stats run to 10000 points, readiness is a percent");
+        await Assert.That(tw.P.Readiness).IsEqualTo(0).Because("readiness counts terraforming done, not what the planet started with");
         Planet rime = tw.W.Planets.Single(p => p.Def.Id == "rime");
-        await Assert.That(rime.Readiness).IsEqualTo((5 + 60 + 0) / 3).Because("Rime starts with its own stats");
+        await Assert.That(rime.Stats["hydrosphere"]).IsEqualTo(6000).Because("Rime starts with its own stats");
+        await Assert.That(rime.Readiness).IsEqualTo(0);
+        await Assert.That(tw.W.SystemReadiness).IsEqualTo(0).Because("the system starts at 0% ready for settlers");
         await Assert.That(tw.W.EnoughPlanetsReady).IsFalse();
+    }
+
+    [Test]
+    public async Task Readiness_CountsTheClimbFromTheStartingValue()
+    {
+        TestWorld tw = new TestWorld();
+        Planet rime = tw.W.Planets.Single(p => p.Def.Id == "rime");
+        PlanetStatDef hydro = tw.W.Content.Terraform.Stats.Single(s => s.Id == "hydrosphere");
+        rime.Stats["hydrosphere"] = 8000; // halfway from 6000 to 10000
+        await Assert.That(rime.StatProgress(hydro)).IsEqualTo(50);
+        await Assert.That(rime.StatPercent(hydro)).IsEqualTo(80).Because("the raw level is still shown in the planet details");
+        foreach (PlanetStatDef s in tw.W.Content.Terraform.Stats)
+        {
+            rime.Stats[s.Id] = s.Target;
+        }
+
+        await Assert.That(rime.Readiness).IsEqualTo(100);
+        await Assert.That(rime.IsReady).IsTrue();
     }
 
     [Test]

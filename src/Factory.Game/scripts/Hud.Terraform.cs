@@ -64,7 +64,7 @@ public partial class Hud
         _readinessBar.Value = system / 100.0;
         _readinessText.Text = $"{system}%  {ready}/{need}";
         _planetCard.TooltipText = "Settler readiness (click for this planet's details)\n" + $"Bring any {need} of the {targets.Count} terraformable planets to {bar}% readiness, then call the settlers from a Settler Uplink. " +
-                                    $"The meter averages your {need} most terraformed planets.\n" +
+                                    $"The meter averages your {need} most terraformed planets, counting only terraforming you've done (a planet's own air or water doesn't count).\n" +
                                     string.Join("\n", targets.Select(p => $"{p.Name}: {p.Readiness}%"));
         foreach ((PlanetStatDef stat, ProgressBar b, Label value) in _statRows)
         {

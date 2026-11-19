@@ -65,6 +65,11 @@ public partial class Hud
         }
 
         List<RecipeDef> recipes = C.RecipeList.Where(r => lander.Def.Categories.Contains(r.Category)).ToList();
+        if ((_selectedRecipe is { } picked) && (W.Research.Unlocked.Contains(picked) == false))
+        {
+            _selectedRecipe = null;
+        }
+
         _selectedRecipe ??= recipes.FirstOrDefault(r => W.Research.Unlocked.Contains(r.Id))?.Id;
         bool reach = Root.InReach(lander.Origin);
         string inv = _selectedRecipe is { } sel
@@ -97,13 +102,18 @@ public partial class Hud
         foreach (RecipeDef r in recipes)
         {
             RecipeDef recipe = r;
-            bool unlocked = W.Research.Unlocked.Contains(r.Id);
+            // As in DSP and Factorio, a recipe that hasn't been researched is just an empty tile: nothing to see or pick.
+            if (W.Research.Unlocked.Contains(r.Id) == false)
+            {
+                _recipeGrid.AddChild(new Slot(52) { MouseFilter = Control.MouseFilterEnum.Ignore });
+                continue;
+            }
+
             Slot slot = new Slot(52)
             {
                 Icon = RecipeIcon(r),
                 Selected = r.Id == _selectedRecipe,
-                Dim = unlocked == false,
-                TooltipText = unlocked ? $"{r.Name}\n{Costs(r.Inputs)} → {(r.Outputs.Length > 0 ? Costs(r.Outputs) : r.Effect)}" : $"{r.Name}\nNot researched yet",
+                TooltipText = $"{r.Name}\n{Costs(r.Inputs)} → {(r.Outputs.Length > 0 ? Costs(r.Outputs) : r.Effect)}",
             };
             // Clicking only selects; crafting starts from the Queue buttons beside the recipe.
             slot.Clicked += (_, _) =>

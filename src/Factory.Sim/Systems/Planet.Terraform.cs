@@ -2,8 +2,9 @@ namespace Factory.Sim;
 
 /// <summary>
 /// Terraforming: each planet has stats (atmosphere, hydrosphere, biosphere) that terraformer buildings
-/// raise a point at a time by consuming products. A planet's readiness is the average of its stats'
-/// progress toward their targets; once enough planets in the system reach the bar, a Settler Uplink can
+/// raise a point at a time by consuming products. A planet's readiness is the average of how much of
+/// each stat's climb, from where the planet started to its target, has been terraformed, so every planet
+/// starts at 0% however much air or water it had already; once enough planets in the system reach the bar, a Settler Uplink can
 /// call the settlers, which wins the game.
 /// </summary>
 public sealed partial class Planet
@@ -17,14 +18,41 @@ public sealed partial class Planet
     public int StatPercent(PlanetStatDef stat) =>
         stat.Target <= 0 ? 100 : System.Math.Min(100, Stats.GetValueOrDefault(stat.Id) * 100 / stat.Target);
 
-    /// <summary>The planet's readiness for settlers: the average of its stats' progress, 0 to 100.</summary>
+    /// <summary>A stat's points when the planet was settled: its own starting value, else the stat's default.</summary>
+    /// <param name="stat">The stat.</param>
+    /// <returns>Starting points.</returns>
+    public int StatStart(PlanetStatDef stat) => Def.Stats.TryGetValue(stat.Id, out int initial) ? initial : stat.Initial;
+
+    /// <summary>
+    /// How much of a stat's terraforming is done, 0 to 100: its climb from the planet's starting value to
+    /// the target. A stat that started at or above its target is done.
+    /// </summary>
+    /// <param name="stat">The stat.</param>
+    /// <returns>Percent of the terraforming done.</returns>
+    public int StatProgress(PlanetStatDef stat)
+    {
+        int start = StatStart(stat);
+        if (start >= stat.Target)
+        {
+            return 100;
+        }
+
+        int done = (Stats.GetValueOrDefault(stat.Id) - start) * 100 / (stat.Target - start);
+
+        return System.Math.Clamp(done, 0, 100);
+    }
+
+    /// <summary>
+    /// The planet's readiness for settlers: the average of its stats' terraforming progress, 0 to 100. It
+    /// starts at 0 and reaches 100 exactly when every stat reaches its target.
+    /// </summary>
     public int Readiness
     {
         get
         {
             PlanetStatDef[] stats = World.Content.Terraform.Stats;
 
-            return stats.Length == 0 ? 100 : stats.Sum(StatPercent) / stats.Length;
+            return stats.Length == 0 ? 100 : stats.Sum(StatProgress) / stats.Length;
         }
     }
 
@@ -35,7 +63,7 @@ public sealed partial class Planet
     {
         foreach (PlanetStatDef s in World.Content.Terraform.Stats)
         {
-            Stats[s.Id] = Def.Stats.TryGetValue(s.Id, out int initial) ? initial : s.Initial;
+            Stats[s.Id] = StatStart(s);
         }
     }
 

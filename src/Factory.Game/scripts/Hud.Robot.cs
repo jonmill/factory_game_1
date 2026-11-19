@@ -16,6 +16,7 @@ public partial class Hud
     private const float ModuleSlotSize = 50;
 
     private Label _robotTitle = null!, _robotInfo = null!, _robotReach = null!;
+    private Label _robotPocketsTitle = null!, _robotPocketsEmpty = null!;
     private GridContainer _robotPockets = null!, _robotCargo = null!;
     private HBoxContainer _robotModules = null!;
     private Slot _robotWork = null!;
@@ -30,11 +31,17 @@ public partial class Hud
         body.AddChild(cols);
 
         VBoxContainer left = new VBoxContainer();
-        left.AddChild(HudStyle.Title("Pockets"));
+        // The commander's own pockets, so items can be dragged across; says whose, since it isn't the building's.
+        _robotPocketsTitle = HudStyle.Title("Your pockets");
+        left.AddChild(_robotPocketsTitle);
         _robotPockets = new GridContainer { Columns = PocketColumns };
         _robotPockets.AddThemeConstantOverride("h_separation", 4);
         _robotPockets.AddThemeConstantOverride("v_separation", 4);
         left.AddChild(_robotPockets);
+        _robotPocketsEmpty = HudStyle.Caption("Empty: right-click ore or trees to mine, or drag items here.", HudStyle.TextDim, 11);
+        _robotPocketsEmpty.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        _robotPocketsEmpty.CustomMinimumSize = new Vector2(PocketColumns * 60, 0);
+        left.AddChild(_robotPocketsEmpty);
         cols.AddChild(left);
 
         cols.AddChild(new ColorRect { Color = HudStyle.Line, CustomMinimumSize = new Vector2(1, 0) });
@@ -180,6 +187,9 @@ public partial class Hud
     private void FillRobotPockets(Unit u, bool reach)
     {
         Clear(_robotPockets);
+        Inventory mine = Root.Leader.Carry;
+        _robotPocketsTitle.Text = $"YOUR POCKETS   {mine.UsedSlots} / {mine.Slots}";
+        _robotPocketsEmpty.Visible = mine.IsEmpty;
         Inventory carry = Root.Leader.Carry;
         int used = 0;
         foreach ((string item, int count, int _) in Stacks(carry))
