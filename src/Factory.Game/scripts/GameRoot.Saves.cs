@@ -179,7 +179,7 @@ public partial class GameRoot
             System.IO.Directory.CreateDirectory(SaveDir);
             string path = PathOf(stem);
             string temp = path + ".tmp";
-            System.IO.File.WriteAllText(temp, Replay.Capture(World, meta).ToJson());
+            System.IO.File.WriteAllText(temp, Replay.CaptureSave(World, meta).ToJson());
             System.IO.File.Move(temp, path, overwrite: true);
         }
         catch (System.IO.IOException e)
@@ -332,6 +332,27 @@ public partial class GameRoot
             return;
         }
 
+        World world;
+        if (_loadReplay.IsSnapshot)
+        {
+            // A snapshot save: the world is read back as it was, at once.
+            try
+            {
+                world = _loadReplay.Restore(Content);
+            }
+            catch (System.IO.InvalidDataException e)
+            {
+                Notify($"Couldn't load \"{LoadingName}\": {e.Message}", Colors.OrangeRed);
+                _loadReplay = null;
+
+                return;
+            }
+
+            FinishLoad(world);
+
+            return;
+        }
+
         if (_playback is null)
         {
             _playback = _loadReplay.BeginPlayback(Content);
@@ -354,8 +375,14 @@ public partial class GameRoot
             return;
         }
 
-        Replay replay = _loadReplay;
-        World world = _playback.World;
+        FinishLoad(_playback.World);
+    }
+
+    /// <summary>Swaps a loaded world in and reports how the load went.</summary>
+    /// <param name="world">The loaded world.</param>
+    private void FinishLoad(World world)
+    {
+        Replay replay = _loadReplay!;
         _loadReplay = null;
         _playback = null;
         Adopt(world);

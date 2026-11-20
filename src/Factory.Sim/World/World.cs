@@ -66,6 +66,18 @@ public sealed partial class World
     /// <param name="content">Game content to simulate with.</param>
     /// <param name="settings">Seed and size settings.</param>
     public World(ContentDb content, WorldSettings settings)
+        : this(content, settings, generate: true)
+    {
+    }
+
+    /// <summary>
+    /// Creates a world. Without <paramref name="generate"/>, the planets are created empty (no terrain, no
+    /// starting base) for a saved state to be read into.
+    /// </summary>
+    /// <param name="content">Game content.</param>
+    /// <param name="settings">World settings.</param>
+    /// <param name="generate">Generate terrain and the starting base.</param>
+    internal World(ContentDb content, WorldSettings settings, bool generate)
     {
         Content = content;
         Settings = settings;
@@ -88,9 +100,19 @@ public sealed partial class World
             int size = def.Start ? 0 : (settings.OtherPlanetSize > 0 ? settings.OtherPlanetSize : def.Size);
             Planet planet = new Planet(this, Planets.Count, def, def.Start ? settings.PlanetWidth : size, def.Start ? settings.PlanetHeight : size);
             Planets.Add(planet);
+            if (generate == false)
+            {
+                continue;
+            }
+
             planet.InitStats();
             ulong planetSeed = (settings.Seed * 0x9E3779B97F4A7C15UL) ^ StateHasher.Of(def.Id);
             WorldGen.Generate(planet, new Rng(planetSeed), settings);
+        }
+
+        if (generate == false)
+        {
+            return;
         }
 
         if (settings.EmptyPlanet)

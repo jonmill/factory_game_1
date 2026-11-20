@@ -8,7 +8,7 @@ namespace Factory.Sim;
 /// conservation invariant (world stock == produced − consumed) is checked by the playtest harness and
 /// catches item duplication and loss bugs.
 /// </summary>
-public sealed class ProductionStats
+public sealed partial class ProductionStats
 {
     /// <summary>Length of one time-series bucket, in ticks (five game minutes).</summary>
     public const int BucketTicks = 5 * 60 * 60;

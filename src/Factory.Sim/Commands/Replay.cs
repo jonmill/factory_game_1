@@ -16,8 +16,11 @@ namespace Factory.Sim;
 /// </summary>
 public sealed class Replay
 {
-    /// <summary>The format this build writes.</summary>
-    public const int CurrentVersion = 2;
+    /// <summary>
+    /// The format this build writes. 3 added <see cref="State"/>: an in-game save carries a snapshot of the
+    /// world and loads at once, instead of replaying every command from the start.
+    /// </summary>
+    public const int CurrentVersion = 3;
 
     /// <summary>The oldest format this build can still load.</summary>
     public const int MinSupportedVersion = 1;
@@ -51,6 +54,17 @@ public sealed class Replay
     /// <summary>Every applied command with the tick it was applied on, in order. Keep this the last property: see <see cref="ReadHeader"/>.</summary>
     public List<ScheduledCommand> Commands { get; init; } = [];
 
+    /// <summary>
+    /// The world at <see cref="FinalTick"/> (<see cref="WorldState"/>, gzipped, base64), for saves; null for
+    /// replays, which rebuild the world from <see cref="Commands"/>. It comes after the commands, so reading
+    /// the header (which stops at <c>Commands</c>) never has to skip over it.
+    /// </summary>
+    public string? State { get; init; }
+
+    /// <summary>True if this file holds the world itself and loads without replaying.</summary>
+    [JsonIgnore]
+    public bool IsSnapshot => State is not null;
+
     /// <summary>Serializer options used for replay files (compact, string enums, nulls omitted).</summary>
     public static readonly JsonSerializerOptions Json = new()
     {
@@ -78,6 +92,47 @@ public sealed class Replay
         FinalChecksum = w.Checksum(),
         Commands = [.. w.CommandLog],
     };
+
+    /// <summary>
+    /// Captures a world as a save: the header plus a snapshot of the world, and no command log, so it loads
+    /// at once however long the game has run.
+    /// </summary>
+    /// <param name="w">The world.</param>
+    /// <param name="meta">Name, time and view for the save lists.</param>
+    /// <returns>The save.</returns>
+    public static Replay CaptureSave(World w, SaveMeta? meta = null) => new()
+    {
+        Version = CurrentVersion,
+        Build = BuildInfo.Version,
+        Meta = meta,
+        Seed = w.Settings.Seed,
+        PlanetWidth = w.Settings.PlanetWidth,
+        PlanetHeight = w.Settings.PlanetHeight,
+        Players = w.Settings.Players,
+        EmptyPlanet = w.Settings.EmptyPlanet,
+        ContentHash = w.Content.ComputeHash(),
+        FinalTick = w.Tick,
+        FinalChecksum = w.Checksum(),
+        State = System.Convert.ToBase64String(WorldState.Capture(w)),
+    };
+
+    /// <summary>Rebuilds the saved world from <see cref="State"/>.</summary>
+    /// <param name="content">The content database.</param>
+    /// <returns>The world at <see cref="FinalTick"/>.</returns>
+    public World Restore(ContentDb content)
+    {
+        byte[] snapshot;
+        try
+        {
+            snapshot = System.Convert.FromBase64String(State ?? throw new InvalidOperationException("This replay has no saved state; play it back instead."));
+        }
+        catch (FormatException e)
+        {
+            throw Unreadable(e);
+        }
+
+        return WorldState.Restore(content, Settings, snapshot);
+    }
 
     /// <summary>Serializes the replay to JSON.</summary>
     public string ToJson() => JsonSerializer.Serialize(this, Json);

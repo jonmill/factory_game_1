@@ -44,8 +44,7 @@ Press Esc for the game menu, then "Save game": type a name and click Save (or cl
 save over it; it asks first). "Load game" lists your saves with the date, time played and planet; click Load.
 F5 quicksaves and F9 loads the quicksave. The game also autosaves every 10 minutes of play into
 "Autosave 1" to "Autosave 3", taking turns, and says so at the bottom left.
-Loading replays your whole game from the start, so a long game takes a while; a progress bar shows how far
-it has got and you can cancel it. Saves are kept in:
+Loading is quick however long you've played. Saves are kept in:
     %APPDATA%\Godot\app_userdata\Factory 1 (working title)\saves\
 A save from a much older or newer build may not load; the Load list greys it out and says why.
 

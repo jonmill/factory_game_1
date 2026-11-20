@@ -9,6 +9,17 @@ public sealed class Inventory(ContentDb content, int slots)
     private readonly SortedDictionary<string, int> _items = new(StringComparer.Ordinal);
     private readonly ContentDb _content = content;
 
+    /// <summary>Replaces the contents with saved counts (loading a game).</summary>
+    /// <param name="items">Item counts.</param>
+    internal void RestoreItems(IEnumerable<KeyValuePair<string, int>> items)
+    {
+        _items.Clear();
+        foreach ((string k, int v) in items)
+        {
+            _items[k] = v;
+        }
+    }
+
     /// <summary>Number of stack slots; int.MaxValue means unlimited capacity.</summary>
     public int Slots { get; set; } = slots;
     /// <summary>Item counts keyed by item id, in ordinal id order.</summary>

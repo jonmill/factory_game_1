@@ -23,8 +23,9 @@ biosphere) until any three of the four terraformable planets are ready. Then you
    multiplayer = exchange commands per tick; host-authoritative = send commands to the host.
 2. **Determinism:** fixed 60 Hz ticks, integer/fixed-point math only (1 tile = 1024 sub-units), seeded
    `Rng`, sorted iteration. `World.Checksum()` hashes state for desync detection and regression tests.
-3. **Replays are saves:** seed + command log (`Replay`); see [Saves](#saves). Snapshot saves are a later
-   optimization for long games.
+3. **Saves are snapshots, replays are logs:** an in-game save stores the whole world (`WorldState`) and loads
+   at once; a replay (seed + command log, `Replay`) re-simulates a game for bug reports and the playtest tools.
+   See [Saves](#saves).
 4. Planets update independently (`Planet.Update`). Research is colony-wide; units have an `OwnerPlayer`.
 
 ## Running
@@ -67,18 +68,29 @@ Saves are `user://saves/<name>.json`: on Windows `%APPDATA%\Godot\app_userdata\F
 on macOS `~/Library/Application Support/Godot/app_userdata/Factory 1 (working title)/saves/`. A quicksave from an
 older build (`user://quicksave.replay.json`) shows up as "Quicksave". Each file is one `Replay` as JSON:
 `Version`, `Build`, `Meta` (name, real time saved, viewed planet), the world settings, `ContentHash`, `FinalTick`,
-`FinalChecksum`, then `Commands` last, so the lists read just the header (`Replay.ReadHeader`).
+`FinalChecksum`, `Commands` (empty in a save) and then `State`, so the lists read just the header
+(`Replay.ReadHeader` stops at `Commands`).
 
-Versioning: `Replay.CurrentVersion` (2) is written; `Replay.MinSupportedVersion` (1) is the oldest that loads.
+`State` is the world itself (`Save/*.State.cs`, `WorldState`): a gzipped binary snapshot, base64 in the JSON,
+about 80 KB for a 10-hour game, and it loads in well under a second however long the game has run. It holds
+every planet's tile layers as raw arrays, then each building, construction site, robot, train and shipment in
+list order, plus research, the ledger, the RNG and the id counters; power networks are rebuilt from the
+buildings on the next tick. `WorldState.Format` versions the binary layout separately from the file format.
+`WorldStateTests` keeps it honest: a bot plays a real game, the world is snapshotted and restored, the two are
+run side by side on the same commands and compared byte for byte every 10 seconds of game time, and a field
+inventory fails when a class the snapshot covers gains or loses a field, so a new field can't be forgotten.
+
+Versioning: `Replay.CurrentVersion` (3) is written; `Replay.MinSupportedVersion` (1) is the oldest that loads.
 `Replay.Check` runs on the header before the commands are parsed: a format outside that range is refused with a
 reason (greyed out in the list), a different `ContentHash` (the game data changed) loads with a warning, and a
 checksum that doesn't match `FinalChecksum` after loading is reported. Format 1 is format 2 without `Build` and
-`Meta`. Bump `CurrentVersion` whenever an older build couldn't read what a newer one writes (a new or changed
+`Meta`; format 3 adds `State`. Saves from formats 1 and 2 (no `State`) still load, by replaying. Bump `CurrentVersion` whenever an older build couldn't read what a newer one writes (a new or changed
 command, a new world setting), and raise `MinSupportedVersion` only when old saves can no longer replay. `Build`
 is `BuildInfo.Version`: `Factory-<date>-<commit>[-dirty]` from git at build time (`package.sh` passes the same name
 it writes to `VERSION.txt`), or `dev` without git.
 
-Loading replays the command log (`ReplayPlayback`) about 20 ms per frame behind a progress bar, with input
+A snapshot save loads at once. An older save, or a replay, replays its command log (`ReplayPlayback`) about
+20 ms per frame behind a progress bar, with input
 blocked; the old game stays frozen underneath until the new world is ready, and Cancel goes back to it. Stepping
 in batches gives exactly the world `Replay.Play` does (a test checks the checksum).
 

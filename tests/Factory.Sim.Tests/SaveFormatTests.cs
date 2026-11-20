@@ -36,7 +36,8 @@ public class SaveFormatTests
         TestWorld tw = PlayedWorld();
         Replay replay = Replay.FromJson(Replay.Capture(tw.W, Meta()).ToJson());
 
-        await Assert.That(replay.Version).IsEqualTo(2);
+        await Assert.That(replay.Version).IsEqualTo(Replay.CurrentVersion);
+        await Assert.That(replay.IsSnapshot).IsFalse().Because("a replay carries commands, not the world");
         await Assert.That(replay.Build).IsEqualTo(BuildInfo.Version);
         await Assert.That(string.IsNullOrEmpty(replay.Build)).IsFalse();
         SaveCheck check = replay.Check(_contentHash);
@@ -44,6 +45,32 @@ public class SaveFormatTests
         await Assert.That(check.Problem).IsNull();
         await Assert.That(check.Warning).IsNull();
         await Assert.That(replay.Play(TestWorld.Content).Checksum()).IsEqualTo(tw.W.Checksum());
+    }
+
+    [Test]
+    public async Task SaveFormat_SnapshotSavesLoadWithoutReplaying()
+    {
+        TestWorld tw = PlayedWorld();
+        string json = Replay.CaptureSave(tw.W, Meta()).ToJson();
+        Replay save = Replay.FromJson(json);
+
+        await Assert.That(save.IsSnapshot).IsTrue();
+        await Assert.That(save.Commands).IsEmpty().Because("a snapshot save doesn't need the command log");
+        await Assert.That(Header(json).Meta?.Name).IsEqualTo(Meta().Name).Because("the save list still reads just the header");
+        World back = save.Restore(TestWorld.Content);
+        await Assert.That(back.Tick).IsEqualTo(tw.W.Tick);
+        await Assert.That(back.Checksum()).IsEqualTo(save.FinalChecksum);
+    }
+
+    [Test]
+    public async Task SaveFormat_DamagedSnapshotIsRefusedClearly()
+    {
+        TestWorld tw = PlayedWorld();
+        JsonObject o = JsonNode.Parse(Replay.CaptureSave(tw.W, Meta()).ToJson())!.AsObject();
+        o["State"] = "not base64!";
+        Replay bad = Replay.FromJson(o.ToJsonString());
+
+        await Assert.That(() => bad.Restore(TestWorld.Content)).Throws<InvalidDataException>();
     }
 
     [Test]

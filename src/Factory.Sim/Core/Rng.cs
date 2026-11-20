@@ -6,6 +6,10 @@ public sealed class Rng(ulong seed)
     /// <summary>Current generator state; starts at the seed and is saved/restored to reproduce the sequence.</summary>
     public ulong State { get; private set; } = seed;
 
+    /// <summary>Puts the generator back to a saved state.</summary>
+    /// <param name="state">The state.</param>
+    internal void Restore(ulong state) => State = state;
+
     /// <summary>Advances the state and returns the next 64-bit pseudo-random value.</summary>
     public ulong Next()
     {

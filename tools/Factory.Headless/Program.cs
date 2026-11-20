@@ -56,9 +56,10 @@ if (command == "verify")
         Console.WriteLine("WARNING: content has changed since this replay was recorded");
     }
 
-    World w = replay.Play(content);
+    // A snapshot save is read back as it was; a replay is played back from the start.
+    World w = replay.IsSnapshot ? replay.Restore(content) : replay.Play(content);
     bool ok = w.Checksum() == replay.FinalChecksum;
-    Console.WriteLine(ok ? $"OK: replay reproduced tick {w.Tick} checksum {w.Checksum():X16}"
+    Console.WriteLine(ok ? $"OK: {(replay.IsSnapshot ? "snapshot restored" : "replay reproduced")} tick {w.Tick} checksum {w.Checksum():X16}"
                          : $"DESYNC: expected {replay.FinalChecksum:X16} got {w.Checksum():X16}");
 
     return ok ? 0 : 1;
