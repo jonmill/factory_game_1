@@ -67,7 +67,7 @@ public class MetricsTests
     [Test]
     public async Task Construction_IsLoggedByBuilderAndWhatWasBuilt()
     {
-        TestWorld tw = new TestWorld(empty: false);
+        TestWorld tw = new TestWorld(empty: false, stocked: true);
         tw.Do(new PlaceBuilding("chest", new Int2(tw.Lander.Origin.X + 5, tw.Lander.Origin.Y), Dir.North));
         tw.RunUntil(() => tw.P.Sites.Count == 0, 60 * 60, "the crate to be built");
         long used = tw.W.Stats.Count("biomass", ItemFlow.Construction, via: "chest");

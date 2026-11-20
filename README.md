@@ -191,7 +191,9 @@ bot on the Explore job walks an outward spiral from the lander; fog is tracked i
 to bigger maps); four tech **ages** (Salvage, Combustion, Clean and Stellar); research paid in **Cores** (Survey Cores in the
 Salvage Age, Analysis Cores from the Combustion Age, Synthesis Cores, which need Dune's silica, from the Clean
 Age, and Stellar Cores, from Cinder's titanium and hafnium plus orbital helium-3 and osmiridium). The commander (hand-mining, builds ghosts in reach, 2 module slots, +2 from research) and
-2 Helper Bot Mk1s (1 slot; Gather / Haul / Explore, with Build and Operate train taught by modules), 5 modules
+2 Helper Bot Mk1s (1 slot; Gather / Haul / Explore, with Build and Operate train taught by modules), landing with an
+empty lander (`start.lander` in `base.json`: everything starts from gathering; tests that need stock use
+`TestWorld.Supplies`), 5 modules
 (construction, servo, cargo, rail operator, mining laser), a Robot Assembly Bay for Mk1 and Mk2 (3 slots)
 helper bots, lander fabricator, burner drills and smelters, steam engines, poles, charge cell banks,
 research stations; in the Combustion Age electric drills, arc smelters, rails, rail stops, water towers,

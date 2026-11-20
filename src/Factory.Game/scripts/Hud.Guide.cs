@@ -109,6 +109,8 @@ public partial class Hud
 
     private int BuiltOfKind(BuildingKind kind) => C.Buildings.Values.Where(d => d.Kind == kind).Sum(d => W.Stats.Built(d.Id));
 
+    private long LanderCount(string item) => W.Get<Building>(P.LanderId)?.Inv.Count(item) ?? 0;
+
     private bool Researched(string tech) => W.Research.Completed.Contains(tech);
 
     /// <summary>True once any research has finished: the player has the basics, wherever they learnt them.</summary>
@@ -134,38 +136,51 @@ public partial class Hud
     {
         _steps.Add(new GuideStep(
             "Welcome, Commander",
-            "You're a robot sent ahead of human settlers. Walk with WASD and zoom with the mouse wheel. " +
-            "Your Colony Lander (the ship you landed in) holds supplies to get started. H shows every control.",
-            () => (Root.Leader.MoveIntent != Int2.Zero) || (W.Stats.Count(flow: ItemFlow.HandMined, by: "commander") > 0) || (W.Tick > 2 * 60 * World.TicksPerSecond),
-            Past: AnyResearch));
-
-        _steps.Add(new GuideStep(
-            "Gather by hand",
-            "Right-click a tree for biomass (fuel), or an ore patch. You walk over and keep mining the deposit; " +
-            "right-drag to sweep across tiles. What you mine goes into your pockets (E).",
-            () => W.Stats.Count(flow: ItemFlow.HandMined, by: "commander") > 0,
+            "You're a robot sent ahead of human settlers. Your Colony Lander (the ship you came in) landed empty: " +
+            "everything you build starts as something you or your two helper bots dig up. Walk with WASD, zoom with " +
+            "the mouse wheel; H shows every control.",
+            () => (Root.Leader.MoveIntent != Int2.Zero) || (W.Stats.Count(flow: ItemFlow.HandMined, by: "commander") > 0) || (W.Tick > 60 * World.TicksPerSecond),
             Past: AnyResearch));
 
         _steps.Add(new GuideStep(
             "Put your helper bots to work",
-            "In the Helper Bots list (top left), click a bot's job button and pick a job: \"Gather Fibrous Biomass\" for fuel, " +
-            "or an ore. They carry what they gather to the lander or the nearest crate.",
-            () => MyHelpers.Any(u => u.Job.Kind == JobKind.Gather),
+            "Your helpers are your hands: in the Helper Bots list (top left), click a bot's job button and pick " +
+            "\"Gather Regolith\" (it builds your first smelter), then set the other to \"Gather Fibrous Biomass\" for fuel. " +
+            "They carry it all to the lander by themselves.",
+            () => MyHelpers.Count(u => u.Job.Kind == JobKind.Gather) >= 2,
+            () => $"{MyHelpers.Count(u => u.Job.Kind == JobKind.Gather)} / 2 helpers gathering",
+            Past: AnyResearch));
+
+        _steps.Add(new GuideStep(
+            "Lend a hand",
+            "You can dig too. Right-click an ore patch (siderite or cuprite) and you'll walk over and keep mining it; " +
+            "right-drag sweeps across tiles. It goes into your pockets (E); press F by the lander to unload.",
+            () => W.Stats.Count(flow: ItemFlow.HandMined, by: "commander") > 0,
             Past: AnyResearch));
 
         _steps.Add(new GuideStep(
             "Build a Burner Smelter",
-            "Press 2 (Production) and click the Burner Smelter, then left-click to place it near the lander " +
-            "(R rotates, Esc backs out). You build ghosts within reach yourself, from your pockets or the lander.",
+            "Once the lander has 5 regolith, press 2 (Production), click the Burner Smelter and left-click to place it " +
+            "near the lander (R rotates, Esc backs out). You build ghosts within reach from the lander and your pockets.",
             () => W.Stats.Built("burner-smelter") > 0,
+            () => W.Stats.Built("burner-smelter") > 0 ? null : $"Regolith in the lander: {System.Math.Min(5, LanderCount("regolith"))} / 5",
             Past: AnyResearch));
 
         _steps.Add(new GuideStep(
-            "Smelt your first plates",
-            "Click the smelter to open it beside your pockets. Drag ore in, and biomass or compacted carbon into its " +
-            "fuel slot (Ctrl/Cmd-click moves everything of one item). Take the plates out the same way.",
-            () => W.Stats.ByFlow(ItemFlow.Smelted).Values.Sum() > 0,
+            "Let a helper run the smelter",
+            "Rather than feeding it by hand, set a helper's job to Haul…: from the lander to the smelter. It brings ore and " +
+            "fuel as the smelter needs them. Click the smelter to see it work, and take plates out the same way (Ctrl/Cmd-click moves a whole stack).",
+            () => (W.Stats.ByFlow(ItemFlow.Smelted).Values.Sum() > 0) && MyHelpers.Any(u => u.Job.Kind == JobKind.Haul),
+            () => W.Stats.ByFlow(ItemFlow.Smelted).Values.Sum() > 0 ? "Plates made. Now set a helper to Haul…" : "Waiting for the first plate",
             Past: AnyResearch));
+
+        _steps.Add(new GuideStep(
+            "Mine automatically",
+            "A Burner Drill (2, Production) mines the deposit under it for as long as it has fuel and pushes ore out of " +
+            "its front (the arrow). Point it straight into a smelter and the pair makes plates on their own; R rotates before placing. " +
+            "The Replicator (C) makes the drive cogs it needs.",
+            () => W.Stats.Built("burner-drill") > 0,
+            Past: () => Researched("analysis-cores")));
 
         _steps.Add(new GuideStep(
             "Get power running",
@@ -194,13 +209,6 @@ public partial class Hud
             "drag them in, or set a helper bot to Haul… from the lander to the station.",
             () => (W.Research.Completed.Count > 0) || W.Research.Progress.Values.Any(v => v > 0),
             () => ResearchProgress("automation")));
-
-        _steps.Add(new GuideStep(
-            "Mine automatically",
-            "A Burner Drill (Production) mines the deposit under it and pushes ore out of its front (the arrow). " +
-            "Point it into a smelter or a crate and keep it fuelled; R rotates before placing.",
-            () => W.Stats.Built("burner-drill") > 0,
-            Past: () => Researched("analysis-cores")));
 
         _steps.Add(new GuideStep(
             "Automate crafting",

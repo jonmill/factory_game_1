@@ -58,7 +58,8 @@ public class PlaytestTests
         TechGoal goal = new TechGoal("automation");
         s.Bots.Add(new GoalBot(goal));
 
-        RunResult r = s.Run(goal.IsMet, 30 * 60 * World.TicksPerSecond);
+        // The lander lands empty: everything comes from gathering, so the first tech takes about half an hour.
+        RunResult r = s.Run(goal.IsMet, 45 * 60 * World.TicksPerSecond);
 
         await Assert.That(r.GoalMet).IsTrue();
         await Assert.That(s.Invariants.Violations).IsEmpty();

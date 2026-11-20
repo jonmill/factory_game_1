@@ -628,9 +628,6 @@
       "chest", "burner-drill", "burner-smelter", "steam-engine", "power-pole", "lab", "survey-core",
       "siderite-plate", "cupral-bar", "ballast-plate", "sintered-brick", "drive-cog", "cupral-filament", "logic-board", "charge-cell"
     ],
-    "lander": {
-      "biomass": 80, "regolith": 40, "siderite-plate": 120, "cupral-bar": 40, "drive-cog": 30,
-      "sintered-brick": 40, "cupral-filament": 30, "charge-cell": 10, "compacted-carbon": 20
-    }
+    "lander": {}
   }
 }

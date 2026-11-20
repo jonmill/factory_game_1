@@ -412,6 +412,11 @@ public sealed partial class GoalBot : IBot
             return;
         }
 
+        if (BootstrapMining(plan, leader))
+        {
+            return;
+        }
+
         if (nearLander == false)
         {
             WalkTowards(leader, home);
@@ -434,6 +439,51 @@ public sealed partial class GoalBot : IBot
                 WalkTowards(leader, P.Torus.Wrap(store.Origin + new Int2(0, store.H)));
             }
         }
+    }
+
+    /// <summary>
+    /// The lander starts empty: until the first research is done the commander mines by hand alongside the
+    /// helper bots, as a player does, fuel first while storage has little. Returns false (and stops mining)
+    /// once the pockets are full, so the caller unloads them.
+    /// </summary>
+    private const int BootstrapLoad = 40;
+
+    private bool BootstrapMining(BotPlan plan, Unit leader)
+    {
+        if (_w.Research.Completed.Count > 0)
+        {
+            return false;
+        }
+
+        // A load at a time: carry it home (the caller unloads it) rather than filling every pocket slot.
+        if (leader.Carry.IsFull || (leader.Carry.Total >= BootstrapLoad))
+        {
+            if (leader.MiningTile is not null)
+            {
+                Send(new MineTile(leader.Id, null));
+            }
+
+            return false;
+        }
+
+        if (leader.MiningTile is not null)
+        {
+            return true; // still at it
+        }
+
+        ResourceDef fuel = C.Resources[FuelResource()];
+        long fuelStored = C.ItemList.Where(i => i.FuelKj > 0).Sum(i => WorldProbe.StorageCount(P, i.Id));
+        ResourceDef? res = fuelStored < Params.MinFuelStock ? fuel
+            : plan.RawDeficit.Where(kv => P.HasResource(kv.Key)).OrderByDescending(kv => kv.Value).ThenBy(kv => kv.Key, StringComparer.Ordinal)
+                .Select(kv => C.Resources[kv.Key]).FirstOrDefault();
+        if ((res is null) || (P.FindNearestResource(leader.Tile, res) is not { } tile))
+        {
+            return false;
+        }
+
+        Send(new MineTile(leader.Id, tile));
+
+        return true;
     }
 
     private void WalkTowards(Unit leader, Int2 tile)
@@ -1318,6 +1368,14 @@ public sealed partial class GoalBot : IBot
             needs.Add(new Job(JobKind.Build));
         }
 
+        // Burners with nothing to burn stop everything (the lander starts empty): fuel comes first.
+        long fuelStored = C.ItemList.Where(i => i.FuelKj > 0).Sum(i => WorldProbe.StorageCount(P, i.Id));
+        bool burners = P.Buildings.Any(b => b.Def.Energy == EnergyKind.Burner) || P.Sites.Any(st => C.Buildings.TryGetValue(st.DefId, out BuildingDef? d) && (d.Energy == EnergyKind.Burner));
+        if (burners && (fuelStored < Params.MinFuelStock / 2))
+        {
+            needs.Add(new Job(JobKind.Gather, Resource: FuelResource()));
+        }
+
         // A lander stuffed with stockpiled ore can't take anything crafting needs: move the bulkiest
         // thing that isn't a crafting ingredient out to a crate.
         if (LanderCongested(lander))
@@ -1506,7 +1564,12 @@ public sealed partial class GoalBot : IBot
             .Where(u => ((u.Job.Kind == JobKind.Haul) && (u.Phase == UnitPhase.Deliver) && (u.Carry.IsEmpty == false)) == false)
             .OrderBy(u => u.Id).ToList();
         List<Job> open = new List<Job>();
-        foreach (Job job in needs)
+        // At the start (two robots, an empty lander) only as many needs as there are robots count, most urgent
+        // first: a robot gathering something far down the list moves to feeding the first smelters instead of
+        // being kept on its job just because it's listed. Later, keeping robots on any listed job spreads them
+        // over everything the base needs, which the long late-game supply chains depend on.
+        int considered = _w.Research.Completed.Count == 0 ? free.Count : needs.Count;
+        foreach (Job job in needs.Take(considered))
         {
             Unit? keeper = free.FirstOrDefault(u => u.Job == job);
             if (keeper is not null)

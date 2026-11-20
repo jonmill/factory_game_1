@@ -11,9 +11,29 @@ public sealed class TestWorld
     public Unit Leader => P.Units.First(u => u.IsLeader);
     public List<Unit> Followers => P.Units.Where(u => u.IsLeader == false).ToList();
 
-    public TestWorld(bool empty = true, ulong seed = 1)
+    /// <summary>
+    /// The supplies the lander used to start with. A real game now lands empty; scenario tests that are
+    /// about something else (crafting, building, trains) start with these so they don't have to mine first.
+    /// </summary>
+    public static readonly IReadOnlyDictionary<string, int> Supplies = new Dictionary<string, int>
+    {
+        ["biomass"] = 80, ["regolith"] = 40, ["siderite-plate"] = 120, ["cupral-bar"] = 40, ["drive-cog"] = 30,
+        ["sintered-brick"] = 40, ["cupral-filament"] = 30, ["charge-cell"] = 10, ["compacted-carbon"] = 20,
+    };
+
+    /// <param name="empty">A flat, empty map for hand-built scenarios (false: the real generated map).</param>
+    /// <param name="seed">World seed.</param>
+    /// <param name="stocked">Put <see cref="Supplies"/> in the lander (default: for scenario maps only).</param>
+    public TestWorld(bool empty = true, ulong seed = 1, bool? stocked = null)
     {
         W = new World(Content, new WorldSettings { Seed = seed, EmptyPlanet = empty, PlanetWidth = 96, PlanetHeight = 96 });
+        if (stocked ?? empty)
+        {
+            foreach ((string item, int n) in Supplies)
+            {
+                Lander.Inv.AddUnchecked(item, n);
+            }
+        }
     }
 
     /// <summary>A test world with railways unlocked, for tests that exercise trains without researching them.</summary>
