@@ -90,19 +90,19 @@ public sealed class Building : Entity
     /// <summary>The tile just outside the building's front face (drill output / rail stop track / sorter target).</summary>
     public Int2 FrontTile() => Planet.Torus.Wrap(Rot switch
     {
-        Dir.East => new Int2(Origin.X + W, Origin.Y + ((H - 1) / 2)),
-        Dir.West => new Int2(Origin.X - 1, Origin.Y + ((H - 1) / 2)),
-        Dir.North => new Int2(Origin.X + ((W - 1) / 2), Origin.Y - 1),
-        _ => new Int2(Origin.X + ((W - 1) / 2), Origin.Y + H),
+        Dir.East => new Int2(Origin.X + W + Def.Reach - 1, Origin.Y + ((H - 1) / 2)),
+        Dir.West => new Int2(Origin.X - Def.Reach, Origin.Y + ((H - 1) / 2)),
+        Dir.North => new Int2(Origin.X + ((W - 1) / 2), Origin.Y - Def.Reach),
+        _ => new Int2(Origin.X + ((W - 1) / 2), Origin.Y + H + Def.Reach - 1),
     });
 
-    /// <summary>The tile just outside the building's rear face (e.g. where an inserter-style sorter takes items from).</summary>
+    /// <summary>The tile just outside the building's rear face (e.g. where an inserter-style sorter takes items from); a long arm reaches one further.</summary>
     public Int2 BackTile() => Planet.Torus.Wrap(Rot switch
     {
-        Dir.East => new Int2(Origin.X - 1, Origin.Y + ((H - 1) / 2)),
-        Dir.West => new Int2(Origin.X + W, Origin.Y + ((H - 1) / 2)),
-        Dir.North => new Int2(Origin.X + ((W - 1) / 2), Origin.Y + H),
-        _ => new Int2(Origin.X + ((W - 1) / 2), Origin.Y - 1),
+        Dir.East => new Int2(Origin.X - Def.Reach, Origin.Y + ((H - 1) / 2)),
+        Dir.West => new Int2(Origin.X + W + Def.Reach - 1, Origin.Y + ((H - 1) / 2)),
+        Dir.North => new Int2(Origin.X + ((W - 1) / 2), Origin.Y + H + Def.Reach - 1),
+        _ => new Int2(Origin.X + ((W - 1) / 2), Origin.Y - Def.Reach),
     });
 
     /// <summary>Definition of the selected recipe, or null if none is selected or the id is unknown.</summary>

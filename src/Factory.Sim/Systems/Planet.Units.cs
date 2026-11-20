@@ -659,10 +659,10 @@ public sealed partial class Planet
         switch (u.Phase)
         {
             case UnitPhase.None or UnitPhase.Seek:
-                // Carrying things the destination won't take (e.g. leftovers from a previous job)? Put them in
-                // storage first instead of waiting at the destination forever. Only a depot takes anything;
-                // a station takes just its slots' items.
-                if ((u.Carry.IsEmpty == false) && (to.Def.IsDepot == false) && u.Carry.Items.Any(kv => AcceptAmount(to, kv.Key) == 0))
+                // Carrying things the destination won't take (leftovers from a previous job, or more than a
+                // limited or filtered crate has room for)? Put them in storage first instead of waiting at the
+                // destination forever.
+                if ((u.Carry.IsEmpty == false) && u.Carry.Items.Any(kv => AcceptAmount(to, kv.Key) == 0))
                 {
                     if (DeliverToStorage(u) == false)
                     {

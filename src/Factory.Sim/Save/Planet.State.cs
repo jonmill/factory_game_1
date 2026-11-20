@@ -223,6 +223,7 @@ public sealed partial class Planet
         s.Strings(b.Modules);
         s.I32(b.BoostPct);
         s.I64(b.LastOutputJ);
+        s.Str(b.Inv.Filter);
     }
 
     private Building ReadBuilding(StateReader r)
@@ -271,6 +272,7 @@ public sealed partial class Planet
         r.Strings(b.Modules);
         b.BoostPct = r.I32();
         b.LastOutputJ = r.I64();
+        b.Inv.Filter = r.Str();
 
         return b;
     }

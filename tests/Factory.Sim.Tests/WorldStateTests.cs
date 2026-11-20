@@ -80,7 +80,7 @@ public class WorldStateTests
             [typeof(Shipment)] = "FromId ToId ToPlanet Vessel Item Count ArriveTick BackTick",
             [typeof(Vehicle)] = "Def Cargo",
             [typeof(BeltItem)] = "Item Pos",
-            [typeof(Inventory)] = "_items _content Slots",
+            [typeof(Inventory)] = "_items _content Slots Filter",
             [typeof(ResearchState)] = "Unlocked Completed Current Progress Levels Series",
             [typeof(ProductionStats)] = "_byFlow _items _series _actorSeries _buildings _techs _terraform Tick",
         };

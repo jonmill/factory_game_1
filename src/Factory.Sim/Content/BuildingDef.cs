@@ -54,6 +54,8 @@ public sealed class BuildingDef
     public bool NeedsWater { get; init; }
     /// <summary>Fixed recipe id the building always runs, or null if the player chooses one.</summary>
     public string? Recipe { get; init; }
+    /// <summary>How far a sorter reaches, in tiles: it takes from that far behind and drops that far ahead (2 for a long arm).</summary>
+    public int Reach { get; init; } = 1;
     /// <summary>Ticks per transfer (sorter).</summary>
     public int Period { get; init; } = 60;
     /// <summary>Whether the player can place this building; false for pre-placed buildings such as the lander.</summary>

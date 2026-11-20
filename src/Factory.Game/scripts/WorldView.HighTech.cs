@@ -357,7 +357,9 @@ public partial class WorldView
         DrawCircle(c, T * 0.18f, _hullLight);
         float swing = b.Def.Period > 0 ? b.Progress / (b.Def.Period * 100f) : 0;
         Vector2 v = new Vector2(b.Rot.Vec().X, b.Rot.Vec().Y);
-        Vector2 hand = c + (v * T * Mathf.Lerp(-0.42f, 0.42f, swing));
+        // A long arm swings twice as far, from two tiles behind to two ahead.
+        float reach = 0.42f + (0.9f * (b.Def.Reach - 1));
+        Vector2 hand = c + (v * T * Mathf.Lerp(-reach, reach, swing));
         DrawLine(c, hand, _hullLight, T * 0.11f);
         DrawLine(c, hand, _hullShade, Mathf.Max(1, T * 0.03f));
         DrawCircle(hand, T * 0.09f, Trim(accent, b.Status == MachineStatus.Working, 1.1f));

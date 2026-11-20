@@ -314,11 +314,11 @@ public sealed partial class GoalBot
         {
             foreach (StationSlot slot in s.StationSlots)
             {
-                if ((slot.Mode == StationMode.Demand) && (s.Inv.Count(slot.Item) >= 20) && (WorldProbe.StorageCount(P, slot.Item) < StockpileCap()) && (StoreFor(slot.Item, lander) is { } into))
+                if ((slot.Mode == StationMode.Demand) && (s.Inv.Count(slot.Item) >= 20) && (Stock(slot.Item) < StockpileCap()) && (StoreFor(slot.Item, lander) is { } into))
                 {
                     needs.Add(new Job(JobKind.Haul, FromId: s.Id, ToId: into.Id, Item: slot.Item));
                 }
-                else if ((slot.Mode == StationMode.Supply) && (s.Inv.Count(slot.Item) < 100) && (WorldProbe.StorageCount(P, slot.Item) >= 10))
+                else if ((slot.Mode == StationMode.Supply) && (s.Inv.Count(slot.Item) < 100) && (Stock(slot.Item) >= 10))
                 {
                     needs.Add(new Job(JobKind.Haul, FromId: sourceFor([slot.Item]), ToId: s.Id, Item: slot.Item));
                 }
@@ -354,7 +354,7 @@ public sealed partial class GoalBot
 
         foreach ((string item, int n) in load.OrderBy(kv => kv.Key, StringComparer.Ordinal))
         {
-            Building? other = WorldProbe.Storages(P).Where(st => (st.Id != lander.Id) && (st.Inv.Count(item) > 0)).OrderByDescending(st => st.Inv.Count(item)).ThenBy(st => st.Id).FirstOrDefault();
+            Building? other = Stores().Where(st => (st.Id != lander.Id) && (st.Inv.Count(item) > 0)).OrderByDescending(st => st.Inv.Count(item)).ThenBy(st => st.Id).FirstOrDefault();
             if ((lander.Inv.Count(item) + (LaunchPad()?.Inv.Count(item) ?? 0) < n) && (other is not null))
             {
                 needs.Add(new Job(JobKind.Haul, FromId: other.Id, ToId: lander.Id, Item: item));

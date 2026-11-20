@@ -127,7 +127,7 @@ public class CoreTests
     [Test]
     public async Task Content_DrawsShipAndElectricTechAsHighTechAndEverythingElseAsIndustrial()
     {
-        string[] highTech = ["arc-smelter", "assembler", "assembler-mk2", "assembler-mk3", "atmo-processor", "bio-incubator", "climate-engine", "conveyor-belt", "electric-drill", "fusion-reactor", "hydro-seeder", "lab", "lander", "logistics-station", "orbital-collector", "orbital-station", "payload-launcher", "plasma-drill", "plasma-smelter", "robot-bay", "settler-uplink", "solar-panel", "sorter", "space-elevator", "wind-turbine"];
+        string[] highTech = ["arc-smelter", "assembler", "assembler-mk2", "assembler-mk3", "atmo-processor", "bio-incubator", "climate-engine", "conveyor-belt", "electric-drill", "fusion-reactor", "hydro-seeder", "lab", "lander", "logistics-station", "long-sorter", "orbital-collector", "orbital-station", "payload-launcher", "plasma-drill", "plasma-smelter", "robot-bay", "settler-uplink", "solar-panel", "sorter", "space-elevator", "wind-turbine"];
 
         string[] actual = TestWorld.Content.BuildingList.Where(b => b.Look == VisualStyle.HighTech).Select(b => b.Id).Order(StringComparer.Ordinal).ToArray();
 

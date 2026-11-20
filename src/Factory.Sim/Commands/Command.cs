@@ -31,6 +31,7 @@ namespace Factory.Sim;
 [JsonDerivedType(typeof(ReturnFerry), "returnFerry")]
 [JsonDerivedType(typeof(SetLaunchTarget), "setLaunchTarget")]
 [JsonDerivedType(typeof(SetStationSlot), "setStationSlot")]
+[JsonDerivedType(typeof(SetCrateLimit), "setCrateLimit")]
 [JsonDerivedType(typeof(InstallMachineModule), "installMachineModule")]
 [JsonDerivedType(typeof(RemoveMachineModule), "removeMachineModule")]
 public abstract record Command

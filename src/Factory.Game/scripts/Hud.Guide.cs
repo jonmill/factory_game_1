@@ -251,8 +251,9 @@ public partial class Hud
 
         _steps.Add(new GuideStep(
             "Lay a belt line",
-            "Research Conveyor Belts. Drag a belt (Logistics) past a row of machines, with a Sorter Arm loading each " +
-            "machine from the belt and another putting its output back: the line runs itself, with no helper on the route.",
+            "Research Conveyor Belts. Lay a belt for each ingredient past a row of fabricators (a Long Sorter Arm reaches a " +
+            "second belt over the first), arms into each machine and one more onto an output belt. Feed each belt from a " +
+            "crate set to take only its ingredient: the line runs itself, with no helper on every machine.",
             () => (P.Buildings.Count(b => b.Def.Kind == BuildingKind.Belt) >= 5) && P.Buildings.Any(b => b.Def.Kind == BuildingKind.Sorter),
             () => ResearchProgress("conveyor-belts"),
             Past: () => Researched("orbital-logistics")));

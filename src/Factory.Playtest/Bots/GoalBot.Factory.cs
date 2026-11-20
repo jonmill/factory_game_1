@@ -18,7 +18,7 @@ public sealed partial class GoalBot
     /// <summary>The automation research a player takes on the way to the settlers, in order.</summary>
     private static readonly string[] _factoryPath =
     [
-        "automation", "robot-modules", "robotics", "mechanical-arms", "analysis-cores", "electric-mining", "arc-smelting", "kerogen-refining",
+        "automation", "robot-modules", "robotics", "mechanical-arms", "analysis-cores", "conveyor-belts", "electric-mining", "arc-smelting", "kerogen-refining",
         "advanced-helpers", "atmospheric-processing", "hydro-seeding", "bio-engineering", "precision-fabrication", "solar-power",
         "fusion-power", "climate-engineering", "plasma-smelting", "plasma-mining", "plasma-fabrication", "lanthanide-catalysis",
     ];
@@ -375,7 +375,8 @@ public sealed partial class GoalBot
         // fabricator per three helpers, and all the lines together one per helper, or the machines outrun
         // what can be fed and everything starves.
         int helpers = P.Units.Count(u => (u.IsLeader == false) && (u.OwnerPlayer == Player));
-        int perLine = System.Math.Max(1, helpers / 3);
+        // Belt lines feed themselves, so once belts are in the lines are sized to the research, not the workforce.
+        int perLine = BeltsReady() ? MaxLineLength : System.Math.Max(1, helpers / 3);
         Dictionary<string, decimal> need = new Dictionary<string, decimal>(StringComparer.Ordinal);
         List<string> order = [];
 
@@ -409,7 +410,7 @@ public sealed partial class GoalBot
         foreach (string item in order)
         {
             int n = (int)System.Math.Clamp(decimal.Ceiling(need[item]), 1, perLine);
-            if (total + n > System.Math.Max(helpers, tech.UnitCostList.Length))
+            if (total + n > System.Math.Max(BeltsReady() ? helpers * 3 : helpers, tech.UnitCostList.Length))
             {
                 break;
             }
@@ -446,7 +447,24 @@ public sealed partial class GoalBot
 
         List<Building> fabs = Fabricators();
         Dictionary<string, int> science = ScienceRecipes();
-        if (fabs.Count + 1 > FabricatorCap() + science.Values.Sum())
+        // Once belts are in, science runs on belt lines (the hand-fed fabricators that made it go back to
+        // general work); lines feed themselves, so they don't count against the hand-fed cap.
+        // One line at a time, each once the last is finished, and only while plates are in hand for it: a
+        // line is a few hundred plates of belts and arms, and starting several at once starves the base.
+        bool lineBuilding = P.Sites.Any(s => C.Buildings.TryGetValue(s.DefId, out BuildingDef? d) && (d.Kind is BuildingKind.Belt or BuildingKind.Sorter));
+        if (BeltsReady() && (lineBuilding == false) && (Stock("siderite-plate") >= 100))
+        {
+            foreach ((string recipe, int want) in science.OrderBy(kv => kv.Key, StringComparer.Ordinal))
+            {
+                int lined = LineFabsFor(recipe);
+                if ((lined < want) && PlaceBeltLine(plan, lander, fab, C.Recipes[recipe], System.Math.Clamp(want - lined, 2, MaxLineLength)))
+                {
+                    return;
+                }
+            }
+        }
+
+        if (fabs.Count(f => _lineFabs.Contains(f.Id) == false) + 1 > FabricatorCap() + (BeltsReady() ? 0 : science.Values.Sum()))
         {
             return;
         }
@@ -454,7 +472,7 @@ public sealed partial class GoalBot
         // Science first: a core line short of fabricators gets the next cell.
         foreach ((string recipe, int want) in science.OrderBy(kv => kv.Key, StringComparer.Ordinal))
         {
-            if (fabs.Count(f => f.RecipeId == recipe) < want)
+            if ((BeltsReady() == false) && (fabs.Count(f => f.RecipeId == recipe) < want))
             {
                 PlaceFabricatorCell(plan, lander, fab);
 
@@ -571,17 +589,19 @@ public sealed partial class GoalBot
 
     /// <summary>True when a machine's product isn't wanted and there is plenty of it in store: let it stop.</summary>
     private bool Surplus(BotPlan plan, RecipeDef r) =>
-        (r.Outputs.Length > 0) && (plan.CraftDeficit.ContainsKey(r.Outputs[0].Item) == false) && (WorldProbe.StorageCount(P, r.Outputs[0].Item) >= StockpileCap());
+        (r.Outputs.Length > 0) && (plan.CraftDeficit.ContainsKey(r.Outputs[0].Item) == false) && (Stock(r.Outputs[0].Item) >= StockpileCap());
 
     /// <summary>Sets every idle fabricator to the craft that needs one most; retargets fabricators whose product is no longer wanted.</summary>
     private void AssignFabricatorRecipes(BotPlan plan)
     {
-        List<Building> fabs = Fabricators();
+        SetLineRecipes();
+        // Line fabricators keep their line's recipe; they count towards the science lines they serve.
+        List<Building> fabs = Fabricators().Where(f => _lineFabs.Contains(f.Id) == false).ToList();
         Dictionary<string, int> science = ScienceRecipes();
         // Staff the science lines first, from fabricators with nothing to do or making something unwanted.
         foreach ((string recipe, int want) in science.OrderBy(kv => kv.Key, StringComparer.Ordinal))
         {
-            for (int have = fabs.Count(f => f.RecipeId == recipe); have < want; have++)
+            for (int have = fabs.Count(f => f.RecipeId == recipe) + LineFabsFor(recipe); have < want; have++)
             {
                 Building? spare = fabs.Where(f => (f.RecipeId is null) || ((science.ContainsKey(f.RecipeId) == false) && Surplus(plan, f.Recipe!)))
                     .OrderBy(f => f.RecipeId is null ? 0 : 1).ThenBy(f => f.Id).FirstOrDefault();
@@ -600,7 +620,7 @@ public sealed partial class GoalBot
         foreach (Building f in fabs.OrderBy(f => f.Id))
         {
             // A science line's fabricator stays on its core (it stops by itself once the store is full).
-            bool line = (f.RecipeId is not null) && science.TryGetValue(f.RecipeId, out int lineSize) && (fabs.Count(x => x.RecipeId == f.RecipeId) <= lineSize);
+            bool line = (f.RecipeId is not null) && science.TryGetValue(f.RecipeId, out int lineSize) && (fabs.Count(x => x.RecipeId == f.RecipeId) + LineFabsFor(f.RecipeId) <= lineSize);
             bool unwanted = (line == false) && (f.Recipe is not null) && Surplus(plan, f.Recipe) && (wanted.Count > 0);
             if ((f.RecipeId is not null) && (unwanted == false))
             {
@@ -618,7 +638,7 @@ public sealed partial class GoalBot
         foreach (Building f in fabs.Where(f => (f.Crafting == false) && (f.Status == MachineStatus.NoInput) && (f.Recipe is not null)).OrderBy(f => f.Id))
         {
             RecipeDef r = f.Recipe!;
-            RecipeDef? upstream = r.Inputs.Where(i => (f.Inv.Count(i.Item) < i.Count) && (WorldProbe.StorageCount(P, i.Item) < i.Count))
+            RecipeDef? upstream = r.Inputs.Where(i => (f.Inv.Count(i.Item) < i.Count) && (Stock(i.Item) < i.Count))
                 .Select(i => wanted.FirstOrDefault(w => w.Outputs.Any(o => o.Item == i.Item))).FirstOrDefault(w => w is not null);
             if ((upstream is not null) && (fabs.Count(x => x.RecipeId == r.Id) > 1) && (fabs.Count(x => x.RecipeId == upstream.Id) < fabs.Count(x => x.RecipeId == r.Id)))
             {
@@ -641,7 +661,9 @@ public sealed partial class GoalBot
         }
 
         int budget = System.Math.Max(1, P.Units.Count(u => (u.IsLeader == false) && (u.OwnerPlayer == Player)) / 2);
+        // The belt lines come first within the budget: a helper there keeps a whole line going, not one machine.
         int start = needs.Count;
+        FeedLines(plan, needs, sourceFor, lander, budget);
         // The budget runs out, so feed in order of how much depends on it: machines nothing else can stand in
         // for (refineries and the like, which make fuel and resin) first, then the science lines and the
         // terraforming consumables (once the terraformers stand, they are the game), then the rest.
@@ -649,7 +671,7 @@ public sealed partial class GoalBot
         HashSet<string> terraform = TerraformInputs();
         int Priority(Building b) => b.Def.Categories.Contains("crafting") == false ? 0
             : science.ContainsKey(b.RecipeId!) || b.Recipe!.Outputs.Any(o => terraform.Contains(o.Item)) ? 1 : 2;
-        foreach (Building f in P.Buildings.Where(b => (b.Def.Kind == BuildingKind.Assembler) && (b.Recipe is not null)).OrderBy(Priority).ThenBy(f => f.Id))
+        foreach (Building f in P.Buildings.Where(b => (b.Def.Kind == BuildingKind.Assembler) && (b.Recipe is not null) && (_lineFabs.Contains(b.Id) == false)).OrderBy(Priority).ThenBy(f => f.Id))
         {
             if (needs.Count - start >= budget)
             {
@@ -671,7 +693,7 @@ public sealed partial class GoalBot
 
             foreach (ItemAmount i in r.Inputs.Where(_ => surplus == false))
             {
-                if ((f.Inv.Count(i.Item) < i.Count * 2) && (P.AcceptAmount(f, i.Item) >= i.Count) && (WorldProbe.StorageCount(P, i.Item) >= i.Count))
+                if ((f.Inv.Count(i.Item) < i.Count * 2) && (P.AcceptAmount(f, i.Item) >= i.Count) && (Stock(i.Item) >= i.Count))
                 {
                     needs.Add(new Job(JobKind.Haul, FromId: sourceFor([i.Item]), ToId: f.Id, Item: i.Item));
                 }
@@ -713,7 +735,7 @@ public sealed partial class GoalBot
     /// <summary>Where to put an item: the lander while it has room for a stack, else the nearest crate that does.</summary>
     private Building? StoreFor(string item, Building lander) =>
         lander.Inv.SpaceFor(item) >= 10 ? lander
-            : WorldProbe.Storages(P).Where(st => (st.Def.Kind != BuildingKind.Ferry) && (st.Inv.SpaceFor(item) >= 10))
+            : Stores().Where(st => (st.Def.Kind != BuildingKind.Ferry) && (_lineOutputs.Contains(st.Id) == false) && (st.Inv.SpaceFor(item) >= 10))
                 .OrderBy(st => P.SubTorus.DistSq(lander.CenterSub, st.CenterSub)).ThenBy(st => st.Id).FirstOrDefault();
 
     /// <summary>The pole the bot runs power lines with: lattice pylons once researched (no biomass, which runs out with the trees).</summary>
@@ -733,7 +755,7 @@ public sealed partial class GoalBot
 
         // Rocket fuel goes to rockets while there's plenty of another fuel to burn instead.
         HashSet<string> launch = C.BuildingList.Where(d => d.Kind == BuildingKind.LaunchPad).SelectMany(d => d.LaunchFuelList).Select(i => i.Item).ToHashSet();
-        bool spare = burns.Any(i => (i != "biomass") && (launch.Contains(i) == false) && (WorldProbe.StorageCount(P, i) >= 50));
+        bool spare = burns.Any(i => (i != "biomass") && (launch.Contains(i) == false) && (Stock(i) >= 50));
 
         return burns.OrderBy(i => i == "biomass" ? 2 : spare && launch.Contains(i) ? 1 : 0).ThenByDescending(i => C.Items[i].FuelKj).ThenBy(i => i, StringComparer.Ordinal).FirstOrDefault() ?? inStorage[0];
     }

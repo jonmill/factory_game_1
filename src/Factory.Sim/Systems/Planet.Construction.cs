@@ -272,7 +272,8 @@ public sealed partial class Planet
     /// <summary>Cancels a ghost; anything already delivered is returned to the nearest storage.</summary>
     internal void CancelSite(ConstructionSite s)
     {
-        Building? store = StoragesByDistance(SubTorus.Wrap(s.CenterSub)).FirstOrDefault();
+        List<Building> near = StoragesByDistance(SubTorus.Wrap(s.CenterSub)).ToList();
+        Building? store = near.FirstOrDefault(st => st.Inv.Filter is null) ?? near.FirstOrDefault();
         if (store is not null)
         {
             foreach ((string? k, int v) in s.Delivered.Items)

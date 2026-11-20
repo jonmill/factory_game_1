@@ -47,7 +47,7 @@ public partial class WorldView
         Rect2 work = bars with { Position = bars.Position + new Vector2(0, T * 0.1f) };
         DrawRect(work, new Color(0, 0, 0, 0.4f));
         DrawRect(new Rect2(work.Position, new Vector2(work.Size.X * progress, work.Size.Y)), _blueprint);
-        if (s.DefId is "rail-stop" or "burner-drill" or "sorter" or "electric-drill")
+        if (s.DefId is "rail-stop" or "burner-drill" or "sorter" or "long-sorter" or "electric-drill")
         {
             DrawArrow(r.GetCenter(), s.Rot, T * 0.2f, A(_blueprint, 0.8f));
         }

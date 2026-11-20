@@ -108,6 +108,23 @@ public class FollowerTests
     }
 
     [Test]
+    public async Task Hauler_StoresWhatAFullCrateWontTake_InsteadOfWaitingForever()
+    {
+        // Several helpers each picked up a load for a crate limited to one stack; the first filled it. The
+        // rest must put their loads in storage, not stand at the crate for good.
+        TestWorld tw = new TestWorld();
+        int stack = TestWorld.Content.Stack("siderite-plate");
+        Building crate = tw.Build("chest", tw.Lander.Origin.X + 8, tw.Lander.Origin.Y);
+        tw.Do(new SetCrateLimit(crate.Id, 1, "siderite-plate"));
+        crate.Inv.AddUnchecked("siderite-plate", stack);
+        Unit f = tw.Followers[0];
+        f.Carry.Add("siderite-plate", 30);
+        tw.Do(new AssignJob(f.Id, new Job(JobKind.Haul, FromId: tw.Lander.Id, ToId: crate.Id, Item: "siderite-plate")));
+        tw.RunUntil(() => f.Carry.IsEmpty, 60 * 30, "the load to go into storage");
+        await Assert.That(crate.Inv.Count("siderite-plate")).IsEqualTo(stack);
+    }
+
+    [Test]
     public async Task Deconstruction_RefundsMaterials()
     {
         TestWorld tw = new TestWorld();

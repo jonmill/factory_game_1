@@ -80,6 +80,7 @@ public sealed partial class GoalBot : IBot
             return;
         }
 
+        RefreshLines();
         _lastCraftDeficit = LastPlan?.CraftDeficit.Keys.ToList() ?? [];
         BotPlan plan = new BotPlan();
         LastPlan = plan;
@@ -267,7 +268,10 @@ public sealed partial class GoalBot : IBot
             return true;
         }
 
-        int[] crew = P.Units.Where(u => (u.IsLeader == false) && (u.OwnerPlayer == Player)).OrderBy(u => u.Id).Select(u => u.Id).ToArray();
+        // Half the helpers go (at least two), those not keeping the factory fed first: the rest stay on their
+        // jobs, which carry on while the commander is away, so the base keeps running.
+        List<Unit> all = P.Units.Where(u => (u.IsLeader == false) && (u.OwnerPlayer == Player)).ToList();
+        int[] crew = all.OrderBy(u => u.Job.Kind == JobKind.Haul ? 1 : 0).ThenBy(u => u.Id).Take(System.Math.Max(2, all.Count / 2)).Select(u => u.Id).ToArray();
         Send(new LaunchFerry(leader.Id, pad.Id, want.Planet, crew));
         _expedition = (want.Resource, want.Planet, ExpeditionAmount, _w.Tick);
         _expeditionDrillsPlaced = false;
@@ -476,7 +480,7 @@ public sealed partial class GoalBot : IBot
         }
 
         ResourceDef fuel = C.Resources[FuelResource()];
-        long fuelStored = C.ItemList.Where(i => i.FuelKj > 0).Sum(i => WorldProbe.StorageCount(P, i.Id));
+        long fuelStored = C.ItemList.Where(i => i.FuelKj > 0).Sum(i => Stock(i.Id));
         ResourceDef? res = fuelStored < Params.MinFuelStock ? fuel
             : plan.RawDeficit.Where(kv => P.HasResource(kv.Key)).OrderByDescending(kv => kv.Value).ThenBy(kv => kv.Key, StringComparer.Ordinal)
                 .Select(kv => C.Resources[kv.Key]).FirstOrDefault();
@@ -650,7 +654,7 @@ public sealed partial class GoalBot : IBot
     {
         int stations = System.Math.Max(1, CountOf(BuildingKind.Lab));
 
-        return t.UnitCostList.All(c => WorldProbe.StorageCount(P, c.Item) + P.Buildings.Where(b => b.Def.Kind == BuildingKind.Lab).Sum(b => b.Inv.Count(c.Item)) >= c.Count * stations);
+        return t.UnitCostList.All(c => Stock(c.Item) + P.Buildings.Where(b => b.Def.Kind == BuildingKind.Lab).Sum(b => b.Inv.Count(c.Item)) >= c.Count * stations);
     }
 
     /// <summary>
@@ -675,10 +679,10 @@ public sealed partial class GoalBot : IBot
 
     private static readonly HashSet<BuildingKind> _wanted =
         [BuildingKind.Lab, BuildingKind.Furnace, BuildingKind.SteamEngine, BuildingKind.Pole, BuildingKind.Chest, BuildingKind.RobotBay, BuildingKind.Terraformer, BuildingKind.Uplink,
-            BuildingKind.LaunchPad, BuildingKind.PayloadLauncher, BuildingKind.Drill, BuildingKind.Sorter, BuildingKind.Assembler, BuildingKind.OrbitalStation, BuildingKind.SolarPanel];
+            BuildingKind.LaunchPad, BuildingKind.PayloadLauncher, BuildingKind.Drill, BuildingKind.Sorter, BuildingKind.Assembler, BuildingKind.OrbitalStation, BuildingKind.SolarPanel, BuildingKind.Belt];
 
     /// <summary>Kinds the factory builds several of at once (columns and cells): duplicate orders are fine.</summary>
-    private static readonly HashSet<BuildingKind> _many = [BuildingKind.Pole, BuildingKind.Drill, BuildingKind.Furnace, BuildingKind.Sorter, BuildingKind.Chest, BuildingKind.Assembler, BuildingKind.SteamEngine];
+    private static readonly HashSet<BuildingKind> _many = [BuildingKind.Belt, BuildingKind.Pole, BuildingKind.Drill, BuildingKind.Furnace, BuildingKind.Sorter, BuildingKind.Chest, BuildingKind.Assembler, BuildingKind.SteamEngine];
 
     /// <summary>
     /// The terraformers and the uplink, the buildings the settlers goal needs. Only the first terraformers,
@@ -853,7 +857,7 @@ public sealed partial class GoalBot : IBot
             // what's in storage. Otherwise a launcher full of catalyst sits aimed at a planet whose air is done.
             Planet? aim = RemoteTargets().Where(t => t.IsReady == false)
                 .OrderByDescending(t => Payloads(launcher.Def).Where(x => launcher.Inv.Has(x.Recipe.Inputs)).Sum(x => PointsLeftOn(t, x.Stat)))
-                .ThenByDescending(t => Payloads(launcher.Def).Where(x => x.Recipe.Inputs.All(c => (launcher.Inv.Count(c.Item) + WorldProbe.StorageCount(P, c.Item)) >= c.Count)).Sum(x => PointsLeftOn(t, x.Stat)))
+                .ThenByDescending(t => Payloads(launcher.Def).Where(x => x.Recipe.Inputs.All(c => (launcher.Inv.Count(c.Item) + Stock(c.Item)) >= c.Count)).Sum(x => PointsLeftOn(t, x.Stat)))
                 .ThenBy(t => t.Id).FirstOrDefault();
             if ((aim is not null) && (launcher.TargetPlanetId != aim.Id))
             {
@@ -880,7 +884,7 @@ public sealed partial class GoalBot : IBot
         }
 
         // Storage pressure → add a crate (also when the lander is stuffed and no crate has room).
-        List<Building> storages = WorldProbe.Storages(P).ToList();
+        List<Building> storages = Stores().ToList();
         int used = storages.Sum(s => s.Inv.UsedSlots), slots = storages.Sum(s => s.Inv.Slots);
         bool noCrateRoom = LanderCongested(lander) && storages.All(st => (st.Id == lander.Id) || (st.Inv.UsedSlots + 4 > st.Inv.Slots));
         if ((slots > 0) && ((used * 100 / slots > 85) || noCrateRoom) && (HasSite("chest") == false))
@@ -1153,7 +1157,7 @@ public sealed partial class GoalBot : IBot
             Add(i.Item, i.Count);
         }
 
-        Dictionary<string, long> stock = WorldProbe.StorageTotals(P);
+        Dictionary<string, long> stock = StockTotals();
         // Cargo back from an expedition waits on the launch pad until it's hauled in: it counts too.
         // (Not the rocket and its fuel: those are already set aside for the trip.)
         foreach (Building pad in P.Buildings.Where(b => b.Def.Kind == BuildingKind.LaunchPad))
@@ -1307,7 +1311,7 @@ public sealed partial class GoalBot : IBot
 
             // Fetch from the lander, or whichever crate holds the most of the first missing ingredient.
             Building? source = wanted.All(i => lander.Inv.Count(i.Item) >= r.In[i.Item]) ? lander
-                : WorldProbe.Storages(P).Where(st => st.Inv.Count(wanted[0].Item) >= r.In[wanted[0].Item])
+                : Stores().Where(st => st.Inv.Count(wanted[0].Item) >= r.In[wanted[0].Item])
                     .OrderByDescending(st => st.Inv.Count(wanted[0].Item)).ThenBy(st => st.Id).FirstOrDefault();
             if (source is not null)
             {
@@ -1417,16 +1421,16 @@ public sealed partial class GoalBot : IBot
     private void AssignFollowers(BotPlan plan, Building lander)
     {
         string fuelItem = C.Resources[FuelResource()].Item;
-        List<string> storageFuel = C.ItemList.Where(i => i.FuelKj > 0).Select(i => i.Id).Where(i => WorldProbe.StorageCount(P, i) > 0).ToList();
+        List<string> storageFuel = C.ItemList.Where(i => i.FuelKj > 0).Select(i => i.Id).Where(i => Stock(i) > 0).ToList();
         List<Job> needs = new List<Job>();
         int FuelIn(Building b) => b.Inv.Items.Where(kv => C.IsFuel(kv.Key)).Sum(kv => kv.Value);
         // Haul from whichever storage actually holds the item (the lander when tied), not always the lander.
-        int SourceFor(params string[] items) => WorldProbe.Storages(P)
+        int SourceFor(params string[] items) => Stores()
             .OrderByDescending(st => items.Sum(it => (long)st.Inv.Count(it))).ThenBy(st => st.Id == lander.Id ? 0 : 1).ThenBy(st => st.Id)
             .FirstOrDefault()?.Id ?? lander.Id;
 
         // Construction
-        int buildable = P.Sites.Count(s => (s.Kind == SiteKind.Deconstruct) || s.MaterialsComplete || s.Missing().Any(m => WorldProbe.StorageCount(P, m.Item) > 0));
+        int buildable = P.Sites.Count(s => (s.Kind == SiteKind.Deconstruct) || s.MaterialsComplete || s.Missing().Any(m => Stock(m.Item) > 0));
         int maxBuilders = Params.Automate ? System.Math.Max(Params.MaxBuilders, P.Units.Count(u => (u.IsLeader == false) && (u.OwnerPlayer == Player)) / 3) : Params.MaxBuilders;
         for (int i = 0; i < System.Math.Min(buildable, maxBuilders); i++)
         {
@@ -1434,7 +1438,7 @@ public sealed partial class GoalBot : IBot
         }
 
         // Burners with nothing to burn stop everything (the lander starts empty): fuel comes first.
-        long fuelStored = C.ItemList.Where(i => i.FuelKj > 0).Sum(i => WorldProbe.StorageCount(P, i.Id));
+        long fuelStored = C.ItemList.Where(i => i.FuelKj > 0).Sum(i => Stock(i.Id));
         bool burners = P.Buildings.Any(b => b.Def.Energy == EnergyKind.Burner) || P.Sites.Any(st => C.Buildings.TryGetValue(st.DefId, out BuildingDef? d) && (d.Energy == EnergyKind.Burner));
         if (burners && (fuelStored < Params.MinFuelStock / 2))
         {
@@ -1448,7 +1452,7 @@ public sealed partial class GoalBot : IBot
             HashSet<string> craftIn = plan.CraftDeficit.Keys.Select(it => WorldProbe.RecipeFor(C, it)!).SelectMany(r => r.Inputs).Select(i => i.Item).ToHashSet();
             string? bulk = lander.Inv.Items.Where(kv => craftIn.Contains(kv.Key) == false).OrderByDescending(kv => kv.Value).ThenBy(kv => kv.Key, StringComparer.Ordinal)
                 .Select(kv => kv.Key).FirstOrDefault();
-            Building? crate = bulk is null ? null : WorldProbe.Storages(P).Where(st => (st.Id != lander.Id) && (st.Inv.SpaceFor(bulk) >= 50))
+            Building? crate = bulk is null ? null : Stores().Where(st => (st.Id != lander.Id) && (st.Inv.SpaceFor(bulk) >= 50))
                 .OrderBy(st => P.SubTorus.DistSq(lander.CenterSub, st.CenterSub)).ThenBy(st => st.Id).FirstOrDefault();
             if (crate is not null)
             {
@@ -1472,7 +1476,7 @@ public sealed partial class GoalBot : IBot
             TechDef tech = C.Techs[techId];
             // A hauler for each lab that is running dry.
             foreach (Building hungry in P.Buildings.Where(b => (b.Def.Kind == BuildingKind.Lab) && (b.NetworkId != 0))
-                .Where(lab => (lab.Inv.Has(tech.UnitCostList) == false) && tech.UnitCostList.Any(c => (lab.Inv.Count(c.Item) < c.Count) && (WorldProbe.StorageCount(P, c.Item) > 0)))
+                .Where(lab => (lab.Inv.Has(tech.UnitCostList) == false) && tech.UnitCostList.Any(c => (lab.Inv.Count(c.Item) < c.Count) && (Stock(c.Item) > 0)))
                 .OrderBy(lab => lab.Id))
             {
                 needs.Add(new Job(JobKind.Haul, FromId: SourceFor(tech.UnitCostList.Where(c => hungry.Inv.Count(c.Item) < c.Count).Select(c => c.Item).ToArray()), ToId: hungry.Id));
@@ -1484,14 +1488,14 @@ public sealed partial class GoalBot : IBot
         List<Building> furnaces = P.Buildings.Where(b => b.Def.Kind == BuildingKind.Furnace).ToList();
         List<string> oreQueue = plan.SmeltDeficit.OrderByDescending(kv => kv.Value)
             .Select(kv => WorldProbe.RecipeFor(C, kv.Key)!.Inputs[0].Item)
-            .Where(ore => WorldProbe.StorageCount(P, ore) > 0).Distinct().ToList();
+            .Where(ore => Stock(ore) > 0).Distinct().ToList();
         for (int i = 0; i < furnaces.Count; i++)
         {
             Building f = furnaces[i];
             string? product = f.Out.Items.Select(kv => kv.Key).FirstOrDefault();
             bool collect = (f.Out.Total >= Params.FurnaceCollectAt) || ((f.Status != MachineStatus.Working) && (f.Out.Total > 0));
             // A drill column with plenty in store is left to back up: its drill stops until the plates are wanted.
-            bool plenty = Params.Automate && drillFed.Contains(f.Id) && (product is not null) && (WorldProbe.StorageCount(P, product) >= StockpileCap() * 3);
+            bool plenty = Params.Automate && drillFed.Contains(f.Id) && (product is not null) && (Stock(product) >= StockpileCap() * 3);
             if (collect && (plenty == false) && (product is not null) && (StoreFor(product, lander) is { } into))
             {
                 needs.Add(new Job(JobKind.Haul, FromId: f.Id, ToId: into.Id));
@@ -1540,7 +1544,7 @@ public sealed partial class GoalBot : IBot
         foreach (Building d in P.Buildings.Where(b => (b.Def.Kind == BuildingKind.Drill) && (b.Out.Total >= 5) && (_retiring.Contains(b.Id) == false) && (P.BuildingAt(b.FrontTile()) is null)).OrderBy(b => b.Id))
         {
             string ore = d.Out.Items.Select(kv => kv.Key).First();
-            if ((WorldProbe.StorageCount(P, ore) < StockpileCap()) && (StoreFor(ore, lander) is { } into))
+            if ((Stock(ore) < StockpileCap()) && (StoreFor(ore, lander) is { } into))
             {
                 needs.Add(new Job(JobKind.Haul, FromId: d.Id, ToId: into.Id));
 
@@ -1556,7 +1560,7 @@ public sealed partial class GoalBot : IBot
             // Climate engines surge every few seconds: keep several surges' worth in them, not just the next one.
             int stock = IsClimateEngine(bc) ? 5 : 1;
             if ((bc.Recipe is { } r) && ((bc.Crafting == false) || (stock > 1))
-                && r.Inputs.Any(c => (bc.Inv.Count(c.Item) < c.Count * stock) && (P.AcceptAmount(bc, c.Item) > 0) && (WorldProbe.StorageCount(P, c.Item) > 0)))
+                && r.Inputs.Any(c => (bc.Inv.Count(c.Item) < c.Count * stock) && (P.AcceptAmount(bc, c.Item) > 0) && (Stock(c.Item) > 0)))
             {
                 needs.Add(new Job(JobKind.Haul, FromId: SourceFor(r.Inputs.Where(c => bc.Inv.Count(c.Item) < c.Count * stock).Select(c => c.Item).ToArray()), ToId: bc.Id));
             }
@@ -1567,7 +1571,7 @@ public sealed partial class GoalBot : IBot
         {
             Planet? target = (pl.TargetPlanetId >= 0) && (pl.TargetPlanetId < _w.Planets.Count) ? _w.Planets[pl.TargetPlanetId] : null;
             string? pack = Payloads(pl.Def).Where(x => (target is null ? RemotePointsLeft(x.Stat) : PointsLeftOn(target, x.Stat)) > 0)
-                .Where(x => x.Recipe.Inputs.Any(c => (pl.Inv.Count(c.Item) < c.Count) && (WorldProbe.StorageCount(P, c.Item) > 0)))
+                .Where(x => x.Recipe.Inputs.Any(c => (pl.Inv.Count(c.Item) < c.Count) && (Stock(c.Item) > 0)))
                 .Select(x => x.Recipe.Inputs[0].Item).FirstOrDefault();
             if (pack is not null)
             {
@@ -1576,7 +1580,7 @@ public sealed partial class GoalBot : IBot
         }
 
         // Raw materials a ghost is waiting on come before keeping the factory fed: one gatherer each.
-        foreach (string res in P.Sites.SelectMany(st => st.Missing()).Where(m => WorldProbe.StorageCount(P, m.Item) < m.Count)
+        foreach (string res in P.Sites.SelectMany(st => st.Missing()).Where(m => Stock(m.Item) < m.Count)
                      .Select(m => WorldProbe.ResourceFor(C, m.Item)).Where(r => (r is not null) && P.HasResource(r.Id)).Select(r => r!.Id).Distinct().Order(StringComparer.Ordinal))
         {
             needs.Add(new Job(JobKind.Gather, Resource: res));
@@ -1602,7 +1606,7 @@ public sealed partial class GoalBot : IBot
             .GroupBy(i => i.Item).ToDictionary(g => g.Key, g => System.Math.Max(10, g.Max(i => i.Count)));
         foreach ((string item, int enough) in craftInputs.OrderBy(kv => kv.Key, StringComparer.Ordinal))
         {
-            Building? other = WorldProbe.Storages(P).Where(st => (st.Id != lander.Id) && (st.Inv.Count(item) > 0)).OrderByDescending(st => st.Inv.Count(item)).FirstOrDefault();
+            Building? other = Stores().Where(st => (st.Id != lander.Id) && (st.Inv.Count(item) > 0)).OrderByDescending(st => st.Inv.Count(item)).FirstOrDefault();
             if ((other is not null) && (lander.Inv.Count(item) < enough))
             {
                 needs.Add(new Job(JobKind.Haul, FromId: other.Id, ToId: lander.Id, Item: item));
@@ -1627,9 +1631,11 @@ public sealed partial class GoalBot : IBot
         // Assign: keep followers already doing a needed job, then hand out the rest in priority order.
         // Let a follower finish a delivery already under way: the items it carries no longer show up in
         // storage, so the need that sent it can vanish, and reassigning it would just put them back.
-        List<Unit> free = P.Units.Where(u => (u.IsLeader == false) && (u.OwnerPlayer == Player))
-            .Where(u => ((u.Job.Kind == JobKind.Haul) && (u.Phase == UnitPhase.Deliver) && (u.Carry.IsEmpty == false)) == false)
-            .OrderBy(u => u.Id).ToList();
+        static bool Delivering(Unit u) => (u.Job.Kind == JobKind.Haul) && (u.Phase == UnitPhase.Deliver) && (u.Carry.IsEmpty == false);
+        List<Unit> mine = P.Units.Where(u => (u.IsLeader == false) && (u.OwnerPlayer == Player)).OrderBy(u => u.Id).ToList();
+        List<Unit> free = mine.Where(u => Delivering(u) == false).ToList();
+        // A helper mid-delivery still staffs its job: without this, every think sent one more to the same crate.
+        List<Unit> delivering = mine.Where(Delivering).ToList();
         List<Job> open = new List<Job>();
         // At the start (two robots, an empty lander) only as many needs as there are robots count, most urgent
         // first: a robot gathering something far down the list moves to feeding the first smelters instead of
@@ -1642,6 +1648,10 @@ public sealed partial class GoalBot : IBot
             if (keeper is not null)
             {
                 free.Remove(keeper);
+            }
+            else if (delivering.FirstOrDefault(u => u.Job == job) is { } underway)
+            {
+                delivering.Remove(underway);
             }
             else
             {
@@ -1664,12 +1674,12 @@ public sealed partial class GoalBot : IBot
         // (what a sensible player does; also gives balance analysis data on every resource).
         ResourceDef fuelRes = C.Resources[FuelResource()];
         List<ResourceDef> stockpile = C.ResourceList.Where(r => (r.IsTree == false) && P.HasResource(r.Id) && (WorldProbe.ResourceFor(C, r.Item) == r) && (drilled.Contains(r.Id) == false))
-            .Where(r => (Params.Automate == false) || (WorldProbe.StorageCount(P, r.Item) < StockpileCap()))
-            .OrderBy(r => WorldProbe.StorageCount(P, r.Item)).ThenBy(r => r.Id, StringComparer.Ordinal).ToList();
+            .Where(r => (Params.Automate == false) || (Stock(r.Item) < StockpileCap()))
+            .OrderBy(r => Stock(r.Item)).ThenBy(r => r.Id, StringComparer.Ordinal).ToList();
         int k = 0;
         foreach (Unit? u in free)
         {
-            bool lowFuel = WorldProbe.StorageCount(P, fuelRes.Item) < Params.MinFuelStock * 2;
+            bool lowFuel = Stock(fuelRes.Item) < Params.MinFuelStock * 2;
             if (Params.Automate && (lowFuel == false) && (stockpile.Count == 0))
             {
                 if (u.Job.Kind != JobKind.Idle)

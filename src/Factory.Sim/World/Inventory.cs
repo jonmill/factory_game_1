@@ -22,6 +22,8 @@ public sealed class Inventory(ContentDb content, int slots)
 
     /// <summary>Number of stack slots; int.MaxValue means unlimited capacity.</summary>
     public int Slots { get; set; } = slots;
+    /// <summary>The only item this inventory takes (a filtered crate), or null for anything.</summary>
+    public string? Filter { get; set; }
     /// <summary>Item counts keyed by item id, in ordinal id order.</summary>
     public IEnumerable<KeyValuePair<string, int>> Items => _items;
     /// <summary>True when the inventory holds no items.</summary>
@@ -56,6 +58,11 @@ public sealed class Inventory(ContentDb content, int slots)
     /// <summary>How many more of this item fit.</summary>
     public int SpaceFor(string item)
     {
+        if ((Filter is not null) && (item != Filter))
+        {
+            return 0;
+        }
+
         if (Slots == int.MaxValue)
         {
             return int.MaxValue / 2;

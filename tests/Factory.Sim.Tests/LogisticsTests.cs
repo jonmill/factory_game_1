@@ -39,6 +39,66 @@ public class LogisticsTests
     }
 
     [Test]
+    public async Task CrateLimit_CapsWhatACrateTakes_AndLifts()
+    {
+        TestWorld tw = new TestWorld();
+        Building crate = tw.Build("chest", tw.Lander.Origin.X + 6, tw.Lander.Origin.Y);
+        int stack = TestWorld.Content.Stack("siderite-plate");
+        tw.Do(new SetCrateLimit(crate.Id, 1));
+        await Assert.That(tw.P.AcceptAmount(crate, "siderite-plate")).IsEqualTo(stack);
+        crate.Inv.AddUnchecked("siderite-plate", stack);
+        await Assert.That(tw.P.AcceptAmount(crate, "drive-cog")).IsEqualTo(0);
+        tw.Do(new SetCrateLimit(crate.Id, 0));
+        await Assert.That(crate.Inv.Slots).IsEqualTo(crate.Def.Slots);
+        tw.Do(new SetCrateLimit(crate.Id, 0, "siderite-plate"));
+        await Assert.That(tw.P.AcceptAmount(crate, "biomass")).IsEqualTo(0);
+        await Assert.That(tw.P.AcceptAmount(crate, "siderite-plate")).IsGreaterThan(0);
+        World loaded = WorldState.Restore(tw.W.Content, tw.W.Settings, WorldState.Capture(tw.W));
+        await Assert.That(loaded.Planets[0].Buildings.First(b => b.Id == crate.Id).Inv.Filter).IsEqualTo("siderite-plate");
+        await Assert.That(tw.Try(new SetCrateLimit(tw.Lander.Id, 1))).IsNotNull();
+        await Assert.That(tw.Try(new SetCrateLimit(crate.Id, crate.Def.Slots + 1))).IsNotNull();
+    }
+
+    [Test]
+    public async Task BeltLine_FeedsItsFabricatorsFromSourceCrates()
+    {
+        // The bot's belt line, built as laid out, with solar panels off to the west: what is in the source
+        // crates comes out of the output crate as torque actuators (three inputs: one through a long arm),
+        // with no helper involved.
+        TestWorld tw = new TestWorld();
+        tw.Unlock("torque-actuator");
+        Int2 o = tw.Lander.Origin + new Int2(14, 6);
+        Factory.Playtest.Bots.BeltLine line = new Factory.Playtest.Bots.BeltLine("torque-actuator", o, ["cupral-filament", "drive-cog", "siderite-plate"], 2, 3);
+        foreach ((string id, Int2 at, Dir rot) in line.Parts("assembler", "sorter", "long-sorter", "power-pole"))
+        {
+            Building b = tw.P.CreateBuilding(TestWorld.Content.Buildings[id], at, rot);
+            if (b.Def.Kind == BuildingKind.Assembler)
+            {
+                tw.Do(new SetRecipe(b.Id, "torque-actuator"));
+            }
+        }
+
+        foreach (int px in new[] { -3, -8 })
+        {
+            tw.Build("power-pole", o.X + px, o.Y + 3);
+            foreach (Int2 d in new[] { new Int2(-2, 0), new Int2(0, 0), new Int2(-2, 4), new Int2(0, 4) })
+            {
+                tw.Build("solar-panel", o.X + px + d.X, o.Y + d.Y);
+            }
+        }
+
+        // Far more filament than the rest, as a player tends to load it: on one mixed belt the spare
+        // filament would jam the cogs and plates out; on its own belt it just backs up.
+        tw.P.BuildingAt(line.SourceCrate(0))!.Inv.AddUnchecked("cupral-filament", 200);
+        tw.P.BuildingAt(line.SourceCrate(1))!.Inv.AddUnchecked("drive-cog", 25);
+        tw.P.BuildingAt(line.SourceCrate(2))!.Inv.AddUnchecked("siderite-plate", 25);
+        tw.Run(60 * 180);
+        Building output = tw.P.BuildingAt(line.OutputCrate)!;
+        // A few items stay on the belts past the last arm that wants them: the line's working stock.
+        await Assert.That(output.Inv.Count("torque-actuator")).IsGreaterThanOrEqualTo(20);
+    }
+
+    [Test]
     public async Task Belt_CarriesItemsBetweenSorters()
     {
         TestWorld tw = new TestWorld();

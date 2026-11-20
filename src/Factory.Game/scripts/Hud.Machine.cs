@@ -147,7 +147,7 @@ public partial class Hud
 
         // The third part changes whenever the action controls need rebuilding: recipe, launch target or station settings.
         string actionsKey = $"{b.RecipeId};{b.TargetPlanetId};{string.Join(",", b.Modules)};" + string.Join(",", b.StationSlots.Select(s => $"{s.Item}:{s.Mode}"));
-        string sig = $"{b.Id}|{reach}|{actionsKey}|{b.BurningFuel}|" + string.Join(",", b.Inv.Items.Select(kv => $"{kv.Key}:{kv.Value}")) + "|" +
+        string sig = $"{b.Id}|{reach}|{actionsKey}|{b.BurningFuel}|{b.Inv.Slots}:{b.Inv.Filter}|" + string.Join(",", b.Inv.Items.Select(kv => $"{kv.Key}:{kv.Value}")) + "|" +
                      string.Join(",", b.Out.Items.Select(kv => $"{kv.Key}:{kv.Value}"));
         if (sig != _machineSig)
         {
@@ -242,6 +242,27 @@ public partial class Hud
         if (b.Def.IsStorage)
         {
             _machineBody.AddChild(HudStyle.Title($"Contents   {b.Inv.UsedSlots} / {b.Inv.Slots}", 11));
+            if (b.Def.Kind == BuildingKind.Chest)
+            {
+                // A slot limit, as on Factorio's chests: a crate feeding a belt holds a few stacks, not everything.
+                HBoxContainer limit = new HBoxContainer();
+                limit.AddThemeConstantOverride("separation", 6);
+                limit.AddChild(HudStyle.Caption(b.Inv.Slots < b.Def.Slots ? $"Slot limit: {b.Inv.Slots}" : "Slot limit: none"));
+                limit.AddChild(HudStyle.Button("-", () => Root.Send(new SetCrateLimit(b.Id, System.Math.Max(1, b.Inv.Slots - 1), b.Inv.Filter)), "Fill fewer slots: helpers and arms stop adding once they are used"));
+                limit.AddChild(HudStyle.Button("+", () => Root.Send(new SetCrateLimit(b.Id, b.Inv.Slots + 1 >= b.Def.Slots ? 0 : b.Inv.Slots + 1, b.Inv.Filter)), "Allow one more slot"));
+                _machineBody.AddChild(limit);
+                // An item filter: the crate takes only what it holds now (so gathered wood never lands in a belt's feed).
+                int slots = b.Inv.Slots >= b.Def.Slots ? 0 : b.Inv.Slots;
+                if (b.Inv.Filter is { } only)
+                {
+                    _machineBody.AddChild(HudStyle.Button($"Only takes {C.Item(only).Name} - take anything", () => Root.Send(new SetCrateLimit(b.Id, slots, null))));
+                }
+                else if (b.Inv.Items.Select(kv => kv.Key).ToList() is [string single])
+                {
+                    _machineBody.AddChild(HudStyle.Button($"Only take {C.Item(single).Name}", () => Root.Send(new SetCrateLimit(b.Id, slots, single)), "Nothing else goes in: helpers and arms put other items elsewhere"));
+                }
+            }
+
             GridContainer grid = new GridContainer { Columns = StorageColumns };
             grid.AddThemeConstantOverride("h_separation", 4);
             grid.AddThemeConstantOverride("v_separation", 4);

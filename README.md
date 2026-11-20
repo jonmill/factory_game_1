@@ -202,10 +202,11 @@ helper bots, lander fabricator, burner drills and smelters, steam engines, poles
 research stations; in the Combustion Age electric drills, arc smelters, rails, rail stops, water towers,
 hand-pump carts (need an operator, 1500 kg pull limit), steam locomotives (water + fuel, 12 t pull), mine
 carts, a Kerogen Refinery (Kerogen Fuel, Polymer Resin), Kerogen Generators (no water, 80% efficient),
-Lattice Pylons (20-tile reach), a Launch Pad and reusable Ferry Rocket to fly the commander, helper bots
+Lattice Pylons (20-tile reach), Conveyor Belts with Long Sorter Arms (reach two tiles, so one side of a machine
+draws from two belts) and crate slot limits and item filters for feeding them, a Launch Pad and reusable Ferry Rocket to fly the commander, helper bots
 and cargo to the other planets (a landed ferry always flies home); in the Clean Age Solar Panels (scaled by each planet's sunlight),
 Wind Turbines (scaled by its atmosphere), a Hover Module (float over water and lava), the first terraformers
-(Atmosphere Processor, Hydrosphere Seeder, Bio Incubator), Conveyor Belts (sorter arms load and unload them), Planetary Logistics
+(Atmosphere Processor, Hydrosphere Seeder, Bio Incubator), Planetary Logistics
 Stations (drones carry supplied items to stations that demand them) and Orbital Logistics Stations (vessels
 between planets); in the Stellar Age an Orbital Collector (helium-3 from the gas giant Vesper, osmiridium from
 the Shards), a Payload Launcher that terraforms another planet from home, Plasma Smelters and Drills, a Fusion Reactor (12 MW on Fusion Cells), the Space Elevator (free
