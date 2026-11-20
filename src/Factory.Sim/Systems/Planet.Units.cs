@@ -598,7 +598,10 @@ public sealed partial class Planet
             case UnitPhase.Deliver: // walking to site
                 {
                     u.Status = site!.Kind == SiteKind.Deconstruct ? $"Going to dismantle {SiteLabel(site)}" : $"Delivering to {SiteLabel(site)}";
-                    if (MoveTowards(u, SubTorus.Wrap(site.CenterSub), (System.Math.Max(site.W, site.H) * Fixed.Half) + Fixed.Half + 200) == false)
+                    // Materials are handed in from up to two tiles beyond the site's edge: a ghost walled in by
+                    // other buildings (a pole squeezed between machines) has no free tile beside it, and a
+                    // helper that had to stand next to it would wait at the nearest spot forever.
+                    if (MoveTowards(u, SubTorus.Wrap(site.CenterSub), (System.Math.Max(site.W, site.H) * Fixed.Half) + (2 * Fixed.One) + 200) == false)
                     {
                         return;
                     }

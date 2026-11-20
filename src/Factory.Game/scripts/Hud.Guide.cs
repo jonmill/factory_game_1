@@ -250,6 +250,14 @@ public partial class Hud
             Past: () => Researched("synthesis-cores")));
 
         _steps.Add(new GuideStep(
+            "Lay a belt line",
+            "Research Conveyor Belts. Drag a belt (Logistics) past a row of machines, with a Sorter Arm loading each " +
+            "machine from the belt and another putting its output back: the line runs itself, with no helper on the route.",
+            () => (P.Buildings.Count(b => b.Def.Kind == BuildingKind.Belt) >= 5) && P.Buildings.Any(b => b.Def.Kind == BuildingKind.Sorter),
+            () => ResearchProgress("conveyor-belts"),
+            Past: () => Researched("orbital-logistics")));
+
+        _steps.Add(new GuideStep(
             "Fly to another planet",
             "Refine crude kerogen (from fen shale) into Kerogen Fuel, research Orbital Ferry and build a Launch Pad. " +
             "Load it with a Ferry Rocket and 20 Kerogen Fuel, pick a planet and launch. P shows the star system.",
@@ -260,7 +268,7 @@ public partial class Hud
         _steps.Add(new GuideStep(
             "Reach the Clean Age",
             "Research Polymer Synthesis and Photonics, then Synthesis Cores. A Synthesis Core is a Photonic Processor " +
-            "(wafers from Dune's silica, logic boards, resin), a Torque Actuator and polymer resin. Terraforming, clean power, belts and logistics follow.",
+            "(wafers from Dune's silica, logic boards, resin), a Torque Actuator and polymer resin. Terraforming, clean power and logistics stations follow.",
             () => Researched("synthesis-cores"),
             () => ResearchProgress("synthesis-cores"),
             Past: () => Researched("stellar-cores")));

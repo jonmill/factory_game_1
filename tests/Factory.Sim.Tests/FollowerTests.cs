@@ -82,6 +82,32 @@ public class FollowerTests
     }
 
     [Test]
+    public async Task Builders_SupplyAGhostWalledInByOtherBuildings()
+    {
+        // A ghost with buildings on all eight sides: no helper can stand next to it, so it must be supplied
+        // from a couple of tiles away instead of waiting at the nearest reachable spot forever.
+        TestWorld tw = new TestWorld();
+        Int2 c = tw.Lander.Origin + new Int2(20, 0);
+        for (int dy = -1; dy <= 1; dy++)
+        {
+            for (int dx = -1; dx <= 1; dx++)
+            {
+                if ((dx != 0) || (dy != 0))
+                {
+                    tw.Build("chest", c.X + dx, c.Y + dy);
+                }
+            }
+        }
+
+        tw.Leader.Pos += new Int2(Fixed.One * -30, 0); // out of the commander's own build reach
+        tw.Do(new PlaceBuilding("chest", c, Dir.North));
+        tw.Equip(tw.Followers[0], "construction-module");
+        tw.Do(new AssignJob(tw.Followers[0].Id, new Job(JobKind.Build)));
+        tw.RunUntil(() => tw.P.Sites.Count == 0, 60 * 60, "the walled-in chest to be built");
+        await Assert.That(tw.P.BuildingAt(c)?.Def.Id).IsEqualTo("chest");
+    }
+
+    [Test]
     public async Task Deconstruction_RefundsMaterials()
     {
         TestWorld tw = new TestWorld();
