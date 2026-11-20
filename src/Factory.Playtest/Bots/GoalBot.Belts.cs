@@ -179,10 +179,13 @@ public sealed partial class GoalBot
     private void FeedLines(BotPlan plan, List<Job> needs, Func<string[], int> sourceFor, Building lander, int budget)
     {
         int start = needs.Count;
+        Dictionary<string, int> science = ScienceRecipes();
         foreach (BeltLine l in Lines())
         {
+            // A line whose product nothing needs now (cores for research long done) idles, as a player's would,
+            // instead of taking helpers from what does.
             RecipeDef r = C.Recipes[l.Recipe];
-            bool wanted = Surplus(plan, r) == false;
+            bool wanted = (science.ContainsKey(r.Id) || plan.CraftDeficit.ContainsKey(r.Outputs[0].Item)) && (Surplus(plan, r) == false);
             for (int i = 0; (i < l.Inputs.Length) && wanted; i++)
             {
                 // About ten crafts per fabricator in the crate (more would starve the rest of the base); a
