@@ -40,6 +40,9 @@ public sealed partial class GoalBot : IBot
     private Int2? _cutting;
     /// <summary>Recipe categories that only a dedicated machine runs (refining), wanted on the last think.</summary>
     private HashSet<string> _machineCategories = [];
+
+    /// <summary>What the previous think was short of (structures are planned before this think's demand).</summary>
+    private List<string> _lastCraftDeficit = [];
     /// <summary>A resource the plan needs that only another planet has, from the last think (it sends an expedition).</summary>
     private (string Resource, int Planet)? _offPlanet;
     /// <summary>Other resources the plan lacks that the same planet has: one trip fetches them all.</summary>
@@ -77,6 +80,7 @@ public sealed partial class GoalBot : IBot
             return;
         }
 
+        _lastCraftDeficit = LastPlan?.CraftDeficit.Keys.ToList() ?? [];
         BotPlan plan = new BotPlan();
         LastPlan = plan;
 
@@ -650,17 +654,21 @@ public sealed partial class GoalBot : IBot
     }
 
     /// <summary>
-    /// The endless tech worth researching now, with the cores in stock: Terraforming Efficiency once
-    /// terraforming has started, then whichever of Research Speed and Robot Efficiency is lower.
+    /// The upgrade worth researching now, with the cores in stock: the next one-off level of an upgrade
+    /// (Robot Efficiency II, ...) or its endless tech. Terraforming Efficiency first once terraforming has
+    /// started, then whichever of Research Speed and Robot Efficiency is lower; Vein Utilization last.
     /// </summary>
     private string? EndlessResearch()
     {
         bool terraforming = P.Buildings.Any(b => b.Def.Kind is BuildingKind.Terraformer or BuildingKind.PayloadLauncher);
-        return new[] { Planet.TerraformingEfficiency, Planet.ResearchSpeed, Planet.RobotEfficiency }
-            .Where(id => C.Techs.TryGetValue(id, out TechDef? t) && t.Prereqs.All(_w.Research.Completed.Contains) && CoresInStock(t))
-            .OrderBy(id => (id == Planet.TerraformingEfficiency) && terraforming ? 0 : 1)
-            .ThenBy(id => _w.Research.Level(id)).ThenBy(id => id, StringComparer.Ordinal)
-            .FirstOrDefault();
+        string[] series = [Planet.TerraformingEfficiency, Planet.ResearchSpeed, Planet.RobotEfficiency, Planet.VeinUtilization];
+        return C.TechList
+            .Where(t => series.Contains(t.LevelOf ?? (t.Repeatable ? t.Id : "")))
+            .Where(t => (t.Repeatable || (_w.Research.Completed.Contains(t.Id) == false)) && t.Prereqs.All(_w.Research.Completed.Contains) && CoresInStock(t))
+            .Select(t => (t.Id, Series: t.LevelOf ?? t.Id))
+            .OrderBy(x => (x.Series == Planet.TerraformingEfficiency) && terraforming ? 0 : x.Series == Planet.VeinUtilization ? 2 : 1)
+            .ThenBy(x => _w.Research.Level(x.Series)).ThenBy(x => x.Id, StringComparer.Ordinal)
+            .Select(x => x.Id).FirstOrDefault();
     }
 
     // ------------------------------------------------------------------ recovery / cleanup
@@ -855,7 +863,12 @@ public sealed partial class GoalBot : IBot
 
         foreach (string category in _machineCategories.Order(StringComparer.Ordinal))
         {
-            if ((MachineFor(category) is { } def) && (CountOf(def.Kind, def.Id) == 0))
+            // One machine per recipe of the category the plan is short of, and a spare for the biggest backlog
+            // once the factory is past the start: a lone refinery can't make fuel, resin and etchant at once.
+            // (Demand is worked out after structures each think, so this reads the last think's plan.)
+            int shortOf = _lastCraftDeficit.Select(it => WorldProbe.RecipeFor(C, it)!).Count(r => r.Category == category);
+            int target = System.Math.Clamp(shortOf + (AgeReached() >= 1 ? 1 : 0), 1, 4);
+            if ((MachineFor(category) is { } def) && (CountOf(def.Kind, def.Id) < target))
             {
                 PlaceNear(plan, def.Id, center, 4, 30);
             }

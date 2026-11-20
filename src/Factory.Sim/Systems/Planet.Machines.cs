@@ -27,7 +27,7 @@ public sealed partial class Planet
                 return b.Inv.SpaceFor(item);
             case BuildingKind.Furnace:
                 {
-                    RecipeDef? smelt = c.RecipeList.FirstOrDefault(r => (r.Category == "smelting") && r.In.ContainsKey(item));
+                    RecipeDef? smelt = c.RecipeList.FirstOrDefault(r => (r.Category == "smelting") && r.In.ContainsKey(item) && World.Research.Unlocked.Contains(r.Id));
                     if (smelt is not null)
                     {
                         // Don't mix ores in one furnace.

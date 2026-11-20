@@ -24,7 +24,7 @@ public sealed partial class GoalBot
     ];
 
     /// <summary>Plates and parts kept in stock ahead of need once the factory runs.</summary>
-    private static readonly string[] _standingStock = ["siderite-plate", "cupral-filament", "sintered-brick", "drive-cog", "logic-board"];
+    private static readonly string[] _standingStock = ["siderite-plate", "cupral-filament", "sintered-brick", "drive-cog", "logic-board", "tempered-girder", "torque-actuator"];
 
     /// <summary>Buildings the bot is taking down on purpose (worked-out columns): cleanup leaves those orders alone.</summary>
     private readonly HashSet<int> _retiring = [];
@@ -356,10 +356,11 @@ public sealed partial class GoalBot
     // ------------------------------------------------------------------ science
 
     /// <summary>
-    /// The science lines a player keeps running: for each core the current research costs, how many
-    /// fabricators it takes to keep every research station busy (a station spends a unit's
-    /// <see cref="TechDef.UnitTicks"/> on each, a fabricator <see cref="RecipeDef.Ticks"/> at its speed per
-    /// core). These fabricators make only their core and are never moved to other work.
+    /// The science lines a player keeps running: for each core the current research costs, and each
+    /// crafted part beneath it (actuators, processors, rotors ...), how many fabricators it takes to keep
+    /// every research station busy (a station spends a unit's <see cref="TechDef.UnitTicks"/> on each, a
+    /// fabricator <see cref="RecipeDef.Ticks"/> at its speed per craft). These fabricators make only their
+    /// item and are never moved to other work.
     /// </summary>
     private Dictionary<string, int> ScienceLines()
     {
@@ -369,26 +370,57 @@ public sealed partial class GoalBot
             return lines;
         }
 
-        long labs = System.Math.Max(1, CountOf(BuildingKind.Lab));
+        decimal labs = System.Math.Max(1, CountOf(BuildingKind.Lab));
         // Helpers carry every input here (they are the belts): a line only grows as the workforce does, one
-        // fabricator per three helpers, or the machines outrun what can be fed and everything starves.
+        // fabricator per three helpers, and all the lines together one per helper, or the machines outrun
+        // what can be fed and everything starves.
         int helpers = P.Units.Count(u => (u.IsLeader == false) && (u.OwnerPlayer == Player));
         int perLine = System.Math.Max(1, helpers / 3);
-        foreach (ItemAmount c in tech.UnitCostList)
+        Dictionary<string, decimal> need = new Dictionary<string, decimal>(StringComparer.Ordinal);
+        List<string> order = [];
+
+        // Fabricators an item needs, given how many of it each research unit takes.
+        void Add(string item, decimal perUnit, int depth)
         {
-            if ((WorldProbe.RecipeFor(C, c.Item) is not { } r) || (WorthAFabricator(r) == false) || (_w.Research.Unlocked.Contains(r.Id) == false))
+            if ((depth > 8) || (WorldProbe.RecipeFor(C, item) is not { } r) || (WorthAFabricator(r) == false) || (_w.Research.Unlocked.Contains(r.Id) == false))
             {
-                continue;
+                return;
             }
 
-            long perCraft = (long)fab.Speed * tech.UnitTicks * r.Outputs[0].Count;
-            lines[c.Item] = (int)System.Math.Clamp(((labs * r.Ticks * 100 * c.Count) + perCraft - 1) / perCraft, 1, perLine);
+            decimal crafts = perUnit / r.Outputs[0].Count;
+            if (need.ContainsKey(item) == false)
+            {
+                order.Add(item);
+            }
+
+            need[item] = need.GetValueOrDefault(item) + (labs * crafts * r.Ticks * 100 / (fab.Speed * (decimal)tech.UnitTicks));
+            foreach (ItemAmount i in r.Inputs)
+            {
+                Add(i.Item, crafts * i.Count, depth + 1);
+            }
+        }
+
+        foreach (ItemAmount c in tech.UnitCostList)
+        {
+            Add(c.Item, c.Count, 0);
+        }
+
+        int total = 0;
+        foreach (string item in order)
+        {
+            int n = (int)System.Math.Clamp(decimal.Ceiling(need[item]), 1, perLine);
+            if (total + n > System.Math.Max(helpers, tech.UnitCostList.Length))
+            {
+                break;
+            }
+
+            lines[item] = n;
+            total += n;
         }
 
         return lines;
     }
 
-    /// <summary>Recipe ids of the science lines, with how many fabricators each wants.</summary>
     /// <summary>What the terraformers and payload launchers standing on this planet consume.</summary>
     private HashSet<string> TerraformInputs() => P.Buildings
         .Where(b => b.Def.Kind is BuildingKind.Terraformer or BuildingKind.PayloadLauncher)
@@ -396,6 +428,7 @@ public sealed partial class GoalBot
             : b.Recipe is { } r ? r.Inputs : [])
         .Select(i => i.Item).ToHashSet();
 
+    /// <summary>Recipe ids of the science lines, with how many fabricators each wants.</summary>
     private Dictionary<string, int> ScienceRecipes() =>
         ScienceLines().ToDictionary(kv => WorldProbe.RecipeFor(C, kv.Key)!.Id, kv => kv.Value, StringComparer.Ordinal);
 
@@ -629,7 +662,9 @@ public sealed partial class GoalBot
             Building? arm = P.Buildings.FirstOrDefault(s => (s.Def.Kind == BuildingKind.Sorter) && (P.BuildingAt(s.BackTile())?.Id == f.Id));
             bool armWorks = arm is not null && P.BuildingAt(arm.FrontTile()) is { } crate && f.Out.Items.All(kv => crate.Inv.SpaceFor(kv.Key) > 0);
             bool leftovers = f.Out.Items.Any(kv => r.Outputs.All(o => o.Item != kv.Key));
-            if (((armWorks == false) || leftovers) && ((f.Out.Total >= 10) || leftovers) && (f.Out.Items.Select(kv => kv.Key).FirstOrDefault() is { } made) && (StoreFor(made, lander) is { } into))
+            // A full output means the arm isn't keeping up (or has no power): carry it out by hand.
+            bool backedUp = f.Status == MachineStatus.OutputFull;
+            if (((armWorks == false) || leftovers || backedUp) && ((f.Out.Total >= 10) || leftovers || backedUp) && (f.Out.Items.Select(kv => kv.Key).FirstOrDefault() is { } made) && (StoreFor(made, lander) is { } into))
             {
                 needs.Add(new Job(JobKind.Haul, FromId: f.Id, ToId: into.Id));
             }
@@ -648,7 +683,7 @@ public sealed partial class GoalBot
 
     /// <summary>How many helper bots the bot wants at the age it has reached.</summary>
     /// <remarks>Helpers carry everything in this game (they are its belts), so a player builds them as soon as the bay is up.</remarks>
-    private int HelperTarget() => 6 + (4 * AgeReached());
+    private int HelperTarget() => 6 + (6 * AgeReached());
 
     private void PlanWorkforce(BotPlan plan, Building lander)
     {

@@ -75,16 +75,35 @@ public class RepeatableResearchTests
         TestWorld tw = new TestWorld();
         Unit helper = tw.Followers[0];
         int before = helper.Speed;
-        tw.W.Research.Completed.UnionWith(["automation", "robot-modules", "robotics", "analysis-cores"]);
-        tw.Do(new SetResearch(Planet.RobotEfficiency));
-        TechDef t = tw.W.Content.Techs[Planet.RobotEfficiency];
+        tw.W.Research.Completed.UnionWith(["automation", "robot-modules", "robotics"]);
+        tw.Do(new SetResearch("robot-efficiency-1"));
+        TechDef t = tw.W.Content.Techs["robot-efficiency-1"];
         for (int i = 0; i < tw.W.Research.UnitsFor(t); i++)
         {
             tw.W.AddResearchUnit();
         }
 
-        await Assert.That(tw.W.Research.Level(Planet.RobotEfficiency)).IsEqualTo(1);
+        await Assert.That(tw.W.Research.Level(Planet.RobotEfficiency)).IsEqualTo(1).Because("Robot Efficiency I is the series' first level");
         await Assert.That(helper.Speed).IsEqualTo(before * 115 / 100);
         await Assert.That(tw.Leader.Speed).IsGreaterThan(tw.Leader.Robot.Speed).Because("the commander gets it too");
+    }
+
+    [Test]
+    public async Task UpgradeSeries_OneOffLevelsCountTowardTheEndlessTech_ButNotItsPrice()
+    {
+        TestWorld tw = new TestWorld();
+        TechDef vein = tw.W.Content.Techs[Planet.VeinUtilization];
+        int fresh = tw.W.Research.UnitsFor(vein);
+        string[] early = tw.W.Content.TechList.Where(t => t.LevelOf == Planet.VeinUtilization).Select(t => t.Id).ToArray();
+        await Assert.That(early.Length).IsEqualTo(3);
+        await Assert.That(early.Select(id => tw.W.Content.Techs[id].Age).ToArray()).IsEquivalentTo(new[] { "salvage", "combustion", "clean" });
+
+        tw.W.Research.Completed.UnionWith(early);
+        await Assert.That(tw.W.Research.Level(Planet.VeinUtilization)).IsEqualTo(3);
+        await Assert.That(tw.W.Research.UnitsFor(vein)).IsEqualTo(fresh).Because("the endless tail starts at its own base price");
+
+        // Saves rebuild the series from content: a restored world still sees the three levels.
+        World back = WorldState.Restore(tw.W.Content, tw.W.Settings, WorldState.Capture(tw.W));
+        await Assert.That(back.Research.Level(Planet.VeinUtilization)).IsEqualTo(3);
     }
 }

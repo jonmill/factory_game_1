@@ -17,13 +17,23 @@ public sealed class ResearchState
     /// <summary>Levels reached in repeatable (infinite) research, by tech id.</summary>
     public SortedDictionary<string, int> Levels { get; } = new(StringComparer.Ordinal);
 
-    /// <summary>The level reached in a repeatable tech, 0 if never researched.</summary>
-    /// <param name="techId">Tech id.</param>
-    /// <returns>The level.</returns>
-    public int Level(string techId) => Levels.GetValueOrDefault(techId);
+    /// <summary>One-off upgrade techs and the repeatable tech each adds a level to (from content).</summary>
+    internal Dictionary<string, string> Series { get; set; } = new(StringComparer.Ordinal);
 
-    /// <summary>Units needed to finish a tech; repeatable techs cost half as much again for every level done.</summary>
+    /// <summary>
+    /// The level reached in an upgrade: its finished one-off levels (Vein Utilization I, II, ...) plus the
+    /// levels of the repeatable tech itself. 0 if none are researched.
+    /// </summary>
+    /// <param name="techId">Id of the repeatable tech.</param>
+    /// <returns>The level.</returns>
+    public int Level(string techId) =>
+        Levels.GetValueOrDefault(techId) + Completed.Count(c => Series.TryGetValue(c, out string? s) && (s == techId));
+
+    /// <summary>
+    /// Units needed to finish a tech; repeatable techs cost half as much again for every level of their own
+    /// done (the one-off early levels don't count toward that price).
+    /// </summary>
     /// <param name="t">The tech.</param>
     /// <returns>Units of research.</returns>
-    public int UnitsFor(TechDef t) => t.Repeatable ? t.Units + (t.Units * Level(t.Id) / 2) : t.Units;
+    public int UnitsFor(TechDef t) => t.Repeatable ? t.Units + (t.Units * Levels.GetValueOrDefault(t.Id) / 2) : t.Units;
 }

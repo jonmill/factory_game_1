@@ -254,6 +254,89 @@ public static class Icons
             ci.DrawRect(new Rect2(m - new Vector2(s * 0.12f, s * 0.1f), new Vector2(s * 0.24f, s * 0.2f)), new Color(0.12f, 0.14f, 0.16f));
             ci.DrawRect(new Rect2(m - new Vector2(s * 0.05f, s * 0.04f), new Vector2(s * 0.1f, s * 0.08f)), c);
         }
+        else if (id == "tempered-girder")
+        {
+            // An I-beam seen end-on over its length: two flanges and a web, with a heat-blued stripe.
+            Rect2 top = new Rect2(m + new Vector2(-s * 0.34f, -s * 0.24f), new Vector2(s * 0.68f, s * 0.1f));
+            Rect2 bottom = new Rect2(m + new Vector2(-s * 0.34f, s * 0.14f), new Vector2(s * 0.68f, s * 0.1f));
+            Rect2 web = new Rect2(m + new Vector2(-s * 0.34f, -s * 0.14f), new Vector2(s * 0.68f, s * 0.28f));
+            ci.DrawRect(web, c.Darkened(0.25f));
+            ci.DrawRect(top, c.Lightened(0.15f));
+            ci.DrawRect(bottom, c.Darkened(0.05f));
+            ci.DrawLine(web.Position + new Vector2(0, web.Size.Y * 0.5f), web.Position + new Vector2(web.Size.X, web.Size.Y * 0.5f), new Color(0.35f, 0.45f, 0.85f), Mathf.Max(1, s * 0.03f));
+            ci.DrawRect(new Rect2(top.Position, new Vector2(top.Size.X, bottom.End.Y - top.Position.Y)), c.Darkened(0.5f), false, 1);
+        }
+        else if (id == "torque-actuator")
+        {
+            // A drum motor with a drive shaft and a small gear on its end.
+            Rect2 drum = new Rect2(m + new Vector2(-s * 0.3f, -s * 0.16f), new Vector2(s * 0.4f, s * 0.32f));
+            ci.DrawRect(drum, c.Darkened(0.15f));
+            for (int i = 1; i < 4; i++)
+            {
+                float x = drum.Position.X + (drum.Size.X * i / 4);
+                ci.DrawLine(new Vector2(x, drum.Position.Y), new Vector2(x, drum.End.Y), c.Darkened(0.45f), 1);
+            }
+
+            ci.DrawRect(drum, c.Darkened(0.5f), false, 1);
+            ci.DrawLine(m + new Vector2(s * 0.1f, 0), m + new Vector2(s * 0.22f, 0), _iron.Lightened(0.3f), Mathf.Max(1.5f, s * 0.06f));
+            Gear(ci, m + new Vector2(s * 0.26f, 0), s * 0.12f, _iron.Lightened(0.2f));
+        }
+        else if (id == "photonic-processor" || id == "phase-processor")
+        {
+            // A square chip with pins on all four sides; the phase processor has a second, glowing die.
+            Rect2 chip = new Rect2(m - new Vector2(s * 0.24f, s * 0.24f), new Vector2(s * 0.48f, s * 0.48f));
+            for (int i = 0; i < 4; i++)
+            {
+                float t = chip.Position.X + (s * 0.08f) + (i * s * 0.11f);
+                float u = chip.Position.Y + (s * 0.08f) + (i * s * 0.11f);
+                Color pin = new Color(0.85f, 0.72f, 0.35f);
+                ci.DrawLine(new Vector2(t, chip.Position.Y), new Vector2(t, chip.Position.Y - (s * 0.07f)), pin, 1);
+                ci.DrawLine(new Vector2(t, chip.End.Y), new Vector2(t, chip.End.Y + (s * 0.07f)), pin, 1);
+                ci.DrawLine(new Vector2(chip.Position.X, u), new Vector2(chip.Position.X - (s * 0.07f), u), pin, 1);
+                ci.DrawLine(new Vector2(chip.End.X, u), new Vector2(chip.End.X + (s * 0.07f), u), pin, 1);
+            }
+
+            ci.DrawRect(chip, new Color(0.1f, 0.12f, 0.15f));
+            ci.DrawRect(chip, c.Darkened(0.3f), false, 1);
+            ci.DrawRect(new Rect2(m - new Vector2(s * 0.1f, s * 0.1f), new Vector2(s * 0.2f, s * 0.2f)), c);
+            if (id == "phase-processor")
+            {
+                ci.DrawCircle(m, s * 0.05f, Colors.White);
+                ci.DrawArc(m, s * 0.16f, 0, Mathf.Tau, 16, A(c, 0.6f), 1, true);
+            }
+        }
+        else if (id == "etchant")
+        {
+            // A stoppered flask of yellow acid.
+            Vector2[] flask = [m + new Vector2(-s * 0.06f, -s * 0.3f), m + new Vector2(s * 0.06f, -s * 0.3f), m + new Vector2(s * 0.06f, -s * 0.1f),
+                m + new Vector2(s * 0.26f, s * 0.3f), m + new Vector2(-s * 0.26f, s * 0.3f), m + new Vector2(-s * 0.06f, -s * 0.1f)];
+            ci.DrawColoredPolygon(flask, A(_glass.Lightened(0.4f), 0.8f));
+            ci.DrawColoredPolygon([m + new Vector2(-s * 0.17f, s * 0.12f), m + new Vector2(s * 0.17f, s * 0.12f), m + new Vector2(s * 0.26f, s * 0.3f), m + new Vector2(-s * 0.26f, s * 0.3f)], c);
+            ci.DrawPolyline([.. flask, flask[0]], c.Darkened(0.5f), 1, true);
+            ci.DrawRect(new Rect2(m + new Vector2(-s * 0.08f, -s * 0.36f), new Vector2(s * 0.16f, s * 0.07f)), new Color(0.45f, 0.3f, 0.2f));
+        }
+        else if (id == "gyro-rotor")
+        {
+            // Nested rings around a bright hub.
+            ci.DrawArc(m, s * 0.32f, 0, Mathf.Tau, 24, c, Mathf.Max(1.5f, s * 0.06f), true);
+            ci.DrawArc(m, s * 0.2f, Mathf.Pi * 0.25f, Mathf.Pi * 2.25f, 20, c.Lightened(0.25f), Mathf.Max(1.5f, s * 0.05f), true);
+            ci.DrawLine(m + new Vector2(-s * 0.32f, 0), m + new Vector2(s * 0.32f, 0), c.Darkened(0.3f), Mathf.Max(1, s * 0.04f));
+            ci.DrawCircle(m, s * 0.08f, c.Lightened(0.5f));
+        }
+        else if (id == "keel-plating")
+        {
+            // A riveted plate with a bevelled edge.
+            Vector2[] plate = [m + new Vector2(-s * 0.3f, -s * 0.22f), m + new Vector2(s * 0.24f, -s * 0.22f), m + new Vector2(s * 0.34f, -s * 0.1f),
+                m + new Vector2(s * 0.34f, s * 0.24f), m + new Vector2(-s * 0.3f, s * 0.24f)];
+            ci.DrawColoredPolygon(plate, c.Darkened(0.1f));
+            ci.DrawPolyline([.. plate, plate[0]], c.Darkened(0.5f), 1, true);
+            ci.DrawLine(plate[0], plate[1], c.Lightened(0.35f), 1);
+            for (int i = 0; i < 3; i++)
+            {
+                ci.DrawCircle(m + new Vector2((i - 1) * s * 0.2f, -s * 0.1f), s * 0.03f, c.Lightened(0.4f));
+                ci.DrawCircle(m + new Vector2((i - 1) * s * 0.2f, s * 0.14f), s * 0.03f, c.Lightened(0.4f));
+            }
+        }
         else if (id == "charge-cell")
         {
             Rect2 cell = new Rect2(m - new Vector2(s * 0.17f, s * 0.28f), new Vector2(s * 0.34f, s * 0.6f));

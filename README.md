@@ -190,7 +190,10 @@ move and buildings around them once built; nothing is built, mined or gathered o
 bot on the Explore job walks an outward spiral from the lander; fog is tracked in 32-tile chunks so it scales
 to bigger maps); four tech **ages** (Salvage, Combustion, Clean and Stellar); research paid in **Cores** (Survey Cores in the
 Salvage Age, Analysis Cores from the Combustion Age, Synthesis Cores, which need Dune's silica, from the Clean
-Age, and Stellar Cores, from Cinder's titanium and hafnium plus orbital helium-3 and osmiridium). The commander (hand-mining, builds ghosts in reach, 2 module slots, +2 from research) and
+Age, and Stellar Cores, from Cinder's titanium and hafnium plus orbital helium-3 and osmiridium). The tree is
+balanced on Factorio/DSP ratios: each core costs ~2.4x the raw of the one before (3 / 7.5 / 18 / 44) and sits one
+crafting level deeper, through tempered girders, torque actuators, photonic and phase processors, gyro rotors and keel
+plating; later buildings are built from their age's parts, and research units take 10 / 15 / 20 / 30 s by age. The commander (hand-mining, builds ghosts in reach, 2 module slots, +2 from research) and
 2 Helper Bot Mk1s (1 slot; Gather / Haul / Explore, with Build and Operate train taught by modules), landing with an
 empty lander (`start.lander` in `base.json`: everything starts from gathering; tests that need stock use
 `TestWorld.Supplies`), 5 modules
@@ -209,7 +212,7 @@ the Shards), a Payload Launcher that terraforms another planet from home, Plasma
 launches, faster collectors and vessels), Precision and Plasma Fabricators (2x and 4x), the Climate Engine
 (terraforms the planet it stands on 60x faster than the first terraformers), Climate Amplifier modules for it
 (burn Lanthanide Accelerant from Dune's lanthanide and Cinder's brimstone to double its speed), Climate
-Acceleration and Vein Utilization (infinite research; Research Speed, Robot Efficiency and Terraforming Efficiency repeat forever too, from earlier ages), a system readiness meter and the Settler Uplink (Stellar Age) to win.
+Acceleration and Vein Utilization (infinite research; Vein Utilization, Robot Efficiency, Research Speed and Terraforming Efficiency come as one-off levels I-III in the early ages, `levelOf` in base.json, then repeat forever in the Stellar Age), a system readiness meter and the Settler Uplink (Stellar Age) to win.
 
 Win condition: any 3 of the 4 terraformable planets (Kepler's Rest, Cinder, Rime, Dune) ready. Each stat runs
 to 10,000 points. The first terraformers and the Payload Launcher add 2 points per 20 s or 10 s and only 2 of

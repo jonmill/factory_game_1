@@ -81,6 +81,7 @@ public sealed partial class World
     {
         Content = content;
         Settings = settings;
+        Research.Series = content.TechList.Where(t => t.LevelOf is not null).ToDictionary(t => t.Id, t => t.LevelOf!, StringComparer.Ordinal);
         Rng = new Rng(settings.Seed);
         foreach (string u in content.Start.Unlocked)
         {

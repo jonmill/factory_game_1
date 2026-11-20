@@ -81,7 +81,7 @@ public class WorldStateTests
             [typeof(Vehicle)] = "Def Cargo",
             [typeof(BeltItem)] = "Item Pos",
             [typeof(Inventory)] = "_items _content Slots",
-            [typeof(ResearchState)] = "Unlocked Completed Current Progress Levels",
+            [typeof(ResearchState)] = "Unlocked Completed Current Progress Levels Series",
             [typeof(ProductionStats)] = "_byFlow _items _series _actorSeries _buildings _techs _terraform Tick",
         };
         List<string> problems = [];

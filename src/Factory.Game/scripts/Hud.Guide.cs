@@ -227,9 +227,17 @@ public partial class Hud
             Past: () => Researched("analysis-cores") && (W.HelpersBuilt > 0)));
 
         _steps.Add(new GuideStep(
+            "Temper girders",
+            "Research Siderite Tempering, then drop siderite plates into a smelter: they come out as Tempered Girders. " +
+            "Every Combustion Age machine is built on them, so keep a smelter on girders.",
+            () => Researched("tempering") && (W.Stats.Get(ItemFlow.Smelted, "tempered-girder") > 0),
+            () => ResearchProgress("tempering"),
+            Past: () => Researched("analysis-cores") && Researched("tempering")));
+
+        _steps.Add(new GuideStep(
             "Reach the Combustion Age",
-            "Research Analytical Engines (it needs Automated Fabrication). It unlocks Analysis Cores " +
-            "(logic board, ballast plate, charge cell) and the Combustion Age: grid power, rail and better robots.",
+            "Research Sorter Arms, then Analytical Engines. Analysis Cores take a Torque Actuator (cog, filament, plate), " +
+            "a charge cell and filament, and open the Combustion Age: grid power, rail and better robots.",
             () => Researched("analysis-cores"),
             () => ResearchProgress("analysis-cores")));
 
@@ -251,8 +259,8 @@ public partial class Hud
 
         _steps.Add(new GuideStep(
             "Reach the Clean Age",
-            "Research Synthesis Cores. They need photonic wafers (smelted from Dune's silica sand) and polymer resin " +
-            "(refined from crude kerogen). Terraforming, clean power, belts and logistics stations follow.",
+            "Research Polymer Synthesis and Photonics, then Synthesis Cores. A Synthesis Core is a Photonic Processor " +
+            "(wafers from Dune's silica, logic boards, resin), a Torque Actuator and polymer resin. Terraforming, clean power, belts and logistics follow.",
             () => Researched("synthesis-cores"),
             () => ResearchProgress("synthesis-cores"),
             Past: () => Researched("stellar-cores")));
@@ -267,8 +275,8 @@ public partial class Hud
 
         _steps.Add(new GuideStep(
             "Reach the Stellar Age",
-            "Research Stellar Cores (via Orbital Logistics and Orbital Collection). An Orbital Collector gathers " +
-            "helium-3 or osmiridium; with Cinder's titanium and hafnium they make Stellar Cores.",
+            "Research Exotic Metallurgy and Lattice Synthesis (via Orbital Collection), then Stellar Cores: a Phase Processor, " +
+            "a Gyro Rotor (osmiridium), Keel Plating (titanium on a girder) and helium-3 from an Orbital Collector.",
             () => Researched("stellar-cores"),
             () => ResearchProgress("stellar-cores")));
 

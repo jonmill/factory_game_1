@@ -338,6 +338,11 @@ public sealed class ContentDb
                 errors.Add($"tech {t.Id}: prereq {p} is from a later age");
             }
 
+            if ((t.LevelOf is not null) && ((Techs.TryGetValue(t.LevelOf, out TechDef? series) == false) || (series.Repeatable == false) || t.Repeatable))
+            {
+                errors.Add($"tech {t.Id}: levelOf {t.LevelOf} must name a repeatable tech, and {t.Id} must not repeat itself");
+            }
+
             foreach (string p in t.Prereqs)
             {
                 if (Techs.ContainsKey(p) == false)

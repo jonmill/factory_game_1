@@ -131,13 +131,13 @@ public class StellarAgeTests
             tw.W.AddResearchUnit();
         }
 
-        await Assert.That(tw.W.Research.Level(vein.Id)).IsEqualTo(1);
+        await Assert.That(tw.W.Research.Level(vein.Id)).IsEqualTo(4).Because("Vein Utilization I-III, then the first endless level");
         await Assert.That(tw.W.Research.Current).IsEqualTo(vein.Id).Because("infinite research carries on");
         await Assert.That(tw.W.Research.UnitsFor(vein)).IsEqualTo(vein.Units + (vein.Units / 2));
         await Assert.That(tw.Try(new SetResearch(vein.Id))).IsNull();
 
-        // Level 10: 200 items mined use up only 100 of the deposit.
-        tw.W.Research.Levels[vein.Id] = 10;
+        // Level 10 (three one-off levels and seven endless ones): 200 items mined use up only 100 of the deposit.
+        tw.W.Research.Levels[vein.Id] = 7;
         tw.Ore("siderite", 40, 40, 1, 1, 500);
         Int2 tile = new Int2(40, 40);
         for (int i = 0; i < 200; i++)

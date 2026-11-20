@@ -30,6 +30,11 @@ public sealed class TechDef
     public bool ComingSoon { get; init; }
     /// <summary>True for infinite research: it can be researched again and again, costing more each level.</summary>
     public bool Repeatable { get; init; }
+    /// <summary>
+    /// For a one-off upgrade (Vein Utilization I, II, ...): the repeatable tech whose level it adds one to.
+    /// As in DSP, the first levels of an upgrade come early and cheap; the endless tail follows later.
+    /// </summary>
+    public string? LevelOf { get; init; }
     /// <summary><see cref="UnitCost"/> as an id-sorted list, for deterministic iteration.</summary>
     [JsonIgnore] public ItemAmount[] UnitCostList { get; internal set; } = [];
     /// <summary>

@@ -2,6 +2,19 @@ namespace Factory.Sim;
 
 public sealed partial class World
 {
+    /// <summary>Applies an upgrade that changes stored stats at once: Robot Efficiency re-rates every robot.</summary>
+    /// <param name="series">The repeatable tech whose level just rose (or any other tech id).</param>
+    private void RefreshAfterUpgrade(string series)
+    {
+        if (series == Factory.Sim.Planet.RobotEfficiency)
+        {
+            foreach (Unit u in Planets.SelectMany(p => p.Units))
+            {
+                u.Planet.RefreshRobot(u);
+            }
+        }
+    }
+
     /// <summary>
     /// Adds a finished research unit to a technology: the one the lab started it for, or the current research
     /// when none is given. Progress belongs to the tech, as in Factorio, so switching research mid-unit doesn't
@@ -32,25 +45,19 @@ public sealed partial class World
         if (tech.Repeatable)
         {
             // Infinite research: bank the level and keep going on the next one.
-            int level = Research.Level(id) + 1;
-            Research.Levels[id] = level;
+            Research.Levels[id] = Research.Levels.GetValueOrDefault(id) + 1;
+            int level = Research.Level(id);
             Research.Progress[id] = 0;
             Research.Completed.Add(id);
             Stats.RecordResearch(id);
-            if (id == Factory.Sim.Planet.RobotEfficiency)
-            {
-                foreach (Unit u in Planets.SelectMany(p => p.Units))
-                {
-                    u.Planet.RefreshRobot(u);
-                }
-            }
-
+            RefreshAfterUpgrade(id);
             Emit($"Research complete: {tech.Name} {level}");
 
             return;
         }
 
         Research.Completed.Add(id);
+        RefreshAfterUpgrade(tech.LevelOf ?? id);
         Stats.RecordResearch(id);
         foreach (string u in tech.Unlocks)
         {
