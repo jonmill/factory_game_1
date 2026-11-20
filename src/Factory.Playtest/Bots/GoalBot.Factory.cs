@@ -389,6 +389,13 @@ public sealed partial class GoalBot
     }
 
     /// <summary>Recipe ids of the science lines, with how many fabricators each wants.</summary>
+    /// <summary>What the terraformers and payload launchers standing on this planet consume.</summary>
+    private HashSet<string> TerraformInputs() => P.Buildings
+        .Where(b => b.Def.Kind is BuildingKind.Terraformer or BuildingKind.PayloadLauncher)
+        .SelectMany(b => b.Def.Kind == BuildingKind.PayloadLauncher ? Payloads(b.Def).SelectMany(x => x.Recipe.Inputs)
+            : b.Recipe is { } r ? r.Inputs : [])
+        .Select(i => i.Item).ToHashSet();
+
     private Dictionary<string, int> ScienceRecipes() =>
         ScienceLines().ToDictionary(kv => WorldProbe.RecipeFor(C, kv.Key)!.Id, kv => kv.Value, StringComparer.Ordinal);
 
@@ -603,9 +610,12 @@ public sealed partial class GoalBot
         int budget = System.Math.Max(1, P.Units.Count(u => (u.IsLeader == false) && (u.OwnerPlayer == Player)) / 2);
         int start = needs.Count;
         // The budget runs out, so feed in order of how much depends on it: machines nothing else can stand in
-        // for (refineries and the like, which make fuel and resin) first, then the science lines, then the rest.
+        // for (refineries and the like, which make fuel and resin) first, then the science lines and the
+        // terraforming consumables (once the terraformers stand, they are the game), then the rest.
         Dictionary<string, int> science = ScienceRecipes();
-        int Priority(Building b) => b.Def.Categories.Contains("crafting") == false ? 0 : science.ContainsKey(b.RecipeId!) ? 1 : 2;
+        HashSet<string> terraform = TerraformInputs();
+        int Priority(Building b) => b.Def.Categories.Contains("crafting") == false ? 0
+            : science.ContainsKey(b.RecipeId!) || b.Recipe!.Outputs.Any(o => terraform.Contains(o.Item)) ? 1 : 2;
         foreach (Building f in P.Buildings.Where(b => (b.Def.Kind == BuildingKind.Assembler) && (b.Recipe is not null)).OrderBy(Priority).ThenBy(f => f.Id))
         {
             if (needs.Count - start >= budget)

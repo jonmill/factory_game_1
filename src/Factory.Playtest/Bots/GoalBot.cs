@@ -686,6 +686,10 @@ public sealed partial class GoalBot : IBot
     private IEnumerable<Planet> RemoteTargets() => _w.TerraformablePlanets.Where(p => p != Home)
         .OrderByDescending(p => p.Readiness).ThenBy(p => p.Id).Take(System.Math.Max(0, _w.PlanetsNeeded - 1));
 
+    /// <summary>Terraforming points a stat still needs on one planet.</summary>
+    private int PointsLeftOn(Planet p, string stat) =>
+        System.Math.Max(0, C.Terraform.Stats.First(s => s.Id == stat).Target - p.Stats.GetValueOrDefault(stat));
+
     /// <summary>Terraforming points a stat still needs across the remote targets.</summary>
     private int RemotePointsLeft(string stat)
     {
@@ -835,9 +839,14 @@ public sealed partial class GoalBot : IBot
             PlaceNear(plan, C.BuildingList.First(b => b.Kind == BuildingKind.LaunchPad).Id, center, 5, 18);
         }
 
-        foreach (Building launcher in P.Buildings.Where(b => b.Def.Kind == BuildingKind.PayloadLauncher))
+        foreach (Building launcher in P.Buildings.Where(b => b.Def.Kind == BuildingKind.PayloadLauncher).OrderBy(b => b.Id))
         {
-            Planet? aim = RemoteTargets().Where(t => t.IsReady == false).OrderBy(t => t.Id).FirstOrDefault();
+            // Aim where what's loaded is needed; with nothing useful loaded, at the planet that needs the most of
+            // what's in storage. Otherwise a launcher full of catalyst sits aimed at a planet whose air is done.
+            Planet? aim = RemoteTargets().Where(t => t.IsReady == false)
+                .OrderByDescending(t => Payloads(launcher.Def).Where(x => launcher.Inv.Has(x.Recipe.Inputs)).Sum(x => PointsLeftOn(t, x.Stat)))
+                .ThenByDescending(t => Payloads(launcher.Def).Where(x => x.Recipe.Inputs.All(c => (launcher.Inv.Count(c.Item) + WorldProbe.StorageCount(P, c.Item)) >= c.Count)).Sum(x => PointsLeftOn(t, x.Stat)))
+                .ThenBy(t => t.Id).FirstOrDefault();
             if ((aim is not null) && (launcher.TargetPlanetId != aim.Id))
             {
                 Send(new SetLaunchTarget(launcher.Id, aim.Id));
@@ -1543,7 +1552,9 @@ public sealed partial class GoalBot : IBot
         // Payload launchers: keep a payload loaded for a stat the remote targets still need.
         foreach (Building pl in P.Buildings.Where(b => (b.Def.Kind == BuildingKind.PayloadLauncher) && (b.Crafting == false)))
         {
-            string? pack = Payloads(pl.Def).Where(x => (RemotePointsLeft(x.Stat) > 0) && x.Recipe.Inputs.Any(c => (pl.Inv.Count(c.Item) < c.Count) && (WorldProbe.StorageCount(P, c.Item) > 0)))
+            Planet? target = (pl.TargetPlanetId >= 0) && (pl.TargetPlanetId < _w.Planets.Count) ? _w.Planets[pl.TargetPlanetId] : null;
+            string? pack = Payloads(pl.Def).Where(x => (target is null ? RemotePointsLeft(x.Stat) : PointsLeftOn(target, x.Stat)) > 0)
+                .Where(x => x.Recipe.Inputs.Any(c => (pl.Inv.Count(c.Item) < c.Count) && (WorldProbe.StorageCount(P, c.Item) > 0)))
                 .Select(x => x.Recipe.Inputs[0].Item).FirstOrDefault();
             if (pack is not null)
             {
