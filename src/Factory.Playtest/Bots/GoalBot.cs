@@ -628,10 +628,39 @@ public sealed partial class GoalBot : IBot
     {
         plan.TechPath = RequiredTechs();
         string? next = plan.TechPath.FirstOrDefault(t => C.Techs[t].Prereqs.All(_w.Research.Completed.Contains) && (C.Techs[t].ComingSoon == false));
+        // As in DSP: while the next tech waits on a core the base can't supply yet (or the path is done),
+        // the stations run endless research with the cores in stock instead of standing idle.
+        if (((next is null) || (CoresInStock(C.Techs[next]) == false)) && (EndlessResearch() is { } endless))
+        {
+            next = endless;
+        }
+
         if ((next is not null) && (_w.Research.Current != next))
         {
             Send(new SetResearch(next));
         }
+    }
+
+    /// <summary>True when storage holds at least one of each core a tech costs per station, enough to keep them all going.</summary>
+    private bool CoresInStock(TechDef t)
+    {
+        int stations = System.Math.Max(1, CountOf(BuildingKind.Lab));
+
+        return t.UnitCostList.All(c => WorldProbe.StorageCount(P, c.Item) + P.Buildings.Where(b => b.Def.Kind == BuildingKind.Lab).Sum(b => b.Inv.Count(c.Item)) >= c.Count * stations);
+    }
+
+    /// <summary>
+    /// The endless tech worth researching now, with the cores in stock: Terraforming Efficiency once
+    /// terraforming has started, then whichever of Research Speed and Robot Efficiency is lower.
+    /// </summary>
+    private string? EndlessResearch()
+    {
+        bool terraforming = P.Buildings.Any(b => b.Def.Kind is BuildingKind.Terraformer or BuildingKind.PayloadLauncher);
+        return new[] { Planet.TerraformingEfficiency, Planet.ResearchSpeed, Planet.RobotEfficiency }
+            .Where(id => C.Techs.TryGetValue(id, out TechDef? t) && t.Prereqs.All(_w.Research.Completed.Contains) && CoresInStock(t))
+            .OrderBy(id => (id == Planet.TerraformingEfficiency) && terraforming ? 0 : 1)
+            .ThenBy(id => _w.Research.Level(id)).ThenBy(id => id, StringComparer.Ordinal)
+            .FirstOrDefault();
     }
 
     // ------------------------------------------------------------------ recovery / cleanup
@@ -670,6 +699,17 @@ public sealed partial class GoalBot : IBot
         C.RecipeList.Where(r => launcher.Categories.Contains(r.Category) && _w.Research.Unlocked.Contains(r.Id))
             .Select(r => (r, Planet.PayloadEffect(r.Effect)))
             .Where(x => x.Item2 is not null).Select(x => (x.r, x.Item2!.Value.Stat, x.Item2!.Value.Points));
+
+    /// <summary>
+    /// How many of a terraforming building a player puts up: the settler uplink once; otherwise several,
+    /// since terraforming goes as fast as the consumables can be made and fed in.
+    /// </summary>
+    private static int TerraformerTarget(BuildingDef def) => def.Kind switch
+    {
+        BuildingKind.Uplink => 1,
+        BuildingKind.PayloadLauncher => System.Math.Min(2, def.MaxPerPlanet > 0 ? def.MaxPerPlanet : 2),
+        _ => def.MaxPerPlanet > 0 ? System.Math.Min(3, def.MaxPerPlanet) : 3,
+    };
 
     /// <summary>Points a terraformer still has to add before its stat is complete; 0 for the uplink.</summary>
     private int PointsLeft(BuildingDef def)
@@ -783,7 +823,7 @@ public sealed partial class GoalBot : IBot
             foreach (BuildingDef def in TerraformBuildings())
             {
                 bool needed = (def.Kind == BuildingKind.Uplink) || (PointsLeft(def) > 0);
-                if (needed && _w.Research.Unlocked.Contains(def.Id) && (CountOf(def.Kind, def.Id) == 0))
+                if (needed && _w.Research.Unlocked.Contains(def.Id) && (CountOf(def.Kind, def.Id) < TerraformerTarget(def)))
                 {
                     PlaceNear(plan, def.Id, center, 5, 40);
                 }
@@ -966,7 +1006,10 @@ public sealed partial class GoalBot : IBot
         foreach (string id in plan.TechPath)
         {
             TechDef t = C.Techs[id];
-            int remaining = System.Math.Min(Params.ResearchLookahead, t.Units - _w.Research.Progress.GetValueOrDefault(id));
+            // The research under way: enough cores to keep every station busy for a while (about 15 units each),
+            // so the science lines never stop as "surplus". Later techs: a small lookahead.
+            int ahead = id == _w.Research.Current ? System.Math.Max(Params.ResearchLookahead, 15 * System.Math.Max(1, CountOf(BuildingKind.Lab))) : Params.ResearchLookahead;
+            int remaining = System.Math.Min(ahead, _w.Research.UnitsFor(t) - _w.Research.Progress.GetValueOrDefault(id));
             foreach (ItemAmount c in t.UnitCostList)
             {
                 Add(c.Item, (long)c.Count * remaining);

@@ -209,7 +209,7 @@ the Shards), a Payload Launcher that terraforms another planet from home, Plasma
 launches, faster collectors and vessels), Precision and Plasma Fabricators (2x and 4x), the Climate Engine
 (terraforms the planet it stands on 60x faster than the first terraformers), Climate Amplifier modules for it
 (burn Lanthanide Accelerant from Dune's lanthanide and Cinder's brimstone to double its speed), Climate
-Acceleration and Vein Utilization (infinite research), a system readiness meter and the Settler Uplink (Stellar Age) to win.
+Acceleration and Vein Utilization (infinite research; Research Speed, Robot Efficiency and Terraforming Efficiency repeat forever too, from earlier ages), a system readiness meter and the Settler Uplink (Stellar Age) to win.
 
 Win condition: any 3 of the 4 terraformable planets (Kepler's Rest, Cinder, Rime, Dune) ready. Each stat runs
 to 10,000 points. The first terraformers and the Payload Launcher add 2 points per 20 s or 10 s and only 2 of

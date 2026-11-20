@@ -40,12 +40,21 @@ public sealed partial class Planet
     public int HandMiningTicks(Unit u, ResourceDef res) => MiningTicks(u, res.HandTicks);
 
     /// <summary>Ticks a robot takes for a hand-mining step that normally takes <paramref name="baseTicks"/>.</summary>
-    private int MiningTicks(Unit u, int baseTicks) => System.Math.Max(1, baseTicks * 100 / System.Math.Max(1, u.Robot.MiningPct + ModulesOf(u).Sum(m => m.MiningPct)));
+    private int MiningTicks(Unit u, int baseTicks) => System.Math.Max(1, baseTicks * 100 / System.Math.Max(1, (u.Robot.MiningPct + ModulesOf(u).Sum(m => m.MiningPct)) * RobotEfficiencyFactor / 100));
+
+    /// <summary>The repeatable tech that makes every robot faster.</summary>
+    public const string RobotEfficiency = "robot-efficiency";
+
+    /// <summary>Extra robot movement and mining speed per level of <see cref="RobotEfficiency"/>, in percent.</summary>
+    public const int RobotEfficiencyPct = 15;
+
+    /// <summary>Robot Efficiency as a percentage (100 with none researched).</summary>
+    private int RobotEfficiencyFactor => 100 + (RobotEfficiencyPct * World.Research.Level(RobotEfficiency));
 
     /// <summary>Recomputes a robot's speed and cargo space from its model and modules.</summary>
     internal void RefreshRobot(Unit u)
     {
-        u.Speed = u.Robot.Speed * (100 + ModulesOf(u).Sum(m => m.SpeedPct)) / 100;
+        u.Speed = u.Robot.Speed * (100 + ModulesOf(u).Sum(m => m.SpeedPct)) / 100 * RobotEfficiencyFactor / 100;
         u.Carry.Slots = u.Robot.CarrySlots + ModulesOf(u).Sum(m => m.CarrySlots);
         if ((u.IsLeader == false) && (CanTakeJob(u, u.Job.Kind) == false))
         {

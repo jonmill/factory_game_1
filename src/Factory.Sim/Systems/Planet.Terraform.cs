@@ -143,6 +143,27 @@ public sealed partial class Planet
     /// <summary>Extra climate engine terraforming per level of <see cref="ClimateAcceleration"/>, in percent.</summary>
     public const int ClimateAccelerationPct = 25;
 
+    /// <summary>The repeatable tech that makes every terraforming consumable count for more.</summary>
+    public const string TerraformingEfficiency = "terraforming-efficiency";
+
+    /// <summary>Extra terraforming from each consumable per level of <see cref="TerraformingEfficiency"/>, in percent.</summary>
+    public const int TerraformingEfficiencyPct = 20;
+
+    /// <summary>Points a terraforming or payload recipe adds after research: Terraforming Efficiency for all, plus Climate Acceleration for climate engines.</summary>
+    /// <param name="points">The recipe's own points.</param>
+    /// <param name="climateEngine">True for a climate engine (a terraformer without a fixed recipe).</param>
+    /// <returns>The points it adds now.</returns>
+    public int TerraformPoints(int points, bool climateEngine)
+    {
+        int pct = 100 + (TerraformingEfficiencyPct * World.Research.Level(TerraformingEfficiency));
+        if (climateEngine)
+        {
+            pct += ClimateAccelerationPct * World.Research.Level(ClimateAcceleration);
+        }
+
+        return points * pct / 100;
+    }
+
     /// <summary>The recipe effect that calls the settlers.</summary>
     public const string CallSettlersEffect = "call-settlers";
 
@@ -151,13 +172,11 @@ public sealed partial class Planet
     {
         if (TerraformEffect(r.Effect) is { } t)
         {
-            // Climate Acceleration: each level adds a quarter to what a recipe-less (climate) terraformer achieves.
-            int points = b.Def.Recipe is null ? t.Points * (100 + (ClimateAccelerationPct * World.Research.Level(ClimateAcceleration))) / 100 : t.Points;
-            AddTerraform(t.Stat, points, b.Origin, b.Def.Id);
+            AddTerraform(t.Stat, TerraformPoints(t.Points, b.Def.Recipe is null), b.Origin, b.Def.Id);
         }
         else if ((PayloadEffect(r.Effect) is { } p) && (TargetOf(b) is { } target))
         {
-            target.AddTerraform(p.Stat, p.Points, new Int2(target.Width / 2, target.Height / 2), b.Def.Id);
+            target.AddTerraform(p.Stat, TerraformPoints(p.Points, climateEngine: false), new Int2(target.Width / 2, target.Height / 2), b.Def.Id);
         }
         else if (r.Effect == CallSettlersEffect)
         {

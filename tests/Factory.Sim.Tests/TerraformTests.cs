@@ -46,13 +46,13 @@ public class TerraformTests
     }
 
     [Test]
-    public async Task Terraformer_RaisesItsStatTwoPointsPerItem()
+    public async Task Terraformer_RaisesItsStatTenPointsPerItem()
     {
         (TestWorld tw, Building _) = Powered();
         Building atmo = tw.Build("atmo-processor", 13, 9);
         atmo.Inv.AddUnchecked("catalyst-pack", 2);
         int before = tw.P.Stats["atmosphere"];
-        tw.RunUntil(() => tw.P.Stats["atmosphere"] == before + 4, (1200 * 2) + 120, "two catalysts' worth of atmosphere");
+        tw.RunUntil(() => tw.P.Stats["atmosphere"] == before + 20, (400 * 2) + 120, "two catalysts' worth of atmosphere");
         await Assert.That(atmo.Inv.Count("catalyst-pack")).IsEqualTo(0);
     }
 
@@ -68,22 +68,25 @@ public class TerraformTests
         await Assert.That(atmo.Inv.Count("catalyst-pack")).IsEqualTo(2);
     }
 
+    /// <summary>
+    /// Terraforming is paid like Factorio's rocket: in consumables from a factory the player can grow, not
+    /// capped by how many terraformers fit on a planet.
+    /// </summary>
     [Test]
-    public async Task EarlyTerraformers_AreLimitedPerPlanet_AndTakeDozensOfHours()
+    public async Task Terraforming_ScalesWithTheFactory()
     {
         (TestWorld tw, Building _) = Powered();
         tw.Unlock("atmo-processor");
         tw.Build("atmo-processor", 13, 9);
         tw.Build("atmo-processor", 13, 13);
-        await Assert.That(tw.Try(new PlaceBuilding("atmo-processor", new Int2(13, 17), Dir.North))).Contains("Only 2");
+        await Assert.That(tw.Try(new PlaceBuilding("atmo-processor", new Int2(13, 17), Dir.North))).IsNull().Because("build as many as you can feed");
 
-        // Two processors working flat out on the home planet's atmosphere.
+        // A stat takes on the order of a thousand consumables: comparable to an age of research, not tens of thousands.
         ContentDb c = tw.W.Content;
-        RecipeDef r = c.Recipes["release-catalyst"];
-        int pointsPerCraft = Planet.TerraformEffect(r.Effect)!.Value.Points;
+        int pointsPerItem = Planet.TerraformEffect(c.Recipes["release-catalyst"].Effect)!.Value.Points;
         PlanetStatDef atmo = c.Terraform.Stats.First(s => s.Id == "atmosphere");
-        double hours = (atmo.Target - atmo.Initial) / (double)pointsPerCraft * r.Ticks / 2 / 3600 / 60;
-        await Assert.That(hours >= 10).IsTrue().Because($"early terraforming alone should take many hours, got {hours:F1}");
+        int items = (atmo.Target - atmo.Initial) / pointsPerItem;
+        await Assert.That(items).IsBetween(500, 2000).Because($"a stat costs {items} catalysts");
     }
 
     [Test]

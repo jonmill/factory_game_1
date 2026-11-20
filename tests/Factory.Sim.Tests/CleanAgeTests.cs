@@ -82,7 +82,7 @@ public class CleanAgeTests
         Planet rime = tw.W.Planets[Index(tw, "rime")];
         await Assert.That(tw.Try(new SetLaunchTarget(launcher.Id, 0))).IsNotNull();
         tw.Do(new SetLaunchTarget(launcher.Id, rime.Id));
-        tw.RunUntil(() => rime.Stats["biosphere"] >= 6, 60 * 60, "three seed payloads to land on Rime");
+        tw.RunUntil(() => rime.Stats["biosphere"] >= 30, 60 * 60, "three seed payloads to land on Rime");
         await Assert.That(tw.P.Stats["biosphere"]).IsEqualTo(0);
         await Assert.That(launcher.Inv.Count("seed-pod")).IsEqualTo(0);
         _ = (panel, panel2, panel3, panel4, panel5);

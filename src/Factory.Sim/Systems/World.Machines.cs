@@ -37,6 +37,14 @@ public sealed partial class World
             Research.Progress[id] = 0;
             Research.Completed.Add(id);
             Stats.RecordResearch(id);
+            if (id == Factory.Sim.Planet.RobotEfficiency)
+            {
+                foreach (Unit u in Planets.SelectMany(p => p.Units))
+                {
+                    u.Planet.RefreshRobot(u);
+                }
+            }
+
             Emit($"Research complete: {tech.Name} {level}");
 
             return;

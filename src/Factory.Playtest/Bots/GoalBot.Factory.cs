@@ -18,7 +18,7 @@ public sealed partial class GoalBot
     /// <summary>The automation research a player takes on the way to the settlers, in order.</summary>
     private static readonly string[] _factoryPath =
     [
-        "automation", "mechanical-arms", "robot-modules", "analysis-cores", "electric-mining", "robotics", "arc-smelting", "kerogen-refining",
+        "automation", "robot-modules", "robotics", "mechanical-arms", "analysis-cores", "electric-mining", "arc-smelting", "kerogen-refining",
         "advanced-helpers", "atmospheric-processing", "hydro-seeding", "bio-engineering", "precision-fabrication", "solar-power",
         "fusion-power", "climate-engineering", "plasma-smelting", "plasma-mining", "plasma-fabrication", "lanthanide-catalysis",
     ];
@@ -353,6 +353,45 @@ public sealed partial class GoalBot
 
     private int FabricatorCap() => 4 + (5 * AgeReached());
 
+    // ------------------------------------------------------------------ science
+
+    /// <summary>
+    /// The science lines a player keeps running: for each core the current research costs, how many
+    /// fabricators it takes to keep every research station busy (a station spends a unit's
+    /// <see cref="TechDef.UnitTicks"/> on each, a fabricator <see cref="RecipeDef.Ticks"/> at its speed per
+    /// core). These fabricators make only their core and are never moved to other work.
+    /// </summary>
+    private Dictionary<string, int> ScienceLines()
+    {
+        Dictionary<string, int> lines = new Dictionary<string, int>(StringComparer.Ordinal);
+        if ((_w.Research.Current is not { } cur) || (C.Techs.TryGetValue(cur, out TechDef? tech) == false) || (BestFabricator() is not { } fab))
+        {
+            return lines;
+        }
+
+        long labs = System.Math.Max(1, CountOf(BuildingKind.Lab));
+        // Helpers carry every input here (they are the belts): a line only grows as the workforce does, one
+        // fabricator per three helpers, or the machines outrun what can be fed and everything starves.
+        int helpers = P.Units.Count(u => (u.IsLeader == false) && (u.OwnerPlayer == Player));
+        int perLine = System.Math.Max(1, helpers / 3);
+        foreach (ItemAmount c in tech.UnitCostList)
+        {
+            if ((WorldProbe.RecipeFor(C, c.Item) is not { } r) || (WorthAFabricator(r) == false) || (_w.Research.Unlocked.Contains(r.Id) == false))
+            {
+                continue;
+            }
+
+            long perCraft = (long)fab.Speed * tech.UnitTicks * r.Outputs[0].Count;
+            lines[c.Item] = (int)System.Math.Clamp(((labs * r.Ticks * 100 * c.Count) + perCraft - 1) / perCraft, 1, perLine);
+        }
+
+        return lines;
+    }
+
+    /// <summary>Recipe ids of the science lines, with how many fabricators each wants.</summary>
+    private Dictionary<string, int> ScienceRecipes() =>
+        ScienceLines().ToDictionary(kv => WorldProbe.RecipeFor(C, kv.Key)!.Id, kv => kv.Value, StringComparer.Ordinal);
+
     /// <summary>Recipes worth a fabricator: crafted in volume, not one-off machines or vessels.</summary>
     private bool WorthAFabricator(RecipeDef r) => (r.Category == "crafting") && (r.Effect is null) && (C.Items[r.Outputs[0].Item].Module is null)
                                                   && (C.Items[r.Outputs[0].Item].Stack >= 50);
@@ -366,9 +405,21 @@ public sealed partial class GoalBot
         }
 
         List<Building> fabs = Fabricators();
-        if (fabs.Count + 1 > FabricatorCap())
+        Dictionary<string, int> science = ScienceRecipes();
+        if (fabs.Count + 1 > FabricatorCap() + science.Values.Sum())
         {
             return;
+        }
+
+        // Science first: a core line short of fabricators gets the next cell.
+        foreach ((string recipe, int want) in science.OrderBy(kv => kv.Key, StringComparer.Ordinal))
+        {
+            if (fabs.Count(f => f.RecipeId == recipe) < want)
+            {
+                PlaceFabricatorCell(plan, lander, fab);
+
+                return;
+            }
         }
 
         // The craft with the biggest backlog that has no fabricator, or whose fabricators are all busy and far behind.
@@ -486,11 +537,31 @@ public sealed partial class GoalBot
     private void AssignFabricatorRecipes(BotPlan plan)
     {
         List<Building> fabs = Fabricators();
+        Dictionary<string, int> science = ScienceRecipes();
+        // Staff the science lines first, from fabricators with nothing to do or making something unwanted.
+        foreach ((string recipe, int want) in science.OrderBy(kv => kv.Key, StringComparer.Ordinal))
+        {
+            for (int have = fabs.Count(f => f.RecipeId == recipe); have < want; have++)
+            {
+                Building? spare = fabs.Where(f => (f.RecipeId is null) || ((science.ContainsKey(f.RecipeId) == false) && Surplus(plan, f.Recipe!)))
+                    .OrderBy(f => f.RecipeId is null ? 0 : 1).ThenBy(f => f.Id).FirstOrDefault();
+                if (spare is null)
+                {
+                    break;
+                }
+
+                Send(new SetRecipe(spare.Id, recipe));
+                fabs.Remove(spare); // spoken for this think
+            }
+        }
+
         List<RecipeDef> wanted = plan.CraftDeficit.OrderByDescending(kv => plan.CraftDepth[kv.Key]).ThenByDescending(kv => kv.Value).ThenBy(kv => kv.Key, StringComparer.Ordinal)
             .Select(kv => WorldProbe.RecipeFor(C, kv.Key)!).Where(WorthAFabricator).ToList();
         foreach (Building f in fabs.OrderBy(f => f.Id))
         {
-            bool unwanted = (f.Recipe is not null) && Surplus(plan, f.Recipe) && (wanted.Count > 0);
+            // A science line's fabricator stays on its core (it stops by itself once the store is full).
+            bool line = (f.RecipeId is not null) && science.TryGetValue(f.RecipeId, out int lineSize) && (fabs.Count(x => x.RecipeId == f.RecipeId) <= lineSize);
+            bool unwanted = (line == false) && (f.Recipe is not null) && Surplus(plan, f.Recipe) && (wanted.Count > 0);
             if ((f.RecipeId is not null) && (unwanted == false))
             {
                 continue;
@@ -531,7 +602,11 @@ public sealed partial class GoalBot
 
         int budget = System.Math.Max(1, P.Units.Count(u => (u.IsLeader == false) && (u.OwnerPlayer == Player)) / 2);
         int start = needs.Count;
-        foreach (Building f in P.Buildings.Where(b => (b.Def.Kind == BuildingKind.Assembler) && (b.Recipe is not null)).OrderBy(f => f.Id))
+        // The budget runs out, so feed in order of how much depends on it: machines nothing else can stand in
+        // for (refineries and the like, which make fuel and resin) first, then the science lines, then the rest.
+        Dictionary<string, int> science = ScienceRecipes();
+        int Priority(Building b) => b.Def.Categories.Contains("crafting") == false ? 0 : science.ContainsKey(b.RecipeId!) ? 1 : 2;
+        foreach (Building f in P.Buildings.Where(b => (b.Def.Kind == BuildingKind.Assembler) && (b.Recipe is not null)).OrderBy(Priority).ThenBy(f => f.Id))
         {
             if (needs.Count - start >= budget)
             {
@@ -562,7 +637,8 @@ public sealed partial class GoalBot
     // ------------------------------------------------------------------ workforce
 
     /// <summary>How many helper bots the bot wants at the age it has reached.</summary>
-    private int HelperTarget() => 2 + (4 * AgeReached());
+    /// <remarks>Helpers carry everything in this game (they are its belts), so a player builds them as soon as the bay is up.</remarks>
+    private int HelperTarget() => 6 + (4 * AgeReached());
 
     private void PlanWorkforce(BotPlan plan, Building lander)
     {

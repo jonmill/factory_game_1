@@ -3,6 +3,12 @@ namespace Factory.Sim;
 /// <summary>Drills, furnaces, fabricators, labs, robot bays and sorters.</summary>
 public sealed partial class Planet
 {
+    /// <summary>The repeatable tech that speeds up research stations.</summary>
+    public const string ResearchSpeed = "research-speed";
+
+    /// <summary>Extra research station speed per level of <see cref="ResearchSpeed"/>, in percent.</summary>
+    public const int ResearchSpeedPct = 20;
+
     private const int MaxFuelStock = 10;
     private const int DrillBuffer = 10;
 
@@ -459,6 +465,11 @@ public sealed partial class Planet
         RecipeDef r = b.Recipe!;
         int speed = (r.Category == "orbital") && HasSpaceElevator ? 2 * b.Def.Speed : b.Def.Speed;
         speed = speed * (100 + b.BoostPct) / 100;
+        if (b.Def.Kind == BuildingKind.Lab)
+        {
+            speed = speed * (100 + (ResearchSpeedPct * World.Research.Level(ResearchSpeed))) / 100;
+        }
+
         b.Progress += speed * f / 1000;
         if (b.Progress < r.Ticks * 100L)
         {

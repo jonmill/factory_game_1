@@ -219,9 +219,17 @@ public partial class Hud
             Past: () => Researched("analysis-cores")));
 
         _steps.Add(new GuideStep(
+            "Build more helper bots",
+            "Helpers are your hands and your conveyor belts: every one more keeps another machine fed. Research Robot " +
+            "Assembly (T), build a Robot Assembly Bay (4, Science) by a power pole, pick Helper Bot Mk1 and let a helper Haul… its parts in.",
+            () => W.HelpersBuilt > 0,
+            () => ResearchProgress("robotics"),
+            Past: () => Researched("analysis-cores") && (W.HelpersBuilt > 0)));
+
+        _steps.Add(new GuideStep(
             "Reach the Combustion Age",
             "Research Analytical Engines (it needs Automated Fabrication). It unlocks Analysis Cores " +
-            "(logic board, ballast plate, charge cell) and the Combustion Age: grid power, rail and robotics.",
+            "(logic board, ballast plate, charge cell) and the Combustion Age: grid power, rail and better robots.",
             () => Researched("analysis-cores"),
             () => ResearchProgress("analysis-cores")));
 
