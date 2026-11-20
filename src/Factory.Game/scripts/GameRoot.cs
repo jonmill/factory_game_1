@@ -906,8 +906,12 @@ public partial class GameRoot : Node2D
             _demoDone = true;
             Replay replay = Replay.FromJson(System.IO.File.ReadAllText(replayPath));
             NewGame(replay.Seed, replay);
-            Building lander = World.Get<Building>(Planet.LanderId)!;
-            Cam = new Vector2(lander.Origin.X + 1.5f, lander.Origin.Y + 3f);
+            // The replay may end on a planet with no lander (the commander flew elsewhere): then the camera stays on the commander.
+            if (World.Get<Building>(Planet.LanderId) is { } lander)
+            {
+                Cam = new Vector2(lander.Origin.X + 1.5f, lander.Origin.Y + 3f);
+            }
+
             if (float.TryParse(System.Environment.GetEnvironmentVariable("FACTORY_ZOOM"), System.Globalization.CultureInfo.InvariantCulture, out float zoom))
             {
                 Zoom = zoom;
