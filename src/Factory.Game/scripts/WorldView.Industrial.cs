@@ -14,6 +14,8 @@ public partial class WorldView
     private static readonly Color _darkIron = new(0.17f, 0.16f, 0.15f);
     private static readonly Color _rust = new(0.45f, 0.27f, 0.15f);
     private static readonly Color _timber = new(0.47f, 0.34f, 0.2f);
+
+    private readonly Dictionary<PowerNetwork, (long Key, List<(Building From, Building To)> Edges)> _wireTrees = [];
     private static readonly Color _stone = new(0.55f, 0.5f, 0.43f);
     private static readonly Color _fire = new(1f, 0.55f, 0.18f);
 
@@ -219,24 +221,54 @@ public partial class WorldView
         }
     }
 
+    /// <summary>A plank crate with a darker frame, steel corner brackets and a fill gauge along its foot.</summary>
     private void DrawCrate(Building b, Rect2 r)
     {
         Rect2 body = r.Grow(-T * 0.1f);
         DropShadow(body, 0.3f);
-        DrawRect(body, _timber.Darkened(0.35f));
+        DrawRect(body, _timber.Darkened(0.5f));
+        float frame = T * 0.09f;
+        Rect2 face = body.Grow(-frame);
         int planks = 3;
         for (int k = 0; k < planks; k++)
         {
-            Rect2 plank = new Rect2(body.Position + new Vector2(0, body.Size.Y * k / planks), new Vector2(body.Size.X, body.Size.Y / planks)).Grow(-Mathf.Max(0.8f, T * 0.025f));
-            DrawRect(plank, _timber.Darkened((Hash(b.Id, k, 41) & 7) / 7f * 0.18f));
+            Rect2 plank = new Rect2(face.Position + new Vector2(0, face.Size.Y * k / planks), new Vector2(face.Size.X, face.Size.Y / planks)).Grow(-Mathf.Max(0.6f, T * 0.015f));
+            Color wood = _timber.Darkened((Hash(b.Id, k, 41) & 7) / 7f * 0.16f);
+            DrawRect(plank, wood);
+            DrawLine(plank.Position, plank.Position + new Vector2(plank.Size.X, 0), wood.Lightened(0.18f), Mathf.Max(1, T * 0.02f));
+            if (T > 30)
+            {
+                // Grain: two faint streaks per plank.
+                for (int g = 0; g < 2; g++)
+                {
+                    float gy = plank.Position.Y + (plank.Size.Y * (0.35f + (g * 0.3f)));
+                    float gx = plank.Position.X + (plank.Size.X * ((Hash(b.Id, k + (g * 5), 43) & 15) / 40f));
+                    DrawLine(new Vector2(gx, gy), new Vector2(gx + (plank.Size.X * 0.45f), gy), wood.Darkened(0.15f), 1);
+                }
+            }
         }
 
-        DrawLine(body.Position, body.End, _timber.Darkened(0.45f), Mathf.Max(1, T * 0.06f));
-        DrawRect(body, _darkIron, false, Mathf.Max(1, T * 0.05f));
+        // The diagonal brace and the frame's lit top edge.
+        DrawLine(face.Position, face.End, _timber.Darkened(0.4f), Mathf.Max(1.5f, T * 0.08f));
+        DrawLine(face.Position + new Vector2(0, -T * 0.02f), face.End + new Vector2(0, -T * 0.02f), _timber.Lightened(0.12f), Mathf.Max(1, T * 0.02f));
+        DrawLine(body.Position, body.Position + new Vector2(body.Size.X, 0), _timber.Lightened(0.05f), Mathf.Max(1, T * 0.03f));
+        DrawRect(body, _darkIron, false, Mathf.Max(1, T * 0.04f));
+
+        // Steel corner brackets with a rivet.
+        float c = T * 0.17f;
+        foreach (Vector2 corner in new[] { body.Position, body.Position + new Vector2(body.Size.X - c, 0), body.Position + new Vector2(0, body.Size.Y - c), body.End - new Vector2(c, c) })
+        {
+            DrawRect(new Rect2(corner, new Vector2(c, c)), new Color(0.42f, 0.44f, 0.46f));
+            DrawRect(new Rect2(corner, new Vector2(c, c)), _darkIron, false, Mathf.Max(1, T * 0.02f));
+            DrawCircle(corner + new Vector2(c / 2, c / 2), Mathf.Max(0.8f, T * 0.025f), new Color(0.7f, 0.72f, 0.74f));
+        }
+
         float fill = b.Inv.Slots > 0 ? (float)b.Inv.UsedSlots / b.Inv.Slots : 0;
         if (fill > 0)
         {
-            DrawRect(new Rect2(body.Position + new Vector2(0, body.Size.Y + (T * 0.04f)), new Vector2(body.Size.X * fill, T * 0.06f)), new Color(0.8f, 0.7f, 0.35f, 0.8f));
+            Rect2 gauge = new Rect2(body.Position + new Vector2(0, body.Size.Y + (T * 0.04f)), new Vector2(body.Size.X, T * 0.06f));
+            DrawRect(gauge, new Color(0, 0, 0, 0.35f));
+            DrawRect(gauge with { Size = new Vector2(gauge.Size.X * fill, gauge.Size.Y) }, fill >= 1 ? new Color(0.9f, 0.45f, 0.3f, 0.9f) : new Color(0.8f, 0.7f, 0.35f, 0.85f));
         }
     }
 
@@ -360,29 +392,120 @@ public partial class WorldView
     }
 
     /// <summary>Copper wires between poles, sagging slightly between their crossbars.</summary>
+    /// <summary>
+    /// Copper wires between poles. A network's poles are joined by its shortest spanning tree, the way a player
+    /// strings wire from each new pole to the nearest one, rather than every pole to every pole in reach,
+    /// which turns a dense base into a web. The tree is cached until the network's poles change.
+    /// </summary>
     private void DrawPowerWires()
     {
+        Color copper = new Color(0.72f, 0.45f, 0.25f);
+        Color shine = new Color(0.95f, 0.7f, 0.45f);
         foreach (PowerNetwork net in P.Networks.Values)
         {
-            List<Building> poles = net.Poles;
-            Color copper = new Color(0.72f, 0.45f, 0.25f);
-            for (int i = 0; i < poles.Count; i++)
+            foreach ((Building from, Building to) in WireTree(net))
             {
-                for (int j = i + 1; j < poles.Count; j++)
+                Vector2 a = Center(from.Origin) - new Vector2(0, T * 0.24f);
+                Vector2 b = a + (Root.WrapDelta(new Vector2(from.Origin.X, from.Origin.Y), new Vector2(to.Origin.X, to.Origin.Y)) * T);
+                if (OnScreen(new Rect2(a, Vector2.Zero).Expand(b)) == false)
                 {
-                    if (P.Torus.Chebyshev(poles[i].Origin, poles[j].Origin) > poles[i].Def.WireReach)
+                    continue;
+                }
+
+                // A sagging catenary: deepest in the middle, deeper for longer spans.
+                float sag = (a.DistanceTo(b) * 0.07f) + (T * 0.05f);
+                Vector2[] wire = new Vector2[9];
+                for (int k = 0; k < wire.Length; k++)
+                {
+                    float f = k / (float)(wire.Length - 1);
+                    wire[k] = a.Lerp(b, f) + new Vector2(0, sag * 4 * f * (1 - f));
+                }
+
+                Vector2 shadow = new Vector2(T * 0.25f, T * 0.45f);
+                DrawPolyline([.. wire.Select(w => w + shadow)], new Color(0, 0, 0, 0.16f), Mathf.Max(1, T * 0.03f), true);
+                DrawPolyline(wire, copper.Darkened(0.25f), Mathf.Max(1.2f, T * 0.045f), true);
+                DrawPolyline(wire, A(shine, 0.55f), Mathf.Max(0.6f, T * 0.015f), true);
+            }
+        }
+    }
+
+    /// <summary>The network's wires: a minimum spanning tree over poles within wire reach of each other (Prim's).</summary>
+    private List<(Building From, Building To)> WireTree(PowerNetwork net)
+    {
+        List<Building> poles = net.Poles;
+        long key = poles.Count;
+        foreach (Building pole in poles)
+        {
+            key = (key * 31) + pole.Id;
+        }
+
+        if (_wireTrees.TryGetValue(net, out (long Key, List<(Building From, Building To)> Edges) cached) && (cached.Key == key))
+        {
+            return cached.Edges;
+        }
+
+        if (_wireTrees.Count > 64)
+        {
+            _wireTrees.Clear();
+        }
+
+        List<(Building From, Building To)> edges = [];
+        int n = poles.Count;
+        bool[] inTree = new bool[n];
+        long[] best = new long[n];
+        int[] parent = new int[n];
+        System.Array.Fill(best, long.MaxValue);
+        System.Array.Fill(parent, -1);
+        for (int root = 0; root < n; root++)
+        {
+            if (inTree[root])
+            {
+                continue;
+            }
+
+            best[root] = 0;
+            while (true)
+            {
+                int pick = -1;
+                for (int i = 0; i < n; i++)
+                {
+                    if ((inTree[i] == false) && (best[i] != long.MaxValue) && ((pick < 0) || (best[i] < best[pick])))
+                    {
+                        pick = i;
+                    }
+                }
+
+                if (pick < 0)
+                {
+                    break;
+                }
+
+                inTree[pick] = true;
+                if (parent[pick] >= 0)
+                {
+                    edges.Add((poles[parent[pick]], poles[pick]));
+                }
+
+                for (int j = 0; j < n; j++)
+                {
+                    int reach = System.Math.Max(poles[pick].Def.WireReach, poles[j].Def.WireReach);
+                    if (inTree[j] || (P.Torus.Chebyshev(poles[pick].Origin, poles[j].Origin) > reach))
                     {
                         continue;
                     }
 
-                    Vector2 a = Center(poles[i].Origin) - new Vector2(0, T * 0.24f);
-                    Vector2 b = a + (Root.WrapDelta(new Vector2(poles[i].Origin.X, poles[i].Origin.Y), new Vector2(poles[j].Origin.X, poles[j].Origin.Y)) * T);
-                    Vector2 mid = ((a + b) / 2) + new Vector2(0, (a.DistanceTo(b) * 0.06f) + (T * 0.05f));
-                    Vector2 shadow = new Vector2(T * 0.25f, T * 0.45f);
-                    DrawPolyline([a + shadow, mid + shadow, b + shadow], new Color(0, 0, 0, 0.18f), Mathf.Max(1, T * 0.03f), true);
-                    DrawPolyline([a, mid, b], copper, Mathf.Max(1, T * 0.035f), true);
+                    long d = P.Torus.DistSq(poles[pick].Origin, poles[j].Origin);
+                    if (d < best[j])
+                    {
+                        best[j] = d;
+                        parent[j] = pick;
+                    }
                 }
             }
         }
+
+        _wireTrees[net] = (key, edges);
+
+        return edges;
     }
 }

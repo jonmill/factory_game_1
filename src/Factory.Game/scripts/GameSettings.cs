@@ -3,7 +3,7 @@ using Godot;
 namespace Factory.Game;
 
 /// <summary>
-/// Player preferences that outlive a game: interface size, whether the guide's hints show, and which
+/// Player preferences that outlive a game: interface size, sound volumes, whether the guide's hints show, and which
 /// one-off tips have been seen. Kept in <c>user://settings.cfg</c>; the future options menu edits these.
 /// </summary>
 public static class GameSettings
@@ -17,6 +17,7 @@ public static class GameSettings
     private static bool _loaded;
     private static float _uiScale = 1f;
     private static bool _showHints = true;
+    private static float _masterVolume = 0.8f, _sfxVolume = 0.8f, _ambientVolume = 0.6f;
 
     /// <summary>
     /// Interface size as a multiple of the automatic size, which follows the game window. 1 is automatic;
@@ -53,6 +54,41 @@ public static class GameSettings
             _showHints = value;
             Save();
         }
+    }
+
+    /// <summary>Overall volume, 0 to 1.</summary>
+    public static float MasterVolume
+    {
+        get => Get(ref _masterVolume);
+        set => Set(ref _masterVolume, value);
+    }
+
+    /// <summary>Volume of sound effects and interface clicks, 0 to 1.</summary>
+    public static float SfxVolume
+    {
+        get => Get(ref _sfxVolume);
+        set => Set(ref _sfxVolume, value);
+    }
+
+    /// <summary>Volume of wind, machinery and the background drone, 0 to 1.</summary>
+    public static float AmbientVolume
+    {
+        get => Get(ref _ambientVolume);
+        set => Set(ref _ambientVolume, value);
+    }
+
+    private static float Get(ref float field)
+    {
+        Load();
+
+        return field;
+    }
+
+    private static void Set(ref float field, float value)
+    {
+        Load();
+        field = Mathf.Clamp(Mathf.Snapped(value, 0.1f), 0f, 1f);
+        Save();
     }
 
     /// <summary>True if the player has already seen (and dismissed or outlasted) a one-off tip.</summary>
@@ -109,6 +145,9 @@ public static class GameSettings
         }
 
         _uiScale = Mathf.Clamp((float)cfg.GetValue("interface", "scale", 1f), MinUiScale, MaxUiScale);
+        _masterVolume = Mathf.Clamp((float)cfg.GetValue("audio", "master", _masterVolume), 0f, 1f);
+        _sfxVolume = Mathf.Clamp((float)cfg.GetValue("audio", "effects", _sfxVolume), 0f, 1f);
+        _ambientVolume = Mathf.Clamp((float)cfg.GetValue("audio", "ambient", _ambientVolume), 0f, 1f);
         if (System.Environment.GetEnvironmentVariable("FACTORY_HINTS") is null)
         {
             _showHints = (bool)cfg.GetValue("guide", "show_hints", true);
@@ -130,6 +169,9 @@ public static class GameSettings
         ConfigFile cfg = new ConfigFile();
         cfg.SetValue("interface", "scale", _uiScale);
         cfg.SetValue("guide", "show_hints", _showHints);
+        cfg.SetValue("audio", "master", _masterVolume);
+        cfg.SetValue("audio", "effects", _sfxVolume);
+        cfg.SetValue("audio", "ambient", _ambientVolume);
         cfg.SetValue("guide", "seen_tips", _seenTips.Order(System.StringComparer.Ordinal).ToArray());
         cfg.Save(Path);
     }

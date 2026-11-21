@@ -39,6 +39,7 @@ public partial class TerrainChunk : Node2D
         int y1 = System.Math.Min(Planet.Height, Origin.Y + Size);
         _verts.Clear();
         _colors.Clear();
+        DrawGroundDetail(x1, y1);
         DrawBeds(x1, y1);
         DrawOre(x1, y1);
         DrawTrees(x1, y1);
@@ -100,6 +101,76 @@ public partial class TerrainChunk : Node2D
     private static uint Hash(int x, int y, uint seed) => GroundPainter.Hash(x, y, seed);
 
     private static Color A(Color c, float a) => new(c.R, c.G, c.B, a);
+
+    /// <summary>
+    /// Small things on open ground so it doesn't read as a flat wash: grass tufts where the biome grows plants,
+    /// pebbles and hairline cracks everywhere, all tinted from the biome's own ground colours. Clumped by a
+    /// coarse hash so some patches are bare and others busy.
+    /// </summary>
+    private void DrawGroundDetail(int x1, int y1)
+    {
+        for (int y = Origin.Y; y < y1; y++)
+        {
+            for (int x = Origin.X; x < x1; x++)
+            {
+                Int2 t = new Int2(x, y);
+                if ((Planet.TerrainAt(t) != Terrain.Ground) || (Planet.ResourceAt(t) is not null))
+                {
+                    continue;
+                }
+
+                BiomeDef? biome = Planet.BiomeAt(t);
+                Color ground = WorldView.Hex(biome?.Ground[0] ?? "#5a4a33");
+                bool grassy = (biome?.Trees ?? 0) > 0;
+                uint h = Hash(t.X, t.Y, 77);
+                uint patch = Hash(t.X >> 2, t.Y >> 2, 78);
+                int busy = (int)(patch & 3);
+                Vector2 p = Local(t);
+                Vector2 At(uint bits) => p + new Vector2(T * (0.1f + ((bits & 15) / 19f)), T * (0.12f + (((bits >> 4) & 15) / 19f)));
+
+                // Grass tufts: three or four blades fanning up from one root.
+                int tufts = grassy ? busy + (int)((h >> 20) & 1) - 1 : 0;
+                for (int k = 0; k < tufts; k++)
+                {
+                    uint hk = Hash((t.X * 5) + k, (t.Y * 3) - k, 79);
+                    Vector2 root = At(hk);
+                    float len = T * (0.1f + (((hk >> 8) & 7) * 0.014f));
+                    Color blade = ground.Lerp(new Color(0.42f, 0.5f, 0.22f), 0.45f).Lightened(((hk >> 12) & 3) * 0.05f);
+                    for (int b = -1; b <= 2; b++)
+                    {
+                        float lean = (b * 0.35f) + ((((hk >> 16) & 7) - 3.5f) * 0.03f);
+                        Vector2 tip = root + new Vector2(Mathf.Sin(lean) * len, -Mathf.Cos(lean) * len);
+                        Vector2 side = new Vector2(len * 0.09f, 0);
+                        Tri(root - side, root + side, tip, b == 2 ? blade.Darkened(0.25f) : blade);
+                    }
+                }
+
+                // Pebbles: a shadow, the stone, and a lit top.
+                int pebbles = (int)((h >> 24) & 3) + busy - 3;
+                for (int k = 0; k < pebbles; k++)
+                {
+                    uint hk = Hash((t.X * 11) - k, (t.Y * 7) + k, 80);
+                    Vector2 c = At(hk);
+                    float r = T * (0.025f + (((hk >> 8) & 3) * 0.012f));
+                    Color stone = ground.Lerp(new Color(0.55f, 0.52f, 0.48f), 0.4f);
+                    Circle(c + new Vector2(r * 0.3f, r * 0.4f), r, new Color(0, 0, 0, 0.22f));
+                    Circle(c, r, stone);
+                    Circle(c - new Vector2(r * 0.3f, r * 0.35f), r * 0.45f, stone.Lightened(0.25f));
+                }
+
+                // An occasional dry crack.
+                if ((h & 31) == 0)
+                {
+                    Vector2 a = At(h >> 8);
+                    Vector2 b = a + new Vector2(T * 0.22f, T * 0.06f);
+                    Vector2 c = b + new Vector2(T * 0.1f, -T * 0.12f);
+                    Color crack = A(ground.Darkened(0.45f), 0.6f);
+                    Line(a, b, crack, Mathf.Max(0.6f, T * 0.018f));
+                    Line(b, c, crack, Mathf.Max(0.6f, T * 0.014f));
+                }
+            }
+        }
+    }
 
     /// <summary>Leaf litter under trees and a faint wash of the ore's colour under ore, as soft blobs.</summary>
     private void DrawBeds(int x1, int y1)

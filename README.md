@@ -224,6 +224,13 @@ Every item, building, research and terraform point goes into the sim's ledger (`
 used it, how, on which planet and when, with five-minute time series. It is the basis for achievements and for
 the playtest reports that check the bots really automate.
 
+Sound and art are made in code: every sound effect and ambient loop is synthesised at start-up
+(`scripts/Audio/Synth.cs`; interface clicks, placing and dismantling, finished buildings, research, the
+commander's pick, launches, wind, a quiet drone and machinery that swells with the working machines in view),
+with Volume / Effects / Ambience in the Esc menu (`FACTORY_SOUND_DUMP=<dir>` writes them all to WAV files).
+The world is drawn procedurally too (`WorldView.*.cs`, `TerrainChunk.cs`); power wires follow each network's
+shortest spanning tree, so a dense base doesn't turn into a web.
+
 Not yet: splitters and underground belts, rail signals
-(trains just block each other), train collision avoidance on single track, snapshot saves, audio,
+(trains just block each other), train collision avoidance on single track, music,
 sprite art, multiplayer transport.

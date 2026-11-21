@@ -34,7 +34,7 @@ public partial class Hud
         MenuButton("Controls and how to play   [H]", () => ShowOnly(HudWindow.Help));
         body.AddChild(HudStyle.Divider());
 
-        // Settings, until there is an options screen: the guide and the interface size.
+        // Settings, until there is an options screen: the guide, the interface size and the volumes.
         Button hints = MenuButton("", () => { });
         void ShowHintsState() => hints.Text = GameSettings.ShowHints ? "Guide and tips: on   [G]" : "Guide and tips: off   [G]";
         hints.Pressed += () =>
@@ -71,6 +71,38 @@ public partial class Hud
         size.AddChild(StepButton("+", 0.1f));
         body.AddChild(size);
         ShowSize();
+
+        // Sound: three volume rows, each a label and − / + steps of 10%.
+        void VolumeRow(string name, System.Func<float> get, System.Action<float> set)
+        {
+            HBoxContainer row = new HBoxContainer();
+            row.AddThemeConstantOverride("separation", 6);
+            Label label = HudStyle.Caption("");
+            label.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+            void Show() => label.Text = $"{name}   {Mathf.RoundToInt(get() * 100)}%";
+            Button Step(string text, float step)
+            {
+                Button b = HudStyle.Button(text, () =>
+                {
+                    set(get() + step);
+                    Audio.SoundPlayer.ApplyVolumes();
+                    Show();
+                });
+                b.CustomMinimumSize = new Vector2(34, 30);
+
+                return b;
+            }
+
+            row.AddChild(label);
+            row.AddChild(Step("−", -0.1f));
+            row.AddChild(Step("+", 0.1f));
+            body.AddChild(row);
+            Show();
+        }
+
+        VolumeRow("Volume", () => GameSettings.MasterVolume, v => GameSettings.MasterVolume = v);
+        VolumeRow("Effects", () => GameSettings.SfxVolume, v => GameSettings.SfxVolume = v);
+        VolumeRow("Ambience", () => GameSettings.AmbientVolume, v => GameSettings.AmbientVolume = v);
         body.AddChild(HudStyle.Divider());
         MenuButton("Quit to desktop", () => Root.GetTree().Quit());
 

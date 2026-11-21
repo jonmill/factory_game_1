@@ -58,6 +58,7 @@ public partial class WorldView : Node2D
     {
         // Ground, ore and trees come from TerrainLayer, drawn just before this node.
         (int x0, int y0, int x1, int y1) = VisibleTiles(GetViewportRect().Size);
+        DrawWaterGlints(x0, y0, x1, y1);
         DrawGrid(x0, y0, x1, y1);
         DrawRails(x0, y0, x1, y1);
         foreach (ConstructionSite s in P.Sites)

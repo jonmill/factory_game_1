@@ -107,6 +107,11 @@ public partial class Hud : CanvasLayer
 
     private void ShowOnly(HudWindow which)
     {
+        if (which != _open)
+        {
+            Root.Sound?.Play("open", 0.45f, 0.05f, 0.08);
+        }
+
         if ((which == HudWindow.Map) && (_open != HudWindow.Map))
         {
             CentreMap();

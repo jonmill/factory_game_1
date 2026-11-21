@@ -37,7 +37,28 @@ public partial class WorldView
             return;
         }
 
-        DrawRect(r, A(_blueprint, 0.2f));
+        DrawRect(r, A(_blueprint, 0.14f));
+        // Blueprint hatching, then the frame filling in from the bottom as the work goes on.
+        float step = T * 0.3f;
+        for (float d = step; d < r.Size.X + r.Size.Y; d += step)
+        {
+            Vector2 from = r.Position + new Vector2(Mathf.Min(d, r.Size.X), Mathf.Max(0, d - r.Size.X));
+            Vector2 to = r.Position + new Vector2(Mathf.Max(0, d - r.Size.Y), Mathf.Min(d, r.Size.Y));
+            DrawLine(from, to, A(_blueprint, 0.16f), Mathf.Max(1, T * 0.02f));
+        }
+
+        if (progress > 0)
+        {
+            float h = r.Size.Y * progress;
+            DrawRect(new Rect2(new Vector2(r.Position.X, r.End.Y - h), new Vector2(r.Size.X, h)), A(_blueprint, 0.22f));
+        }
+
+        float corner = Mathf.Min(r.Size.X, r.Size.Y) * 0.22f;
+        foreach ((Vector2 at, Vector2 dir) in new[] { (r.Position, new Vector2(1, 1)), (new Vector2(r.End.X, r.Position.Y), new Vector2(-1, 1)), (new Vector2(r.Position.X, r.End.Y), new Vector2(1, -1)), (r.End, new Vector2(-1, -1)) })
+        {
+            DrawPolyline([at + new Vector2(dir.X * corner, 0), at, at + new Vector2(0, dir.Y * corner)], Hdr(_blueprint, 1.1f), Mathf.Max(1.5f, T * 0.06f));
+        }
+
         float pulse = 0.65f + (0.15f * Mathf.Sin((Time * 3) + s.Id));
         DrawRect(r, A(_blueprint, pulse), false, Mathf.Max(1, T * 0.04f));
         float matFrac = s.Cost.Length == 0 ? 1 : s.Cost.Sum(c => System.Math.Min(c.Count, s.Delivered.Count(c.Item))) / (float)s.Cost.Sum(c => c.Count);

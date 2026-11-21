@@ -78,6 +78,9 @@ public partial class GameRoot : Node2D
     private WorldView _view = null!;
     private FogLayer _fog = null!;
     private Hud _hud = null!;
+
+    /// <summary>The game's sound: effects, clicks and ambience.</summary>
+    public Audio.SoundPlayer Sound { get; private set; } = null!;
     private double _acc;
     private Int2 _lastIntent;
     private Vector2 _panIntent;
@@ -109,6 +112,11 @@ public partial class GameRoot : Node2D
                 GlowBloom = 0f,
                 GlowHdrThreshold = 1.15f,
                 GlowBlendMode = Godot.Environment.GlowBlendModeEnum.Screen,
+
+                // A touch more contrast and colour than the raw palette.
+                AdjustmentEnabled = true,
+                AdjustmentContrast = 1.06f,
+                AdjustmentSaturation = 1.1f,
             },
         };
         env.Environment.SetGlowLevel(1, 0.8f);
@@ -122,8 +130,11 @@ public partial class GameRoot : Node2D
         AddChild(_view);
         _fog = new FogLayer { Root = this };
         AddChild(_fog);
+        AddChild(Vignette());
         _hud = new Hud { Root = this };
         AddChild(_hud);
+        Sound = new Audio.SoundPlayer { Root = this };
+        AddChild(Sound);
         Notify($"Platform: {PlatformServices.Name}. Press H for controls, G for the guide.", Colors.LightSkyBlue);
     }
 
@@ -213,8 +224,79 @@ public partial class GameRoot : Node2D
         }
     }
 
+    /// <summary>A soft darkening toward the screen's edges, under the HUD, that draws the eye to the middle.</summary>
+    private static CanvasLayer Vignette()
+    {
+        Gradient fade = new Gradient();
+        fade.SetColor(0, new Color(0, 0, 0, 0));
+        fade.SetOffset(0, 0.55f);
+        fade.SetColor(1, new Color(0, 0, 0, 0.32f));
+        fade.SetOffset(1, 1f);
+        GradientTexture2D tex = new GradientTexture2D
+        {
+            Gradient = fade,
+            Fill = GradientTexture2D.FillEnum.Radial,
+            FillFrom = new Vector2(0.5f, 0.5f),
+            FillTo = new Vector2(1.05f, 0.5f),
+            Width = 256,
+            Height = 256,
+        };
+        TextureRect rect = new TextureRect { Texture = tex, MouseFilter = Control.MouseFilterEnum.Ignore, ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize, StretchMode = TextureRect.StretchModeEnum.Scale };
+        rect.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+        CanvasLayer layer = new CanvasLayer { Layer = 1 };
+        layer.AddChild(rect);
+
+        return layer;
+    }
+
     /// <summary>Submits a command to the simulation as the local player on the current planet.</summary>
-    public void Send(Command c) => World.Submit(c with { Player = LocalPlayer, PlanetId = PlanetId });
+    public void Send(Command c)
+    {
+        World.Submit(c with { Player = LocalPlayer, PlanetId = PlanetId });
+        switch (c)
+        {
+            case PlaceBuilding or PlaceTrain:
+                Sound.Play("place", 0.8f, 0.06f, 0.04);
+                break;
+            case DeconstructEntity or DeconstructRail or CancelSite:
+                Sound.Play("dismantle", 0.7f, 0.05f, 0.05);
+                break;
+            case QueueCraft:
+                Sound.Play("craft", 0.6f);
+                break;
+            case TakeFromBuilding or DepositToBuilding:
+                Sound.Play("pickup", 0.6f, 0.08f);
+                break;
+            case SetResearch or SetRecipe:
+                Sound.Play("craft", 0.5f, 0.02f);
+                break;
+            default:
+                break;
+        }
+    }
+
+    /// <summary>The sound for a simulation event, picked from its message.</summary>
+    private void PlayEventSound(SimEvent e)
+    {
+        string m = e.Message;
+        if (m.Contains("You win", System.StringComparison.Ordinal) || m.Contains("ready for settlers", System.StringComparison.Ordinal)
+            || m.Contains("Enough planets are ready", System.StringComparison.Ordinal))
+        {
+            Sound.Play("win", 0.8f, 0, 2);
+        }
+        else if (m.StartsWith("Research complete", System.StringComparison.Ordinal) || m.Contains("fully terraformed", System.StringComparison.Ordinal))
+        {
+            Sound.Play("research", 0.75f, 0, 0.5);
+        }
+        else if (m.Contains(" launched for ", System.StringComparison.Ordinal) || m.Contains(" flew home ", System.StringComparison.Ordinal))
+        {
+            Sound.Play("launch", 0.9f, 0, 1);
+        }
+        else if (m.Contains(" finished building ", System.StringComparison.Ordinal) || m.Contains(" assembled ", System.StringComparison.Ordinal))
+        {
+            Sound.PlayAt("built", e.PlanetId, e.Tile, 0.55f, 0.12);
+        }
+    }
 
     /// <summary>Switches the active tool and clears any in-progress drag.</summary>
     /// <param name="tool">The tool to activate.</param>
@@ -308,6 +390,7 @@ public partial class GameRoot : Node2D
                     if ((err is not null) && (cmd.Player == LocalPlayer) && (cmd is not SetMoveIntent))
                     {
                         Notify(err, Colors.OrangeRed);
+                        Sound.Play("error", 0.8f, 0, 0.3);
                     }
                 }
 
@@ -332,6 +415,7 @@ public partial class GameRoot : Node2D
         foreach (SimEvent e in World.Events)
         {
             Notify(e.Message, Colors.Aquamarine);
+            PlayEventSound(e);
         }
 
         World.Events.Clear();
@@ -1170,6 +1254,18 @@ public partial class GameRoot : Node2D
                 (World.Planets.FindIndex(p => p.Def.Id == planetId) is int index and >= 0))
             {
                 ViewPlanet(index);
+            }
+
+            // FACTORY_ZOOM=<f> and FACTORY_CAM=<x>,<y> (a tile) frame screenshots of a loaded game.
+            if (float.TryParse(System.Environment.GetEnvironmentVariable("FACTORY_ZOOM"), System.Globalization.CultureInfo.InvariantCulture, out float shotZoom))
+            {
+                Zoom = shotZoom;
+            }
+
+            if ((System.Environment.GetEnvironmentVariable("FACTORY_CAM")?.Split(',') is [string cx, string cy]) && float.TryParse(cx, System.Globalization.CultureInfo.InvariantCulture, out float camX)
+                && float.TryParse(cy, System.Globalization.CultureInfo.InvariantCulture, out float camY))
+            {
+                Cam = new Vector2(camX, camY);
             }
 
             // FACTORY_WINDOW=save|load open the save and load windows.
