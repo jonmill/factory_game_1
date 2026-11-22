@@ -14,6 +14,15 @@ namespace Factory.Game;
 /// </summary>
 public partial class WorldView : Node2D
 {
+    /// <summary>The colour and strength of every shadow, applied once to the merged shadow layer.</summary>
+    public static readonly Color ShadowTint = new(0.07f, 0.05f, 0.03f, 0.58f);
+
+    /// <summary>The colour of the scuffed ground under buildings.</summary>
+    private static readonly Color _decalTint = new(0.12f, 0.09f, 0.05f, 1f);
+
+    /// <summary>Which layer of the world this view draws.</summary>
+    public WorldLayer Layer { get; set; } = WorldLayer.Things;
+
     /// <summary>The game root that owns the camera, tools and the simulation being drawn.</summary>
     public GameRoot Root { get; set; } = null!;
 
@@ -56,28 +65,43 @@ public partial class WorldView : Node2D
     /// <inheritdoc />
     public override void _Draw()
     {
-        // Ground, ore and trees come from TerrainLayer, drawn just before this node.
+        // Ground, ore and trees come from TerrainLayer, drawn just before the world layers.
         (int x0, int y0, int x1, int y1) = VisibleTiles(GetViewportRect().Size);
-        DrawWaterGlints(x0, y0, x1, y1);
-        DrawGrid(x0, y0, x1, y1);
-        DrawRails(x0, y0, x1, y1);
-        foreach (ConstructionSite s in P.Sites)
+        switch (Layer)
         {
-            DrawSite(s);
+            case WorldLayer.Decals:
+                foreach (Building b in P.Buildings)
+                {
+                    DrawBakedDecal(b);
+                }
+
+                return;
+            case WorldLayer.Ground:
+                DrawWaterGlints(x0, y0, x1, y1);
+                DrawGrid(x0, y0, x1, y1);
+                DrawRails(x0, y0, x1, y1);
+                foreach (ConstructionSite s in P.Sites)
+                {
+                    DrawSite(s);
+                }
+
+                // Belts lie flat on the ground, under the shadows.
+                foreach (Building b in P.Buildings.Where(b => b.Def.Kind == BuildingKind.Belt))
+                {
+                    DrawBuilding(b);
+                }
+
+                return;
+            case WorldLayer.Shadows:
+                foreach (Building b in P.Buildings)
+                {
+                    DrawBakedShadow(b);
+                }
+
+                return;
         }
 
-        // Baked buildings' shadows go down first, so they fall on the ground but never over another building.
-        foreach (Building b in P.Buildings)
-        {
-            DrawBakedShadow(b);
-        }
-
-        // Belts lie flat under everything else; the rest go back to front, so taller models overlap the row behind.
-        foreach (Building b in P.Buildings.Where(b => b.Def.Kind == BuildingKind.Belt))
-        {
-            DrawBuilding(b);
-        }
-
+        // The rest go back to front, so taller models overlap the row behind.
         foreach (Building b in P.Buildings.Where(b => b.Def.Kind != BuildingKind.Belt).OrderBy(b => b.Origin.Y + b.H))
         {
             DrawBuilding(b);
@@ -110,11 +134,21 @@ public partial class WorldView : Node2D
     /// <summary>The building's baked 3D sprite, if its model has been baked.</summary>
     private Art.BakedSprite? Baked(Building b) => Root.Art.TryGet(b.Def.Id, b.Rot, out Art.BakedSprite sprite) ? sprite : null;
 
+    /// <summary>The shadow mask, in white; the shadow layer tints and fades all of them together.</summary>
     private void DrawBakedShadow(Building b)
     {
-        if ((Baked(b) is { Shadow: { } shadow } sprite) && OnScreen(RectOf(b.Origin, b.W, b.H)))
+        if ((Baked(b) is { } sprite) && (sprite.Shadows.Length > 0) && OnScreen(RectOf(b.Origin, b.W, b.H)))
         {
-            DrawTextureRect(shadow, new Rect2(S(b.Origin) + (sprite.Offset * T), sprite.Size * T), false);
+            int frame = sprite.FrameAt(Time, b.Id, b.Status == MachineStatus.Working);
+            DrawTextureRect(sprite.Shadows[System.Math.Min(frame, sprite.Shadows.Length - 1)], new Rect2(S(b.Origin) + (sprite.ShadowOffset * T), sprite.ShadowSize * T), false);
+        }
+    }
+
+    private void DrawBakedDecal(Building b)
+    {
+        if ((Baked(b) is { Decal: { } decal } sprite) && OnScreen(RectOf(b.Origin, b.W, b.H)))
+        {
+            DrawTextureRect(decal, new Rect2(S(b.Origin) + (sprite.DecalOffset * T), sprite.DecalSize * T), false, _decalTint);
         }
     }
 
@@ -122,7 +156,7 @@ public partial class WorldView : Node2D
     private void DrawBaked(Building b, Art.BakedSprite sprite, bool working)
     {
         Rect2 rect = new Rect2(S(b.Origin) + (sprite.Offset * T), sprite.Size * T);
-        int frame = (working && (sprite.Frames.Length > 1)) ? (int)((Time * sprite.Fps) + b.Id) % sprite.Frames.Length : 0;
+        int frame = sprite.FrameAt(Time, b.Id, working);
         DrawTextureRect(sprite.Frames[frame], rect, false);
         if (working && (sprite.Glow.Length > 0))
         {
@@ -193,4 +227,20 @@ public partial class WorldView : Node2D
         TrainState.Moving => "Moving",
         _ => s.ToString(),
     };
+}
+
+/// <summary>The layers the world is drawn in, bottom to top.</summary>
+public enum WorldLayer
+{
+    /// <summary>Scuffed ground under buildings.</summary>
+    Decals,
+
+    /// <summary>Things lying flat on the ground: water glints, the grid, rails, construction sites and belts.</summary>
+    Ground,
+
+    /// <summary>Every shadow, as white masks merged into one group.</summary>
+    Shadows,
+
+    /// <summary>Buildings, wires, trains, units and the interface overlays.</summary>
+    Things,
 }

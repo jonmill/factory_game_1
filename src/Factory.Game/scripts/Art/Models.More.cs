@@ -189,7 +189,7 @@ public static partial class Models
 
     private static void LaunchPad(Kit k, Color accent)
     {
-        Foundation(k, 3, 3, Concrete, 0.04f, 0.14f);
+        Foundation(k, 3, 3, Concrete, 0.04f, 0.14f, true);
         Vector3 c = new Vector3(1.5f, 0.14f, 1.5f);
 
         // A blast plate with a hazard ring, flame trench, service tower and fuel tanks.

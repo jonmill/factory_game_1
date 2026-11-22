@@ -49,11 +49,11 @@ public static class Palette
     /// <summary>Yellow and black hazard stripes.</summary>
     public static StandardMaterial3D Hazard => Get("hazard", () => Textured(Stripes(), 0.1f, 0.55f, 2f));
 
-    /// <summary>White ceramic hull panels with fine seams.</summary>
-    public static StandardMaterial3D Hull => Get("hull", () => Textured(Panels(new Color(0.78f, 0.8f, 0.82f), 19), 0.05f, 0.42f, 1f));
+    /// <summary>Bone-grey ceramic hull panels with fine seams.</summary>
+    public static StandardMaterial3D Hull => Get("hull", () => Textured(Panels(new Color(0.6f, 0.57f, 0.51f), 19), 0.08f, 0.5f, 1f));
 
     /// <summary>Grey composite for the darker parts of high-tech machines.</summary>
-    public static StandardMaterial3D HullDark => Get("hull-dark", () => Textured(Panels(new Color(0.42f, 0.46f, 0.52f), 20), 0.45f, 0.4f, 1f));
+    public static StandardMaterial3D HullDark => Get("hull-dark", () => Textured(Panels(new Color(0.27f, 0.28f, 0.29f), 20), 0.45f, 0.45f, 1f));
 
     /// <summary>Dark, glossy glass.</summary>
     public static StandardMaterial3D Glass => Get("glass", () => Plain(new Color(0.03f, 0.06f, 0.09f), 0.65f, 0.05f));

@@ -76,6 +76,7 @@ public partial class GameRoot : Node2D
 
     private TerrainLayer _terrain = null!;
     private WorldView _view = null!;
+    private WorldView[] _layers = [];
     private FogLayer _fog = null!;
     private Hud _hud = null!;
     private Vector2 _camOffset;
@@ -132,8 +133,19 @@ public partial class GameRoot : Node2D
         AddChild(Art);
         _terrain = new TerrainLayer { Root = this };
         AddChild(_terrain);
-        _view = new WorldView { Root = this };
+        // The world draws in layers: scuffed ground under buildings, then flat things (rails, belts), then
+        // every shadow merged into one group so overlaps never double-darken, then buildings and units.
+        WorldView decals = new WorldView { Root = this, Layer = WorldLayer.Decals };
+        WorldView ground = new WorldView { Root = this, Layer = WorldLayer.Ground };
+        WorldView shadows = new WorldView { Root = this, Layer = WorldLayer.Shadows };
+        CanvasGroup shadowGroup = new CanvasGroup { SelfModulate = WorldView.ShadowTint };
+        shadowGroup.AddChild(shadows);
+        _view = new WorldView { Root = this, Layer = WorldLayer.Things };
+        AddChild(decals);
+        AddChild(ground);
+        AddChild(shadowGroup);
         AddChild(_view);
+        _layers = [decals, ground, shadows, _view];
         _fog = new FogLayer { Root = this };
         AddChild(_fog);
         AddChild(Vignette());
@@ -447,7 +459,10 @@ public partial class GameRoot : Node2D
         _terrain.Refresh(delta);
         _fog.Refresh(delta);
 
-        _view.QueueRedraw();
+        foreach (WorldView layer in _layers)
+        {
+            layer.QueueRedraw();
+        }
     }
 
     private void SendLeaderIntent()

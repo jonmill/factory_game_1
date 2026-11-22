@@ -48,9 +48,28 @@ public static partial class Models
 
     private static Basis Pitch(float a) => new(Vector3.Right, a);
 
-    /// <summary>The plate every building stands on.</summary>
-    private static void Foundation(Kit k, int w, int h, Material mat, float inset = 0.06f, float thick = 0.08f) =>
-        k.Bevel(inset, inset, w - (2 * inset), h - (2 * inset), thick, 0.12f, mat);
+    /// <summary>
+    /// What a heavy machine stands on: two sleepers across its width with anchor bolts, so the ground shows
+    /// around and under it, or (for pads) a solid slab with a chipped edge.
+    /// </summary>
+    private static void Foundation(Kit k, int w, int h, Material mat, float inset = 0.06f, float thick = 0.08f, bool solid = false)
+    {
+        if (solid)
+        {
+            k.Bevel(inset, inset, w - (2 * inset), h - (2 * inset), thick, 0.12f, mat);
+
+            return;
+        }
+
+        foreach (float z in new[] { inset + 0.12f, h - inset - 0.36f })
+        {
+            k.Slab(inset + 0.04f, z, w - (2 * inset) - 0.08f, 0.24f, thick, mat);
+            foreach (float x in new[] { inset + 0.12f, w - inset - 0.12f })
+            {
+                k.Cyl(new Vector3(x, thick, z + 0.12f), 0.035f, 0.035f, Palette.Steel, -1, 8);
+            }
+        }
+    }
 
     private static void Crate(Kit k, Color accent)
     {
@@ -194,16 +213,35 @@ public static partial class Models
         _ = accent;
     }
 
-    /// <summary>The shared high-tech base: dark plinth, bevelled white body and a glowing band at the foot.</summary>
+    /// <summary>
+    /// The shared high-tech body: a bevelled hull on four feet and two skids, raised a little off the ground
+    /// so it sits on the planet rather than on a plinth. A dark band runs round its foot, a service hatch in
+    /// the machine's colour faces the camera, and a status lamp sits at the front-left. Its top is at
+    /// 0.195 + <paramref name="bodyHeight"/>.
+    /// </summary>
     private static void TechBody(Kit k, int w, int h, float bodyHeight, Color accent)
     {
-        k.Bevel(0.05f, 0.07f, w - 0.1f, h - 0.12f, 0.16f, 0.3f, Palette.HullDark);
-        k.Bevel(0.08f, 0.1f, w - 0.16f, h - 0.18f, 0.03f, 0.31f, Palette.Glow(accent, 1.1f), 0.16f);
-        k.Bevel(0.14f, 0.16f, w - 0.28f, h - 0.3f, bodyHeight, 0.34f, Palette.Hull, 0.195f);
+        foreach ((float x, float z) in new[] { (0.16f, 0.18f), (w - 0.4f, 0.18f), (0.16f, h - 0.42f), (w - 0.4f, h - 0.42f) })
+        {
+            k.Bevel(x, z, 0.24f, 0.24f, 0.15f, 0.06f, Palette.HullDark);
+            k.Cyl(new Vector3(x + 0.12f, 0, z + 0.12f), 0.16f, 0.03f, Palette.HullDark, 0.14f, 12);
+        }
 
-        // A status lamp at the front-left corner.
-        k.Ball(new Vector3(0.38f, 0.2f + bodyHeight, h - 0.42f), 0.05f, Palette.Glow(new Color(0.4f, 1f, 0.5f), 3f));
+        foreach (float x in new[] { 0.3f, w - 0.46f })
+        {
+            k.Slab(x, 0.3f, 0.16f, h - 0.6f, 0.1f, Palette.HullDark);
+        }
+
+        k.Bevel(0.2f, 0.22f, w - 0.4f, h - 0.44f, 0.11f, 0.26f, Palette.HullDark, 0.12f);
+        k.Bevel(0.18f, 0.2f, w - 0.36f, h - 0.4f, bodyHeight - 0.035f, 0.3f, Palette.Hull, 0.23f);
+
+        // Service hatch and status lamp on the camera side.
+        k.Box(new Vector3(w - 0.75f, 0.2f + (bodyHeight * 0.45f), h - 0.2f), new Vector3(0.34f, Mathf.Min(0.3f, bodyHeight * 0.55f), 0.03f), Palette.Paint(Muted(accent), 0.3f, 0.5f));
+        k.Ball(new Vector3(0.42f, 0.2f + bodyHeight, h - 0.44f), 0.045f, Palette.Glow(new Color(0.4f, 1f, 0.5f), 3f));
     }
+
+    /// <summary>A building's colour as paint: darker and less saturated, so it reads as material, not as a label.</summary>
+    private static Color Muted(Color c) => Color.FromHsv(c.H, c.S * 0.55f, c.V * 0.55f);
 
     private static void Lab(Kit k, Color accent)
     {

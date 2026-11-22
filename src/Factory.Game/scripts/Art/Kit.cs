@@ -8,8 +8,11 @@ public enum BakePass
     /// <summary>The model, lit and shaded, on a transparent background.</summary>
     Color,
 
-    /// <summary>A white ground plane showing the model's shadow and contact darkening; the model itself is invisible.</summary>
+    /// <summary>The model flattened onto the ground along the sun's direction, as a solid white mask: its cast shadow.</summary>
     Shadow,
+
+    /// <summary>The model flattened straight down, as a solid mask: where it touches and covers the ground.</summary>
+    Footprint,
 
     /// <summary>Only the emissive parts, everything else black; turned into a glow layer.</summary>
     Glow,
@@ -23,6 +26,7 @@ public enum BakePass
 public sealed class Kit
 {
     private static readonly StandardMaterial3D _black = new() { ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded, AlbedoColor = Colors.Black };
+    private static readonly StandardMaterial3D _white = new() { ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded, AlbedoColor = Colors.White, CullMode = BaseMaterial3D.CullModeEnum.Disabled };
 
     private readonly Node3D _root;
 
@@ -69,8 +73,9 @@ public sealed class Kit
         switch (Pass)
         {
             case BakePass.Shadow:
-                mi.MaterialOverride = mat;
-                mi.CastShadow = GeometryInstance3D.ShadowCastingSetting.ShadowsOnly;
+            case BakePass.Footprint:
+                mi.MaterialOverride = _white;
+                mi.CastShadow = GeometryInstance3D.ShadowCastingSetting.Off;
                 break;
             case BakePass.Glow:
                 mi.MaterialOverride = glow ? Palette.GlowOnly((StandardMaterial3D)mat) : _black;
