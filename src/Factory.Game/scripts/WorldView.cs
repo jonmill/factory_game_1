@@ -130,6 +130,22 @@ public partial class WorldView : Node2D
             DrawTextureRect(sprite.Glow[frame], rect, false, new Color(k, k, k, 0.9f));
         }
 
+        // A loaded launch pad shows its rocket standing on it.
+        if ((b.Def.Kind == BuildingKind.LaunchPad) && (b.Def.Vessel is { } vessel) && (b.Inv.Count(vessel) > 0) && Root.Art.TryGet("rocket-on-pad", b.Rot, out Art.BakedSprite rocket))
+        {
+            DrawTextureRect(rocket.Frames[0], new Rect2(S(b.Origin) + (rocket.Offset * T), rocket.Size * T), false);
+        }
+
+        // What a crafting machine is making, as a small badge on top (like an alt view).
+        if ((b.Recipe is { } recipe) && (b.Def.Kind is BuildingKind.Assembler or BuildingKind.Furnace) && (Root.Zoom > 0.6f) && (recipe.Outputs.Length > 0))
+        {
+            Vector2 at = S(b.Origin) + (new Vector2(b.W * 0.5f, b.H * 0.42f) * T);
+            float size = T * Mathf.Min(0.75f, 0.3f * b.W);
+            DrawCircle(at, size * 0.62f, new Color(0.05f, 0.07f, 0.1f, 0.72f));
+            DrawArc(at, size * 0.62f, 0, Mathf.Tau, 24, new Color(1, 1, 1, 0.25f), Mathf.Max(1, T * 0.03f));
+            Ui.Icons.Item(this, new Rect2(at - new Vector2(size / 2, size / 2), new Vector2(size, size)), P.World.Content.Item(recipe.Outputs[0].Item));
+        }
+
         if (working && (sprite.Smoke is { } smoke))
         {
             Puffs(S(b.Origin) + (smoke * T), new Color(0.42f, 0.4f, 0.38f), 0.7f, b.Id);

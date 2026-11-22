@@ -54,6 +54,9 @@ public partial class SpriteBaker : Node
 
     private readonly Dictionary<(string, SimDir), BakedSprite> _sprites = [];
 
+    /// <summary>The running baker, for interface code that draws building icons.</summary>
+    public static SpriteBaker? Current { get; private set; }
+
     /// <summary>The game root, for the content's colours.</summary>
     public GameRoot Root { get; set; } = null!;
 
@@ -76,6 +79,7 @@ public partial class SpriteBaker : Node
     /// <inheritdoc />
     public override void _Ready()
     {
+        Current = this;
         if (System.Environment.GetEnvironmentVariable("FACTORY_FLAT_ART") == "1")
         {
             Baked = true;
@@ -109,6 +113,19 @@ public partial class SpriteBaker : Node
         }
 
         Dictionary<(string, SimDir), (Image? Shadow, Image[] Frames, Image[] Glow)> images = [];
+        string cache = CacheDir();
+        bool cached = work.All(w => Godot.FileAccess.FileExists(CachePath(cache, w.Model.Id, w.Rot, w.Pass, w.Frame)));
+        if (cached)
+        {
+            foreach ((ModelDef m, SimDir rot, BakePass pass, int frame) in work)
+            {
+                Image img = Image.LoadFromFile(ProjectSettings.GlobalizePath(CachePath(cache, m.Id, rot, pass, frame)));
+                Store(images, m, rot, pass, frame, img);
+            }
+
+            work.Clear();
+        }
+
         for (int i = 0; i < work.Count; i += Batch)
         {
             List<Job> jobs = [];
@@ -123,28 +140,11 @@ public partial class SpriteBaker : Node
             await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
             foreach (Job job in jobs)
             {
-                Image img = job.View.GetTexture().GetImage();
+                Image raw = job.View.GetTexture().GetImage();
                 job.View.QueueFree();
-                (string, SimDir) key = (job.Model.Id, job.Rot);
-                if (images.TryGetValue(key, out (Image? Shadow, Image[] Frames, Image[] Glow) set) == false)
-                {
-                    set = (null, new Image[job.Model.Frames], new Image[job.Model.Glows ? job.Model.Frames : 0]);
-                }
-
-                switch (job.Pass)
-                {
-                    case BakePass.Shadow:
-                        set.Shadow = ToShadow(img);
-                        break;
-                    case BakePass.Glow:
-                        set.Glow[job.Frame] = ToGlow(img);
-                        break;
-                    default:
-                        set.Frames[job.Frame] = Unpremultiply(img);
-                        break;
-                }
-
-                images[key] = set;
+                Image img = job.Pass switch { BakePass.Shadow => ToShadow(raw), BakePass.Glow => ToGlow(raw), _ => Unpremultiply(raw) };
+                img.SavePng(CachePath(cache, job.Model.Id, job.Rot, job.Pass, job.Frame));
+                Store(images, job.Model, job.Rot, job.Pass, job.Frame, img);
             }
         }
 
@@ -183,8 +183,63 @@ public partial class SpriteBaker : Node
         }
 
         Baked = true;
-        GD.Print($"Baked {_sprites.Count} sprites from {work.Count} renders in {Time.GetTicksMsec() - started} ms");
+        GD.Print(cached ? $"Loaded {_sprites.Count} baked sprites from the cache in {Time.GetTicksMsec() - started} ms" : $"Baked {_sprites.Count} sprites from {work.Count} renders in {Time.GetTicksMsec() - started} ms");
     }
+
+    private static void Store(Dictionary<(string, SimDir), (Image? Shadow, Image[] Frames, Image[] Glow)> images, ModelDef m, SimDir rot, BakePass pass, int frame, Image img)
+    {
+        if (images.TryGetValue((m.Id, rot), out (Image? Shadow, Image[] Frames, Image[] Glow) set) == false)
+        {
+            set = (null, new Image[m.Frames], new Image[m.Glows ? m.Frames : 0]);
+        }
+
+        switch (pass)
+        {
+            case BakePass.Shadow:
+                set.Shadow = img;
+                break;
+            case BakePass.Glow:
+                set.Glow[frame] = img;
+                break;
+            default:
+                set.Frames[frame] = img;
+                break;
+        }
+
+        images[(m.Id, rot)] = set;
+    }
+
+    /// <summary>
+    /// The cache folder for this build of the game: baked images are reused until the code changes (a new
+    /// build has a new module id), and older builds' folders are removed. FACTORY_ART_REBAKE=1 ignores it.
+    /// </summary>
+    private static string CacheDir()
+    {
+        string build = typeof(Models).Assembly.ManifestModule.ModuleVersionId.ToString("N");
+        string root = "user://art";
+        DirAccess.MakeDirRecursiveAbsolute($"{root}/{build}");
+        foreach (string old in DirAccess.GetDirectoriesAt(root).Where(d => d != build))
+        {
+            foreach (string f in DirAccess.GetFilesAt($"{root}/{old}"))
+            {
+                DirAccess.RemoveAbsolute($"{root}/{old}/{f}");
+            }
+
+            DirAccess.RemoveAbsolute($"{root}/{old}");
+        }
+
+        if (System.Environment.GetEnvironmentVariable("FACTORY_ART_REBAKE") == "1")
+        {
+            foreach (string f in DirAccess.GetFilesAt($"{root}/{build}"))
+            {
+                DirAccess.RemoveAbsolute($"{root}/{build}/{f}");
+            }
+        }
+
+        return $"{root}/{build}";
+    }
+
+    private static string CachePath(string dir, string id, SimDir rot, BakePass pass, int frame) => $"{dir}/{id}-{rot}-{pass}-{frame}.png";
 
     /// <summary>Every model's first frame with its shadow, on a patch of ground, in one image.</summary>
     private static void ContactSheet(Dictionary<(string, SimDir), (Image? Shadow, Image[] Frames, Image[] Glow)> images, string dir)

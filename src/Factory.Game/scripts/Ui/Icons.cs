@@ -424,6 +424,18 @@ public static class Icons
     /// <param name="def">Building definition.</param>
     public static void Building(CanvasItem ci, Rect2 r, BuildingDef def)
     {
+        // Baked models make the best icons: the same art as in the world, fitted to the slot.
+        if ((Art.SpriteBaker.Current is { } baker) && baker.TryGet(def.Id, Dir.South, out Art.BakedSprite sprite) && (def.Kind != BuildingKind.Belt))
+        {
+            Texture2D tex = sprite.Frames[0];
+            Vector2 px = tex.GetSize();
+            float k = Mathf.Min(r.Size.X / px.X, r.Size.Y / px.Y) * 1.1f;
+            Vector2 size = px * k;
+            ci.DrawTextureRect(tex, new Rect2(r.GetCenter() - (size / 2), size), false);
+
+            return;
+        }
+
         Color accent = WorldView.Hex(def.Color);
         Vector2 m = r.GetCenter();
         float s = Mathf.Min(r.Size.X, r.Size.Y);

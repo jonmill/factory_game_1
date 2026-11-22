@@ -37,6 +37,11 @@ public partial class WorldView
             return;
         }
 
+        if (Root.Art.TryGet(s.DefId, s.Rot, out Art.BakedSprite plan))
+        {
+            DrawTextureRect(plan.Frames[0], new Rect2(S(s.Origin) + (plan.Offset * T), plan.Size * T), false, new Color(0.55f, 0.8f, 1f, 0.28f + (0.4f * progress)));
+        }
+
         DrawRect(r, A(_blueprint, 0.14f));
         // Blueprint hatching, then the frame filling in from the bottom as the work goes on.
         float step = T * 0.3f;
@@ -214,6 +219,12 @@ public partial class WorldView
                     (int w, int h) = Planet.SizeOf(def, Root.PlaceRot);
                     bool ok = P.CanPlace(def, origin, Root.PlaceRot) is null;
                     Rect2 r = RectOf(origin, w, h);
+                    if (Root.Art.TryGet(def.Id, Root.PlaceRot, out Art.BakedSprite ghost))
+                    {
+                        // The model itself, see-through and tinted by whether it fits.
+                        DrawTextureRect(ghost.Frames[0], new Rect2(S(origin) + (ghost.Offset * T), ghost.Size * T), false, A(ok ? new Color(0.8f, 1f, 0.85f) : new Color(1f, 0.6f, 0.6f), 0.6f));
+                    }
+
                     DrawRect(r, A(ok ? good : bad, 0.22f));
                     DrawRect(r, A(ok ? good : bad, 0.85f), false, 2);
                     if (def.Kind is BuildingKind.Drill or BuildingKind.RailStop or BuildingKind.Sorter)

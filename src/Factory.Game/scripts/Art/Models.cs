@@ -27,7 +27,9 @@ public static partial class Models
     private static readonly Color _fire = new(1f, 0.5f, 0.15f);
 
     /// <summary>Every model.</summary>
-    public static readonly ModelDef[] All =
+    public static ModelDef[] All { get => field ??= [.. _first, .. More()]; }
+
+    private static readonly ModelDef[] _first =
     [
         new("chest", 1, 1, 0.8f, Crate),
         new("power-pole", 1, 1, 2.0f, Pole, Anchor: new Vector3(0.5f, 1.86f, 0.5f)),
