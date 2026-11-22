@@ -153,7 +153,7 @@ public partial class TerrainChunk : Node2D
                     Vector2 c = At(hk);
                     float r = T * (0.025f + (((hk >> 8) & 3) * 0.012f));
                     Color stone = ground.Lerp(new Color(0.55f, 0.52f, 0.48f), 0.4f);
-                    Circle(c + new Vector2(r * 0.3f, r * 0.4f), r, new Color(0, 0, 0, 0.22f));
+                    Circle(c + (Lean * r * 0.9f), r, Shade(0.4f));
                     Circle(c, r, stone);
                     Circle(c - new Vector2(r * 0.3f, r * 0.35f), r * 0.45f, stone.Lightened(0.25f));
                 }
@@ -229,6 +229,15 @@ public partial class TerrainChunk : Node2D
         }
     }
 
+    /// <summary>The direction shadows fall on screen per tile of height, shared with the baked buildings.</summary>
+    private static Vector2 Lean => Art.SpriteBaker.ShadowLean;
+
+    /// <summary>How far up the screen one tile of height rises.</summary>
+    private static float Rise1 => Art.SpriteBaker.Rise(1);
+
+    /// <summary>The shared shadow colour at a strength.</summary>
+    private static Color Shade(float a) => new(WorldView.ShadowTint.R, WorldView.ShadowTint.G, WorldView.ShadowTint.B, a);
+
     private void DrawCrystal(Vector2 foot, float s, float lean, Color color)
     {
         Vector2 tip = foot + new Vector2(lean * s, -s * 2.1f);
@@ -237,7 +246,9 @@ public partial class TerrainChunk : Node2D
         Vector2 shoulderL = foot + new Vector2((-s * 0.55f) + (lean * s * 0.6f), -s * 1.35f);
         Vector2 shoulderR = foot + new Vector2((s * 0.55f) + (lean * s * 0.6f), -s * 1.35f);
 
-        Poly([foot + new Vector2(s * 0.2f, s * 0.15f), right + new Vector2(s * 0.5f, s * 0.2f), tip + new Vector2(s * 0.9f, s * 1.3f)], new Color(0, 0, 0, 0.3f));
+        // Its shadow falls with the sun like every building's: the tip's shadow lies one height along the lean.
+        Vector2 tipShadow = foot + (Lean * (s * 2.1f / Rise1));
+        Poly([foot + new Vector2(-s * 0.55f, -s * 0.2f), foot + new Vector2(s * 0.6f, s * 0.15f), tipShadow], Shade(0.5f));
         Poly([foot, left, shoulderL, tip], color.Lightened(0.15f));
         Poly([foot, tip, shoulderR, right], color.Darkened(0.35f));
         Line(foot, tip, color.Lightened(0.45f), Mathf.Max(1f, s * 0.12f));
@@ -271,8 +282,8 @@ public partial class TerrainChunk : Node2D
                 float turn = ((h >> 9) & 15) / 15f * Mathf.Tau;
 
                 // A soft shadow, the trunk's foot, then the canopy from its shaded underside up to its lit crown.
-                Circle(c + new Vector2(r * 0.4f, r * 0.5f), r * 1.1f, new Color(0, 0, 0, 0.18f));
-                Circle(c + new Vector2(r * 0.3f, r * 0.4f), r * 0.95f, new Color(0, 0, 0, 0.18f));
+                Circle(c + (Lean * T * 0.15f), r * 0.75f, Shade(0.3f));
+                Circle(c + (Lean * T * 0.55f), r * 1.05f, Shade(0.42f));
                 Circle(c + new Vector2(0, T * 0.08f), T * 0.06f, new Color(0.25f, 0.18f, 0.1f));
                 for (int k = 0; k < lobes; k++)
                 {

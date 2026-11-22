@@ -14,7 +14,33 @@ namespace Factory.Game.Art;
 /// <param name="Glows">Whether it has emissive parts worth a glow layer.</param>
 /// <param name="Anchor">Wire attachment point in model coordinates, for poles.</param>
 /// <param name="Smoke">Chimney mouth in model coordinates, where smoke rises while working.</param>
-public sealed record ModelDef(string Id, int W, int H, float Height, System.Action<Kit, Color> Build, int Frames = 1, float Fps = 10, bool Turns = false, bool Glows = false, Vector3? Anchor = null, Vector3? Smoke = null);
+/// <param name="Flicker">Whether its light flickers like fire.</param>
+/// <param name="Reach">How far its light reaches past the footprint, in tiles.</param>
+/// <param name="Puffs">Other things it gives off while working (steam, sparks, dust), in model coordinates.</param>
+public sealed record ModelDef(string Id, int W, int H, float Height, System.Action<Kit, Color> Build, int Frames = 1, float Fps = 10, bool Turns = false, bool Glows = false, Vector3? Anchor = null, Vector3? Smoke = null, bool Flicker = false, float Reach = 1.2f, (Vector3 At, Emit Kind)[]? Puffs = null)
+{
+    /// <summary>Everything it gives off while working, smoke included.</summary>
+    public (Vector3 At, Emit Kind)[] Emitters => [.. Smoke is { } s ? new[] { (s, Emit.Smoke) } : [], .. Puffs ?? []];
+}
+
+/// <summary>What a working machine gives off.</summary>
+public enum Emit
+{
+    /// <summary>Grey-brown smoke from burning fuel, drifting downwind.</summary>
+    Smoke,
+
+    /// <summary>White steam, quick to rise and fade.</summary>
+    Steam,
+
+    /// <summary>Bright sparks that jump and fall.</summary>
+    Sparks,
+
+    /// <summary>Dust kicked up at ground level.</summary>
+    Dust,
+
+    /// <summary>A faint coloured vapour, for terraforming exhausts.</summary>
+    Vapor,
+}
 
 /// <summary>
 /// The building models. Shared rules keep them one family: everything stands on a foundation plate a little
@@ -33,13 +59,13 @@ public static partial class Models
     [
         new("chest", 1, 1, 0.8f, Crate),
         new("power-pole", 1, 1, 2.0f, Pole, Anchor: new Vector3(0.5f, 1.86f, 0.5f)),
-        new("burner-smelter", 2, 2, 2.0f, BurnerSmelter, Glows: true, Smoke: new Vector3(1.48f, 1.96f, 0.5f)),
-        new("burner-drill", 2, 2, 1.8f, BurnerDrill, Frames: 8, Fps: 10, Turns: true, Glows: true, Smoke: new Vector3(1.4f, 1.25f, 1.45f)),
-        new("steam-engine", 2, 2, 1.9f, SteamEngine, Frames: 8, Fps: 8, Glows: true, Smoke: new Vector3(0.45f, 1.9f, 0.8f)),
-        new("lab", 2, 2, 1.6f, Lab, Frames: 8, Fps: 8, Glows: true),
-        new("assembler", 3, 3, 1.5f, Fabricator, Frames: 8, Fps: 8, Glows: true),
+        new("burner-smelter", 2, 2, 2.0f, BurnerSmelter, Glows: true, Smoke: new Vector3(1.48f, 1.96f, 0.5f), Flicker: true, Reach: 1.6f),
+        new("burner-drill", 2, 2, 1.8f, BurnerDrill, Frames: 16, Fps: 12, Turns: true, Glows: true, Smoke: new Vector3(1.4f, 1.25f, 1.45f), Flicker: true, Puffs: [(new Vector3(1f, 0.1f, -0.05f), Emit.Dust)]),
+        new("steam-engine", 2, 2, 1.9f, SteamEngine, Frames: 16, Fps: 12, Glows: true, Smoke: new Vector3(0.45f, 1.9f, 0.8f), Flicker: true, Puffs: [(new Vector3(0.62f, 0.62f, 1.66f), Emit.Steam)]),
+        new("lab", 2, 2, 1.6f, Lab, Frames: 16, Fps: 10, Glows: true),
+        new("assembler", 3, 3, 1.5f, Fabricator, Frames: 16, Fps: 10, Glows: true),
         new("solar-panel", 2, 2, 0.9f, SolarPanel),
-        new("lander", 3, 3, 2.2f, Lander, Glows: true),
+        new("lander", 3, 3, 2.2f, Lander, Frames: 16, Fps: 4, Glows: true),
     ];
 
     private static Basis Yaw(float a) => new(Vector3.Up, a);
@@ -114,13 +140,16 @@ public static partial class Models
 
         k.Bevel(0.15f, 0.19f, 1.7f, 1.58f, 0.08f, 0.28f, Palette.DarkIron, 1.3f);
         k.Cyl(new Vector3(0.82f, 1.38f, 0.92f), 0.44f, 0.02f, Palette.Paint(new Color(0.08f, 0.05f, 0.04f), 0, 1), -1, 24);
-        k.Cyl(new Vector3(0.82f, 1.39f, 0.92f), 0.32f, 0.02f, Palette.Glow(_fire, 2.2f), -1, 24);
+        k.Cyl(new Vector3(0.82f, 1.39f, 0.92f), 0.32f, 0.02f, Palette.Fire(2.6f), -1, 24);
+        k.Cyl(new Vector3(0.82f, 1.4f, 0.92f), 0.14f, 0.02f, Palette.Glow(new Color(1f, 0.85f, 0.55f), 3.5f), -1, 16);
+        k.Light(new Vector3(0.82f, 1.75f, 0.92f), _fire, 1.6f, 1.6f);
+        k.Light(new Vector3(1f, 0.45f, 2.15f), _fire, 1.6f, 1.8f);
         k.Ring(new Vector3(0.82f, 1.41f, 0.92f), 0.4f, 0.48f, Palette.DarkIron);
 
         // The fire door on the camera side: an iron frame, a dark mouth, and the fire inside.
         k.Box(new Vector3(1f, 0.55f, 1.76f), new Vector3(0.72f, 0.52f, 0.06f), Palette.DarkIron);
         k.Box(new Vector3(1f, 0.52f, 1.785f), new Vector3(0.54f, 0.36f, 0.04f), Palette.Paint(new Color(0.05f, 0.03f, 0.02f), 0, 1));
-        k.Box(new Vector3(1f, 0.44f, 1.79f), new Vector3(0.46f, 0.18f, 0.04f), Palette.Glow(_fire, 3f));
+        k.Box(new Vector3(1f, 0.44f, 1.79f), new Vector3(0.46f, 0.18f, 0.04f), Palette.Fire(3f));
         k.Rivets(new Vector3(0.7f, 0.79f, 1.8f), new Vector3(1.3f, 0.79f, 1.8f), 5, 0.025f, Palette.Steel);
 
         // A chimney at the back right.
@@ -152,7 +181,7 @@ public static partial class Models
 
         // The drill string and its turning gear.
         k.Cyl(bore, 0.05f, 1.4f, Palette.Steel, -1, 10);
-        Kit gear = k.Group(bore + new Vector3(0, 0.3f, 0), Yaw(k.Spin / 4));
+        Kit gear = k.Group(bore + new Vector3(0, 0.3f, 0), Yaw(k.Spin * 0.4f));
         gear.Cyl(Vector3.Zero, 0.3f, 0.1f, Palette.Steel, -1, 20);
         for (int i = 0; i < 10; i++)
         {
@@ -165,8 +194,14 @@ public static partial class Models
         // The engine on the camera side: firebox with a glowing grate and a short stack.
         k.Bevel(0.3f, 1.22f, 1.4f, 0.62f, 0.56f, 0.1f, Palette.Iron, 0.14f);
         k.Rivets(new Vector3(0.38f, 0.62f, 1.85f), new Vector3(1.62f, 0.62f, 1.85f), 7, 0.022f, Palette.Steel);
-        k.Box(new Vector3(0.7f, 0.38f, 1.845f), new Vector3(0.36f, 0.16f, 0.02f), Palette.Glow(_fire, 2.5f));
+        k.Box(new Vector3(0.7f, 0.38f, 1.845f), new Vector3(0.36f, 0.16f, 0.02f), Palette.Fire(2.8f));
+        k.Light(new Vector3(0.7f, 0.35f, 2.1f), _fire, 1.3f, 1.4f);
         k.Cyl(new Vector3(1.4f, 0.7f, 1.45f), 0.11f, 0.55f, Palette.DarkIron, 0.09f, 12);
+
+        // A rocking beam on the engine drives the gear: two strokes per turn of the loop.
+        float rock = Mathf.Sin(k.Spin * 2) * 0.22f;
+        k.Box(new Vector3(1.05f, 0.82f, 1.5f), new Vector3(0.7f, 0.05f, 0.08f), Palette.Steel, Roll(rock));
+        k.Rod(new Vector3(1.05f - (Mathf.Cos(rock) * 0.32f), 0.82f - (Mathf.Sin(rock) * 0.32f), 1.5f), new Vector3(0.75f, 0.7f, 1.5f), 0.025f, Palette.Steel, 6);
         _ = accent;
     }
 
@@ -193,7 +228,17 @@ public static partial class Models
         k.Rod(new Vector3(1.15f, 1.15f, 0.8f), new Vector3(1.15f, 1.3f, 0.8f), 0.03f, Palette.Copper);
 
         // Firebox glow under the boiler's front end.
-        k.Box(new Vector3(0.45f, 0.3f, 1.26f), new Vector3(0.32f, 0.12f, 0.02f), Palette.Glow(_fire, 2.5f));
+        k.Box(new Vector3(0.45f, 0.3f, 1.26f), new Vector3(0.32f, 0.12f, 0.02f), Palette.Fire(2.8f));
+        k.Light(new Vector3(0.45f, 0.3f, 1.5f), _fire, 1.2f, 1.3f);
+
+        // A flyball governor on the dome, spinning three times as fast as the flywheel.
+        Kit governor = k.Group(new Vector3(1.15f, 1.34f, 0.8f), Yaw(k.Spin * 3));
+        governor.Rod(Vector3.Zero, new Vector3(0, 0.18f, 0), 0.015f, Palette.Steel, 6);
+        foreach (float side in new[] { -1f, 1f })
+        {
+            governor.Rod(new Vector3(0, 0.16f, 0), new Vector3(side * 0.1f, 0.06f, 0), 0.01f, Palette.Steel, 4);
+            governor.Ball(new Vector3(side * 0.1f, 0.06f, 0), 0.03f, Palette.Copper);
+        }
 
         // Flywheel facing the camera, with a crank and piston rod.
         Vector3 hub = new Vector3(1.38f, 0.62f, 1.6f);
@@ -205,7 +250,7 @@ public static partial class Models
             wheel.Rod(Vector3.Zero, new Vector3(Mathf.Cos(a) * 0.38f, Mathf.Sin(a) * 0.38f, 0), 0.025f, Palette.Iron, 6);
         }
 
-        wheel.Cyl(new Vector3(0, 0, -0.04f), 0.07f, 0.0f, Palette.Steel);
+        wheel.Cyl(new Vector3(0, 0, -0.04f), 0.07f, 0.04f, Palette.Steel);
         wheel.Ball(Vector3.Zero, 0.07f, Palette.Steel);
         Vector3 crank = hub + new Vector3(Mathf.Cos(k.Spin) * 0.2f, Mathf.Sin(-k.Spin) * 0.2f, 0.06f);
         k.Rod(crank, new Vector3(0.6f, 0.62f, 1.66f), 0.03f, Palette.Steel);
@@ -221,23 +266,28 @@ public static partial class Models
     /// </summary>
     private static void TechBody(Kit k, int w, int h, float bodyHeight, Color accent)
     {
-        foreach ((float x, float z) in new[] { (0.16f, 0.18f), (w - 0.4f, 0.18f), (0.16f, h - 0.42f), (w - 0.4f, h - 0.42f) })
+        // Splayed feet at the corners, each on a pad with a strut up under the hull.
+        Vector3 mid = new Vector3(w / 2f, 0, h / 2f);
+        foreach ((float x, float z) in new[] { (0.16f, 0.16f), (w - 0.16f, 0.16f), (0.16f, h - 0.16f), (w - 0.16f, h - 0.16f) })
         {
-            k.Bevel(x, z, 0.24f, 0.24f, 0.15f, 0.06f, Palette.HullDark);
-            k.Cyl(new Vector3(x + 0.12f, 0, z + 0.12f), 0.16f, 0.03f, Palette.HullDark, 0.14f, 12);
+            Vector3 pad = new Vector3(x, 0, z);
+            Vector3 toMid = (mid - pad).Normalized();
+            k.Cyl(pad, 0.13f, 0.05f, Palette.HullDark, 0.1f, 10);
+            k.Rod(pad + new Vector3(0, 0.04f, 0), pad + (toMid * 0.32f) + new Vector3(0, 0.3f, 0), 0.04f, Palette.Steel, 8);
+            k.Rivets(pad + new Vector3(-0.07f, 0.05f, 0), pad + new Vector3(0.07f, 0.05f, 0), 2, 0.018f, Palette.Steel);
         }
 
-        foreach (float x in new[] { 0.3f, w - 0.46f })
+        foreach (float x in new[] { 0.42f, w - 0.58f })
         {
-            k.Slab(x, 0.3f, 0.16f, h - 0.6f, 0.1f, Palette.HullDark);
+            k.Slab(x, 0.42f, 0.16f, h - 0.84f, 0.12f, Palette.HullDark);
         }
 
-        k.Bevel(0.2f, 0.22f, w - 0.4f, h - 0.44f, 0.11f, 0.26f, Palette.HullDark, 0.12f);
-        k.Bevel(0.18f, 0.2f, w - 0.36f, h - 0.4f, bodyHeight - 0.035f, 0.3f, Palette.Hull, 0.23f);
+        k.Bevel(0.32f, 0.34f, w - 0.64f, h - 0.68f, 0.11f, 0.22f, Palette.HullDark, 0.12f);
+        k.Bevel(0.28f, 0.3f, w - 0.56f, h - 0.6f, bodyHeight - 0.035f, 0.28f, Palette.Hull, 0.23f);
 
         // Service hatch and status lamp on the camera side.
-        k.Box(new Vector3(w - 0.75f, 0.2f + (bodyHeight * 0.45f), h - 0.2f), new Vector3(0.34f, Mathf.Min(0.3f, bodyHeight * 0.55f), 0.03f), Palette.Paint(Muted(accent), 0.3f, 0.5f));
-        k.Ball(new Vector3(0.42f, 0.2f + bodyHeight, h - 0.44f), 0.045f, Palette.Glow(new Color(0.4f, 1f, 0.5f), 3f));
+        k.Box(new Vector3(w - 0.8f, 0.2f + (bodyHeight * 0.45f), h - 0.29f), new Vector3(0.34f, Mathf.Min(0.3f, bodyHeight * 0.55f), 0.03f), Palette.Paint(Muted(accent), 0.3f, 0.5f));
+        k.Ball(new Vector3(0.52f, 0.2f + bodyHeight, h - 0.52f), 0.045f, Palette.Glow(new Color(0.4f, 1f, 0.5f), k.Phase < 0.5f ? 3f : 1.2f));
     }
 
     /// <summary>A building's colour as paint: darker and less saturated, so it reads as material, not as a label.</summary>
@@ -252,7 +302,8 @@ public static partial class Models
         // A turning ring of light inside a glass dome.
         Kit core = k.Group(c + new Vector3(0, 0.32f, 0), Yaw(k.Spin));
         core.Ring(Vector3.Zero, 0.3f, 0.34f, Palette.Glow(accent, 2.5f), Roll(0.5f));
-        core.Ball(Vector3.Zero, 0.1f, Palette.Glow(accent.Lightened(0.4f), 3f));
+        core.Ball(Vector3.Zero, 0.08f + (0.03f * Mathf.Sin(k.Spin * 3)), Palette.Glow(accent.Lightened(0.4f), 3f));
+        k.Light(c + new Vector3(0, 0.35f, 0), accent, 1.4f, 1.2f);
         k.Ball(c + new Vector3(0, 0.08f, 0), 0.6f, Palette.ClearGlass, true);
 
         // Sample vials at the corners.
@@ -273,11 +324,12 @@ public static partial class Models
         Vector3 c = new Vector3(1.5f, top + 0.04f, 1.43f);
         k.Cyl(c, 0.78f, 0.03f, Palette.Glass, -1, 40);
         k.Ring(c + new Vector3(0, 0.03f, 0), 0.72f, 0.78f, Palette.Glow(accent, 2f));
+        k.Light(c + new Vector3(0, 0.5f, 0), accent, 1.6f, 1.3f);
         Kit gantry = k.Group(c + new Vector3(0, 0.05f, 0), Yaw(k.Spin));
         gantry.Cyl(Vector3.Zero, 0.14f, 0.36f, Palette.HullDark, 0.1f, 16);
         foreach (float side in new[] { -1f, 1f })
         {
-            Vector3 elbow = new Vector3(side * 0.42f, 0.36f, 0);
+            Vector3 elbow = new Vector3(side * 0.42f, 0.36f + (0.06f * Mathf.Sin((k.Spin * 3) + side)), 0);
             gantry.Rod(new Vector3(0, 0.32f, 0), elbow, 0.04f, Palette.Hull, 10);
             gantry.Rod(elbow, elbow + new Vector3(side * 0.12f, -0.26f, 0), 0.03f, Palette.Hull, 10);
             gantry.Ball(elbow, 0.055f, Palette.HullDark);
@@ -351,7 +403,8 @@ public static partial class Models
         for (int i = 0; i < 4; i++)
         {
             float a = (i * Mathf.Pi / 2) + (Mathf.Pi / 4);
-            k.Ball(c + new Vector3(Mathf.Cos(a) * 0.86f, 1.18f, Mathf.Sin(a) * 0.86f), 0.06f, Palette.Glow(new Color(1f, 0.3f, 0.25f), 3f));
+            bool on = ((int)(k.Phase * 8) + i) % 4 == 0;
+            k.Ball(c + new Vector3(Mathf.Cos(a) * 0.86f, 1.18f, Mathf.Sin(a) * 0.86f), 0.06f, Palette.Glow(new Color(1f, 0.3f, 0.25f), on ? 3f : 0.6f));
         }
 
         // A cargo hatch on the camera side.

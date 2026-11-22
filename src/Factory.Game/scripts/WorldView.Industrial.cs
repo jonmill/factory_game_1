@@ -428,8 +428,6 @@ public partial class WorldView
                     wire[k] = a.Lerp(b, f) + new Vector2(0, sag * 4 * f * (1 - f));
                 }
 
-                Vector2 shadow = new Vector2(T * 0.25f, T * 0.45f);
-                DrawPolyline([.. wire.Select(w => w + shadow)], new Color(0, 0, 0, 0.16f), Mathf.Max(1, T * 0.03f), true);
                 DrawPolyline(wire, copper.Darkened(0.25f), Mathf.Max(1.2f, T * 0.045f), true);
                 DrawPolyline(wire, A(shine, 0.55f), Mathf.Max(0.6f, T * 0.015f), true);
             }

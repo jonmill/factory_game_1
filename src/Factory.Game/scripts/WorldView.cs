@@ -15,10 +15,10 @@ namespace Factory.Game;
 public partial class WorldView : Node2D
 {
     /// <summary>The colour and strength of every shadow, applied once to the merged shadow layer.</summary>
-    public static readonly Color ShadowTint = new(0.07f, 0.05f, 0.03f, 0.58f);
+    public static readonly Color ShadowTint = new(0.07f, 0.05f, 0.03f, 0.5f);
 
     /// <summary>The colour of the scuffed ground under buildings.</summary>
-    private static readonly Color _decalTint = new(0.12f, 0.09f, 0.05f, 1f);
+    private static readonly Color _decalTint = new(0.16f, 0.12f, 0.08f, 0.85f);
 
     /// <summary>Which layer of the world this view draws.</summary>
     public WorldLayer Layer { get; set; } = WorldLayer.Things;
@@ -98,6 +98,15 @@ public partial class WorldView : Node2D
                     DrawBakedShadow(b);
                 }
 
+                DrawMovingShadows();
+
+                return;
+            case WorldLayer.Lights:
+                foreach (Building b in P.Buildings)
+                {
+                    DrawBakedLight(b);
+                }
+
                 return;
         }
 
@@ -158,12 +167,6 @@ public partial class WorldView : Node2D
         Rect2 rect = new Rect2(S(b.Origin) + (sprite.Offset * T), sprite.Size * T);
         int frame = sprite.FrameAt(Time, b.Id, working);
         DrawTextureRect(sprite.Frames[frame], rect, false);
-        if (working && (sprite.Glow.Length > 0))
-        {
-            float k = 1.45f + (0.12f * Mathf.Sin((Time * 5f) + b.Id));
-            DrawTextureRect(sprite.Glow[frame], rect, false, new Color(k, k, k, 0.9f));
-        }
-
         // A loaded launch pad shows its rocket standing on it.
         if ((b.Def.Kind == BuildingKind.LaunchPad) && (b.Def.Vessel is { } vessel) && (b.Inv.Count(vessel) > 0) && Root.Art.TryGet("rocket-on-pad", b.Rot, out Art.BakedSprite rocket))
         {
@@ -180,9 +183,107 @@ public partial class WorldView : Node2D
             Ui.Icons.Item(this, new Rect2(at - new Vector2(size / 2, size / 2), new Vector2(size, size)), P.World.Content.Item(recipe.Outputs[0].Item));
         }
 
-        if (working && (sprite.Smoke is { } smoke))
+        if (working)
         {
-            Puffs(S(b.Origin) + (smoke * T), new Color(0.42f, 0.4f, 0.38f), 0.7f, b.Id);
+            foreach ((Vector2 at, Art.Emit kind) in sprite.Emitters)
+            {
+                Emit(S(b.Origin) + (at * T), kind, b.Id);
+            }
+        }
+    }
+
+    /// <summary>Smoke, steam, sparks, dust or vapour from a working machine; each emitter runs on its own phase.</summary>
+    private void Emit(Vector2 at, Art.Emit kind, int seed)
+    {
+        switch (kind)
+        {
+            case Art.Emit.Smoke:
+                Puffs(at, new Color(0.36f, 0.33f, 0.3f), 0.55f + (seed % 5 * 0.04f), seed);
+                break;
+            case Art.Emit.Steam:
+                for (int i = 0; i < 5; i++)
+                {
+                    float ph = Mathf.PosMod((Time * 0.9f) + (i / 5f) + (seed * 0.31f), 1f);
+                    Vector2 drift = new Vector2((T * 0.2f * ph) + (Mathf.Sin((ph * 7f) + seed + i) * T * 0.06f), -T * 0.8f * ph);
+                    DrawCircle(at + drift, T * (0.06f + (ph * 0.22f)), new Color(0.92f, 0.93f, 0.95f, 0.5f * (1 - ph) * Mathf.Min(1, ph * 6)));
+                }
+
+                break;
+            case Art.Emit.Sparks:
+                for (int i = 0; i < 7; i++)
+                {
+                    uint h = Hash(seed, i, (uint)(Time * 3));
+                    float ph = Mathf.PosMod(Time * 3, 1f);
+                    float ang = (-Mathf.Pi / 2) + ((((h & 255) / 255f) - 0.5f) * 2.4f);
+                    float speed = T * (0.3f + (((h >> 8) & 255) / 255f * 0.5f));
+                    Vector2 p = at + (new Vector2(Mathf.Cos(ang), Mathf.Sin(ang)) * speed * ph) + new Vector2(0, T * 0.9f * ph * ph);
+                    DrawCircle(p, Mathf.Max(1, T * 0.025f), Hdr(new Color(1f, 0.75f, 0.35f, 1 - ph), 2.2f));
+                }
+
+                break;
+            case Art.Emit.Dust:
+                for (int i = 0; i < 4; i++)
+                {
+                    float ph = Mathf.PosMod((Time * 0.7f) + (i / 4f) + (seed * 0.19f), 1f);
+                    float side = (i % 2 == 0) ? 1 : -1;
+                    Vector2 drift = new Vector2(side * T * 0.45f * ph, -T * 0.12f * ph);
+                    DrawCircle(at + drift, T * (0.08f + (ph * 0.2f)), new Color(0.5f, 0.42f, 0.32f, 0.32f * (1 - ph)));
+                }
+
+                break;
+            default:
+                for (int i = 0; i < 4; i++)
+                {
+                    float ph = Mathf.PosMod((Time * 0.4f) + (i / 4f) + (seed * 0.23f), 1f);
+                    Vector2 drift = new Vector2((T * 0.5f * ph) + (Mathf.Sin((ph * 5f) + seed) * T * 0.1f), -T * 1.4f * ph);
+                    DrawCircle(at + drift, T * (0.12f + (ph * 0.4f)), new Color(0.75f, 0.9f, 0.95f, 0.22f * (1 - ph) * Mathf.Min(1, ph * 5)));
+                }
+
+                break;
+        }
+    }
+
+    private readonly Dictionary<int, float> _lit = [];
+    private float _lastLightTime;
+
+    /// <summary>
+    /// The light a working machine gives off, on the additive light layer. It fades up over a third of a
+    /// second when the machine starts and down when it stops, and fire flickers.
+    /// </summary>
+    private void DrawBakedLight(Building b)
+    {
+        if ((Baked(b) is not { } sprite) || (sprite.Lights.Length == 0))
+        {
+            return;
+        }
+
+        float dt = Mathf.Clamp(Time - _lastLightTime, 0, 0.1f);
+        bool working = b.Status == MachineStatus.Working;
+        float lit = _lit.GetValueOrDefault(b.Id);
+        lit = Mathf.MoveToward(lit, working ? 1 : 0, dt * 3f);
+        _lit[b.Id] = lit;
+        if ((lit <= 0.001f) || (OnScreen(RectOf(b.Origin, b.W, b.H)) == false))
+        {
+            return;
+        }
+
+        float k = lit;
+        if (sprite.Flicker)
+        {
+            k *= 0.86f + (0.09f * Mathf.Sin((Time * 13f) + b.Id)) + (0.05f * Mathf.Sin((Time * 31f) + (b.Id * 3)));
+        }
+
+        int frame = sprite.FrameAt(Time, b.Id, working);
+        Texture2D tex = sprite.Lights[System.Math.Min(frame, sprite.Lights.Length - 1)];
+        DrawTextureRect(tex, new Rect2(S(b.Origin) + (sprite.LightOffset * T), sprite.LightSize * T), false, new Color(k, k, k, 1));
+    }
+
+    /// <summary>Notes the clock after the light layer has drawn, for the fades' time step.</summary>
+    public override void _Process(double delta)
+    {
+        if (Layer == WorldLayer.Lights)
+        {
+            _lastLightTime = Time;
         }
     }
 
@@ -243,4 +344,7 @@ public enum WorldLayer
 
     /// <summary>Buildings, wires, trains, units and the interface overlays.</summary>
     Things,
+
+    /// <summary>The light working machines give off, drawn additively over everything.</summary>
+    Lights,
 }

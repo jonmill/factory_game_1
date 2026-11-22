@@ -14,8 +14,11 @@ public enum BakePass
     /// <summary>The model flattened straight down, as a solid mask: where it touches and covers the ground.</summary>
     Footprint,
 
-    /// <summary>Only the emissive parts, everything else black; turned into a glow layer.</summary>
-    Glow,
+    /// <summary>
+    /// The light a working machine gives off, on black: its glowing parts at full strength plus what its lamps
+    /// and fires light on its own surfaces and the ground around it. Drawn additively while it works.
+    /// </summary>
+    Light,
 }
 
 /// <summary>
@@ -25,21 +28,39 @@ public enum BakePass
 /// </summary>
 public sealed class Kit
 {
-    private static readonly StandardMaterial3D _black = new() { ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded, AlbedoColor = Colors.Black };
     private static readonly StandardMaterial3D _white = new() { ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded, AlbedoColor = Colors.White, CullMode = BaseMaterial3D.CullModeEnum.Disabled };
 
     private readonly Node3D _root;
+    private readonly Transform3D _toModel;
 
     /// <summary>Creates a kit that adds parts under <paramref name="root"/>.</summary>
     /// <param name="root">Parent node for every part.</param>
     /// <param name="pass">The pass being rendered.</param>
     /// <param name="phase">Animation phase, 0 to 1, for moving parts.</param>
     public Kit(Node3D root, BakePass pass, float phase)
+        : this(root, pass, phase, Transform3D.Identity, [])
+    {
+    }
+
+    private Kit(Node3D root, BakePass pass, float phase, Transform3D toModel, List<PointLight> lights)
     {
         _root = root;
         Pass = pass;
         Phase = phase;
+        _toModel = toModel;
+        Lights = lights;
     }
+
+    /// <summary>A lamp or fire's light, in model coordinates.</summary>
+    /// <param name="At">Where it shines from.</param>
+    /// <param name="Color">Its colour.</param>
+    /// <param name="Range">How far it reaches, in tiles.</param>
+    /// <param name="Energy">Its strength.</param>
+    /// <param name="Shadows">Whether it casts shadows (the main fires and lamps do; small glowing trim doesn't).</param>
+    public readonly record struct PointLight(Vector3 At, Color Color, float Range, float Energy, bool Shadows);
+
+    /// <summary>Every light the model has added, for the light pass.</summary>
+    public List<PointLight> Lights { get; }
 
     /// <summary>The pass being rendered.</summary>
     public BakePass Pass { get; }
@@ -56,10 +77,24 @@ public sealed class Kit
     /// <returns>The child kit.</returns>
     public Kit Group(Vector3 pivot, Basis rotation)
     {
-        Node3D n = new Node3D { Transform = new Transform3D(rotation, pivot) };
+        Transform3D xf = new Transform3D(rotation, pivot);
+        Node3D n = new Node3D { Transform = xf };
         _root.AddChild(n);
 
-        return new Kit(n, Pass, Phase);
+        return new Kit(n, Pass, Phase, _toModel * xf, Lights);
+    }
+
+    /// <summary>A light that, while the machine works, falls on its own surfaces and the ground around it.</summary>
+    /// <param name="at">Where it shines from.</param>
+    /// <param name="color">Its colour.</param>
+    /// <param name="range">How far it reaches, in tiles.</param>
+    /// <param name="energy">Its strength.</param>
+    /// <returns>This kit.</returns>
+    public Kit Light(Vector3 at, Color color, float range = 1.6f, float energy = 1.5f)
+    {
+        Lights.Add(new PointLight(_toModel * at, color, range, energy, true));
+
+        return this;
     }
 
     /// <summary>Adds a mesh with a material and transform, adjusted for the pass.</summary>
@@ -77,12 +112,22 @@ public sealed class Kit
                 mi.MaterialOverride = _white;
                 mi.CastShadow = GeometryInstance3D.ShadowCastingSetting.Off;
                 break;
-            case BakePass.Glow:
-                mi.MaterialOverride = glow ? Palette.GlowOnly((StandardMaterial3D)mat) : _black;
-                mi.CastShadow = GeometryInstance3D.ShadowCastingSetting.Off;
+            case BakePass.Light:
+                // Lit only by the machine's own lights; glowing parts at full strength, each also spilling a
+                // little light of its colour onto what's around it.
+                mi.MaterialOverride = mat;
+                if (glow)
+                {
+                    StandardMaterial3D g = (StandardMaterial3D)mat;
+                    Aabb box = mesh.GetAabb();
+                    float reach = Mathf.Clamp(box.Size.Length() * 1.6f, 0.5f, 2f);
+                    Lights.Add(new PointLight(_toModel * (xf * box.GetCenter()), g.Emission, reach, Mathf.Min(1.2f, g.EmissionEnergyMultiplier * 0.3f), false));
+                }
+
                 break;
             default:
-                mi.MaterialOverride = mat;
+                // Idle, glowing parts are only faintly warm; the light layer brings them up while working.
+                mi.MaterialOverride = glow ? Palette.Dim((StandardMaterial3D)mat) : mat;
                 break;
         }
 

@@ -77,6 +77,7 @@ public partial class GameRoot : Node2D
     private TerrainLayer _terrain = null!;
     private WorldView _view = null!;
     private WorldView[] _layers = [];
+    private int _bakedFrames;
     private FogLayer _fog = null!;
     private Hud _hud = null!;
     private Vector2 _camOffset;
@@ -145,7 +146,9 @@ public partial class GameRoot : Node2D
         AddChild(ground);
         AddChild(shadowGroup);
         AddChild(_view);
-        _layers = [decals, ground, shadows, _view];
+        WorldView lights = new WorldView { Root = this, Layer = WorldLayer.Lights, Material = new CanvasItemMaterial { BlendMode = CanvasItemMaterial.BlendModeEnum.Add } };
+        AddChild(lights);
+        _layers = [decals, ground, shadows, _view, lights];
         _fog = new FogLayer { Root = this };
         AddChild(_fog);
         AddChild(Vignette());
@@ -1330,6 +1333,19 @@ public partial class GameRoot : Node2D
     private void TakeScreenshotWhenDue()
     {
         string? shot = System.Environment.GetEnvironmentVariable("FACTORY_SCREENSHOT");
+        if (Art.Baked && (_bakedFrames < 30))
+        {
+            // Let a few frames draw with the baked art before capturing; menus redraw their icons with it.
+            if (_bakedFrames == 0)
+            {
+                _hud.PropagateCall(CanvasItem.MethodName.QueueRedraw);
+            }
+
+            _bakedFrames++;
+
+            return;
+        }
+
         if ((shot is not null) && (Clock > 3.0) && Art.Baked)
         {
             GD.Print($"[shot] viewport={GetViewportRect().Size} zoom={Zoom} window={DisplayServer.WindowGetSize()} scale={DisplayServer.ScreenGetScale()}");

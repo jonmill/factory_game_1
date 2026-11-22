@@ -14,35 +14,35 @@ public static partial class Models
         new("water-tower", 1, 1, 2.6f, WaterTower),
 
         // Combustion Age.
-        new("kerogen-refinery", 3, 3, 2.8f, Refinery, Glows: true, Smoke: new Vector3(0.8f, 2.75f, 1.0f)),
-        new("kerogen-generator", 2, 2, 1.6f, Generator, Frames: 8, Fps: 12, Glows: true, Smoke: new Vector3(1.55f, 1.6f, 0.55f)),
+        new("kerogen-refinery", 3, 3, 2.8f, Refinery, Glows: true, Smoke: new Vector3(0.8f, 2.75f, 1.0f), Flicker: true, Reach: 1.5f, Puffs: [(new Vector3(2.35f, 1.3f, 1.2f), Emit.Steam)]),
+        new("kerogen-generator", 2, 2, 1.6f, Generator, Frames: 16, Fps: 16, Glows: true, Smoke: new Vector3(1.55f, 1.6f, 0.55f), Flicker: true),
         new("lattice-pylon", 1, 1, 3.0f, Pylon, Anchor: new Vector3(0.5f, 2.86f, 0.5f)),
-        new("launch-pad", 3, 3, 1.8f, LaunchPad, Glows: true),
+        new("launch-pad", 3, 3, 1.8f, LaunchPad, Frames: 16, Fps: 3, Glows: true),
         new("ferry", 3, 3, 3.4f, (k, a) => Rocket(k, a, true)),
         new("rocket-on-pad", 3, 3, 3.4f, (k, a) => Rocket(k, a, false)),
 
         // Clean Age.
-        new("electric-drill", 2, 2, 1.5f, ElectricDrill, Frames: 8, Fps: 12, Turns: true, Glows: true),
-        new("arc-smelter", 2, 2, 1.6f, ArcSmelter, Glows: true),
-        new("wind-turbine", 2, 2, 3.7f, WindTurbine, Frames: 12, Fps: 10),
-        new("assembler-mk2", 3, 3, 1.6f, (k, a) => FabricatorTier(k, a, 2), Frames: 8, Fps: 10, Glows: true),
-        new("logistics-station", 3, 3, 2.3f, LogisticsStation, Frames: 8, Fps: 6, Glows: true),
-        new("orbital-station", 4, 4, 3.2f, OrbitalStation, Frames: 8, Fps: 6, Glows: true),
-        new("orbital-collector", 3, 3, 2.4f, Collector, Frames: 8, Fps: 6, Glows: true),
+        new("electric-drill", 2, 2, 1.5f, ElectricDrill, Frames: 16, Fps: 14, Turns: true, Glows: true, Puffs: [(new Vector3(1f, 0.1f, 0.02f), Emit.Dust)]),
+        new("arc-smelter", 2, 2, 1.6f, ArcSmelter, Frames: 16, Fps: 14, Glows: true, Flicker: true, Reach: 1.5f, Puffs: [(new Vector3(0.9f, 0.95f, 1.0f), Emit.Sparks)]),
+        new("wind-turbine", 2, 2, 3.7f, WindTurbine, Frames: 16, Fps: 10),
+        new("assembler-mk2", 3, 3, 1.6f, (k, a) => FabricatorTier(k, a, 2), Frames: 16, Fps: 10, Glows: true),
+        new("logistics-station", 3, 3, 2.3f, LogisticsStation, Frames: 16, Fps: 6, Glows: true),
+        new("orbital-station", 4, 4, 3.2f, OrbitalStation, Frames: 16, Fps: 6, Glows: true),
+        new("orbital-collector", 3, 3, 2.4f, Collector, Frames: 16, Fps: 6, Glows: true),
         new("payload-launcher", 3, 3, 2.6f, PayloadLauncher, Glows: true),
-        new("robot-bay", 3, 3, 1.7f, RobotBay, Frames: 8, Fps: 8, Glows: true),
-        new("atmo-processor", 3, 3, 2.4f, (k, a) => Terraformer(k, a, 0), Frames: 8, Fps: 8, Glows: true, Smoke: new Vector3(1.5f, 2.35f, 0.9f)),
-        new("hydro-seeder", 3, 3, 1.7f, (k, a) => Terraformer(k, a, 1), Frames: 8, Fps: 8, Glows: true),
-        new("bio-incubator", 3, 3, 2.0f, (k, a) => Terraformer(k, a, 2), Glows: true),
+        new("robot-bay", 3, 3, 1.7f, RobotBay, Frames: 16, Fps: 8, Glows: true, Puffs: [(new Vector3(1.5f, 0.75f, 1.2f), Emit.Sparks)]),
+        new("atmo-processor", 3, 3, 2.4f, (k, a) => Terraformer(k, a, 0), Frames: 16, Fps: 8, Glows: true, Puffs: [(new Vector3(1.5f, 2.35f, 0.95f), Emit.Vapor), (new Vector3(0.78f, 1.9f, 0.95f), Emit.Vapor)]),
+        new("hydro-seeder", 3, 3, 1.7f, (k, a) => Terraformer(k, a, 1), Frames: 16, Fps: 8, Glows: true, Puffs: [(new Vector3(1.5f, 1.1f, 1.5f), Emit.Steam)]),
+        new("bio-incubator", 3, 3, 2.0f, (k, a) => Terraformer(k, a, 2), Frames: 16, Fps: 6, Glows: true, Puffs: [(new Vector3(1.5f, 1.2f, 1.45f), Emit.Vapor)]),
 
         // Stellar Age.
-        new("assembler-mk3", 3, 3, 1.7f, (k, a) => FabricatorTier(k, a, 3), Frames: 8, Fps: 12, Glows: true),
-        new("plasma-smelter", 2, 2, 1.5f, PlasmaSmelter, Frames: 8, Fps: 12, Glows: true),
-        new("plasma-drill", 3, 3, 1.9f, PlasmaDrill, Frames: 8, Fps: 12, Turns: true, Glows: true),
-        new("fusion-reactor", 4, 4, 2.0f, FusionReactor, Frames: 8, Fps: 10, Glows: true),
-        new("space-elevator", 5, 5, 6.0f, SpaceElevator, Frames: 8, Fps: 6, Glows: true),
-        new("climate-engine", 4, 4, 2.6f, ClimateEngine, Frames: 8, Fps: 10, Glows: true, Smoke: new Vector3(2f, 2.6f, 1.6f)),
-        new("settler-uplink", 3, 3, 3.0f, SettlerUplink, Frames: 8, Fps: 4, Glows: true),
+        new("assembler-mk3", 3, 3, 1.7f, (k, a) => FabricatorTier(k, a, 3), Frames: 16, Fps: 12, Glows: true),
+        new("plasma-smelter", 2, 2, 1.5f, PlasmaSmelter, Frames: 16, Fps: 12, Glows: true),
+        new("plasma-drill", 3, 3, 1.9f, PlasmaDrill, Frames: 16, Fps: 12, Turns: true, Glows: true),
+        new("fusion-reactor", 4, 4, 2.0f, FusionReactor, Frames: 16, Fps: 10, Glows: true),
+        new("space-elevator", 5, 5, 6.0f, SpaceElevator, Frames: 16, Fps: 6, Glows: true),
+        new("climate-engine", 4, 4, 2.6f, ClimateEngine, Frames: 16, Fps: 10, Glows: true, Puffs: [(new Vector3(2f, 2.6f, 1.92f), Emit.Vapor)]),
+        new("settler-uplink", 3, 3, 3.0f, SettlerUplink, Frames: 16, Fps: 4, Glows: true),
     ];
 
     private static void CellBank(Kit k, Color accent)
@@ -90,7 +90,7 @@ public static partial class Models
     }
 
     /// <summary>Combustion-age concrete pad.</summary>
-    private static StandardMaterial3D Concrete => Palette.Paint(new Color(0.5f, 0.49f, 0.46f), 0f, 0.95f);
+    private static StandardMaterial3D Concrete => Palette.Paint(new Color(0.42f, 0.4f, 0.36f), 0f, 0.95f);
 
     private static void Refinery(Kit k, Color accent)
     {
@@ -120,7 +120,8 @@ public static partial class Models
 
         // The flare stack's pilot flame and control-room windows.
         k.Cyl(new Vector3(0.8f, 2.6f, 1.0f), 0.05f, 0.18f, Palette.DarkIron, -1, 8);
-        k.Ball(new Vector3(0.8f, 2.8f, 1.0f), 0.06f, Palette.Glow(new Color(1f, 0.55f, 0.15f), 3f));
+        k.Ball(new Vector3(0.8f, 2.8f, 1.0f), 0.07f, Palette.Fire(3.5f));
+        k.Light(new Vector3(0.8f, 2.95f, 1.0f), new Color(1f, 0.55f, 0.2f), 2.6f, 1.6f);
         for (int i = 0; i < 4; i++)
         {
             k.Box(new Vector3(0.6f + (i * 0.5f), 0.55f, 2.81f), new Vector3(0.3f, 0.18f, 0.02f), Palette.Glow(new Color(1f, 0.85f, 0.5f), 1f));
@@ -151,7 +152,7 @@ public static partial class Models
         foreach (float z in new[] { 0.55f, 0.95f })
         {
             k.Cyl(new Vector3(1.55f, 0.83f, z), 0.09f, 0.75f, Palette.DarkIron, 0.08f, 12);
-            k.Cyl(new Vector3(1.55f, 1.57f, z), 0.07f, 0.02f, Palette.Glow(new Color(1f, 0.5f, 0.15f), 1.5f), -1, 12);
+            k.Cyl(new Vector3(1.55f, 1.57f, z), 0.07f, 0.02f, Palette.Fire(2f), -1, 12);
         }
     }
 
@@ -215,7 +216,7 @@ public static partial class Models
         k.Rod(tower + new Vector3(0, 1.2f, 0), c + new Vector3(0.35f, 1.2f, -0.3f), 0.035f, Palette.Yellow, 6);
         foreach (float z in new[] { 1.9f, 2.45f })
         {
-            k.Rod(new Vector3(0.3f, 0.36f, z), new Vector3(1.0f, 0.36f, z), 0.2f, Palette.Paint(new Color(0.85f, 0.85f, 0.82f), 0.3f, 0.4f), 20);
+            k.Rod(new Vector3(0.3f, 0.36f, z), new Vector3(1.0f, 0.36f, z), 0.2f, Palette.Paint(new Color(0.62f, 0.6f, 0.56f), 0.3f, 0.4f), 20);
         }
 
         _ = accent;
@@ -230,7 +231,7 @@ public static partial class Models
             k.Cyl(c, 1.2f, 0.01f, Palette.Paint(new Color(0.12f, 0.1f, 0.08f), 0, 1), -1, 40);
         }
 
-        Color hullWhite = new Color(0.88f, 0.88f, 0.86f);
+        Color hullWhite = new Color(0.66f, 0.64f, 0.6f);
         foreach ((float dx, float dz) in new[] { (-1f, 0f), (1f, 0f), (0f, -1f), (0f, 1f) })
         {
             k.Rod(c + new Vector3(dx * 0.82f, 0, dz * 0.82f), c + new Vector3(dx * 0.35f, 0.75f, dz * 0.35f), 0.04f, Palette.Steel, 8);
@@ -276,13 +277,19 @@ public static partial class Models
         // A crucible with three electrodes dipping into a glowing melt, and a transformer cabinet.
         Vector3 c = new Vector3(0.9f, top, 1.0f);
         k.Cyl(c, 0.55f, 0.2f, Palette.Paint(new Color(0.28f, 0.26f, 0.25f), 0.3f, 0.8f), 0.6f, 24);
-        k.Cyl(c + new Vector3(0, 0.2f, 0), 0.45f, 0.02f, Palette.Glow(new Color(1f, 0.55f, 0.2f), 3f), -1, 24);
+        k.Cyl(c + new Vector3(0, 0.2f, 0), 0.45f, 0.02f, Palette.Fire(3f), -1, 24);
+        k.Cyl(c + new Vector3(0, 0.21f, 0), 0.2f, 0.02f, Palette.Glow(new Color(1f, 0.9f, 0.7f), 3.5f), -1, 16);
+        k.Light(c + new Vector3(0, 0.6f, 0), new Color(1f, 0.6f, 0.3f), 1.7f, 1.8f);
         for (int i = 0; i < 3; i++)
         {
             float a = (i * Mathf.Tau / 3) + 0.4f;
             Vector3 at = c + new Vector3(Mathf.Cos(a) * 0.2f, 0, Mathf.Sin(a) * 0.2f);
             k.Cyl(at + new Vector3(0, 0.15f, 0), 0.06f, 0.75f, Palette.Paint(new Color(0.15f, 0.15f, 0.16f), 0.2f, 0.7f), -1, 10);
             k.Rod(at + new Vector3(0, 0.85f, 0), new Vector3(1.6f, top + 0.8f, 0.5f), 0.03f, Palette.Copper, 6);
+
+            // The arc at each electrode's tip jumps between bright and dim, out of step with the others.
+            bool arcing = ((int)(k.Phase * 16 * (i + 2) / 3) % 3) != 0;
+            k.Ball(at + new Vector3(0, 0.2f, 0), arcing ? 0.07f : 0.04f, Palette.Glow(new Color(0.8f, 0.9f, 1f), arcing ? 4f : 1.5f));
         }
 
         k.Bevel(1.4f, 0.3f, 0.42f, 0.42f, 0.8f, 0.06f, Palette.HullDark, top);

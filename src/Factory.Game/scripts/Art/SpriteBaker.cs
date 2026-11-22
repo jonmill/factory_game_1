@@ -9,8 +9,20 @@ public sealed class BakedSprite
     /// <summary>The lit model, one image per animation frame (one if it doesn't move).</summary>
     public Texture2D[] Frames { get; init; } = [];
 
-    /// <summary>The glowing parts per frame, drawn brighter while the machine works; empty if nothing glows.</summary>
-    public Texture2D[] Glow { get; init; } = [];
+    /// <summary>The light it gives off while working, per frame, drawn additively; empty if it gives none.</summary>
+    public Texture2D[] Lights { get; init; } = [];
+
+    /// <summary>Top-left of the light images.</summary>
+    public Vector2 LightOffset { get; init; }
+
+    /// <summary>Size of the light images.</summary>
+    public Vector2 LightSize { get; init; }
+
+    /// <summary>Whether its light flickers like fire.</summary>
+    public bool Flicker { get; init; }
+
+    /// <summary>Where smoke, steam, sparks or dust come from while it works, in tiles from the footprint's top-left.</summary>
+    public (Vector2 At, Emit Kind)[] Emitters { get; init; } = [];
 
     /// <summary>The cast shadow per frame: a white mask the world tints and draws into one shared shadow layer.</summary>
     public Texture2D[] Shadows { get; init; } = [];
@@ -42,9 +54,6 @@ public sealed class BakedSprite
     /// <summary>Where wires attach, in tiles from the footprint's top-left (poles only).</summary>
     public Vector2? Anchor { get; init; }
 
-    /// <summary>Where smoke rises, in tiles from the footprint's top-left; for burner models, which turn, given facing north.</summary>
-    public Vector2? Smoke { get; init; }
-
     /// <summary>The animation frame to show.</summary>
     /// <param name="time">Game clock in seconds.</param>
     /// <param name="seed">Per-building offset so neighbours don't move in step.</param>
@@ -72,7 +81,8 @@ public partial class SpriteBaker : Node
     private const int Batch = 32;
     private const float Margin = 0.2f;
     private const float DecalMargin = 0.7f;
-    private const int DecalPx = 20;
+    private const int DecalPx = 40;
+    private const int LightPx = 40;
 
     /// <summary>
     /// The sun's direction in model space (x east, y up, z south): low and from the west-north-west, so
@@ -138,7 +148,7 @@ public partial class SpriteBaker : Node
                     work.Add((m, rot, BakePass.Shadow, f));
                     if (m.Glows)
                     {
-                        work.Add((m, rot, BakePass.Glow, f));
+                        work.Add((m, rot, BakePass.Light, f));
                     }
                 }
             }
@@ -151,7 +161,7 @@ public partial class SpriteBaker : Node
         {
             foreach ((ModelDef m, SimDir rot, BakePass pass, int frame) in work)
             {
-                Image img = Image.LoadFromFile(ProjectSettings.GlobalizePath(CachePath(cache, m.Id, rot, pass, frame)));
+                Image img = ResourceLoader.Load<Image>(CachePath(cache, m.Id, rot, pass, frame), null, ResourceLoader.CacheMode.Ignore);
                 Store(images, m, rot, pass, frame, img);
             }
 
@@ -174,8 +184,9 @@ public partial class SpriteBaker : Node
             {
                 Image raw = job.View.GetTexture().GetImage();
                 job.View.QueueFree();
-                Image img = job.Pass switch { BakePass.Shadow => ToMask(raw), BakePass.Footprint => ToDecal(raw), BakePass.Glow => ToGlow(raw), _ => Unpremultiply(raw) };
-                img.SavePng(CachePath(cache, job.Model.Id, job.Rot, job.Pass, job.Frame));
+                Image img = job.Pass switch { BakePass.Shadow => ToMask(raw), BakePass.Footprint => ToDecal(raw), BakePass.Light => ToLight(raw), _ => Unpremultiply(raw) };
+                Pack(img);
+                ResourceSaver.Save(img, CachePath(cache, job.Model.Id, job.Rot, job.Pass, job.Frame), ResourceSaver.SaverFlags.Compress);
                 Store(images, job.Model, job.Rot, job.Pass, job.Frame, img);
             }
         }
@@ -186,22 +197,26 @@ public partial class SpriteBaker : Node
         {
             if (dump is not null)
             {
-                set.Frames[0].SavePng(System.IO.Path.Combine(dump, $"{id}-{rot}.png"));
-                set.Shadows[0].SavePng(System.IO.Path.Combine(dump, $"{id}-{rot}-shadow.png"));
-                set.Decal?.SavePng(System.IO.Path.Combine(dump, $"{id}-{rot}-decal.png"));
-                if (set.Glow.Length > 0)
+                Plain(set.Frames[0]).SavePng(System.IO.Path.Combine(dump, $"{id}-{rot}.png"));
+                Plain(set.Shadows[0]).SavePng(System.IO.Path.Combine(dump, $"{id}-{rot}-shadow.png"));
+                (set.Decal is null ? null : Plain(set.Decal))?.SavePng(System.IO.Path.Combine(dump, $"{id}-{rot}-decal.png"));
+                if (set.Lights.Length > 0)
                 {
-                    set.Glow[0].SavePng(System.IO.Path.Combine(dump, $"{id}-{rot}-glow.png"));
+                    Plain(set.Lights[0]).SavePng(System.IO.Path.Combine(dump, $"{id}-{rot}-light.png"));
                 }
             }
 
             ModelDef m = Models.All.First(x => x.Id == id);
-            Rect2 frame = Area(m, BakePass.Color), shadow = Area(m, BakePass.Shadow), decal = Area(m, BakePass.Footprint);
+            Rect2 frame = Area(m, BakePass.Color), shadow = Area(m, BakePass.Shadow), decal = Area(m, BakePass.Footprint), light = Area(m, BakePass.Light);
             _sprites[(id, rot)] = new BakedSprite
             {
                 Frames = [.. set.Frames.Select(Texture)],
-                Glow = [.. set.Glow.Select(Texture)],
-                Shadows = [.. set.Shadows.Select(Texture)],
+                Lights = Textures(set.Lights),
+                Shadows = Textures(set.Shadows),
+                LightOffset = light.Position,
+                LightSize = light.Size,
+                Flicker = m.Flicker,
+                Emitters = [.. m.Emitters.Select(e => (Turned(m, rot, e.At), e.Kind))],
                 Decal = set.Decal is null ? null : Texture(set.Decal),
                 Offset = frame.Position,
                 Size = frame.Size,
@@ -211,7 +226,6 @@ public partial class SpriteBaker : Node
                 DecalSize = decal.Size,
                 Fps = m.Fps,
                 Anchor = m.Anchor is { } a ? new Vector2(a.X, a.Z - Rise(a.Y)) : null,
-                Smoke = m.Smoke is { } sm ? Turned(m, rot, sm) : null,
             };
         }
 
@@ -220,6 +234,9 @@ public partial class SpriteBaker : Node
             ContactSheet(images, dump);
         }
 
+        long bytes = _sprites.Values.SelectMany(sp => sp.Frames.Concat(sp.Shadows).Concat(sp.Lights).Append(sp.Decal)).OfType<Texture2D>().Distinct()
+            .Sum(t => (long)t.GetWidth() * t.GetHeight() * 4 * 4 / 3 / (t.GetImage().IsCompressed() ? 4 : 1));
+        GD.Print($"Baked art uses about {bytes / (1024 * 1024)} MB of textures");
         Baked = true;
         GD.Print(cached ? $"Loaded {_sprites.Count} baked sprites from the cache in {Time.GetTicksMsec() - started} ms" : $"Baked {_sprites.Count} sprites from {work.Count} renders in {Time.GetTicksMsec() - started} ms");
     }
@@ -231,7 +248,7 @@ public partial class SpriteBaker : Node
 
         public Image[] Shadows { get; } = new Image[m.Frames];
 
-        public Image[] Glow { get; } = new Image[m.Glows ? m.Frames : 0];
+        public Image[] Lights { get; } = new Image[m.Glows ? m.Frames : 0];
 
         public Image? Decal { get; set; }
     }
@@ -252,8 +269,8 @@ public partial class SpriteBaker : Node
             case BakePass.Footprint:
                 set.Decal = img;
                 break;
-            case BakePass.Glow:
-                set.Glow[frame] = img;
+            case BakePass.Light:
+                set.Lights[frame] = img;
                 break;
             default:
                 set.Frames[frame] = img;
@@ -291,7 +308,7 @@ public partial class SpriteBaker : Node
         return $"{root}/{build}";
     }
 
-    private static string CachePath(string dir, string id, SimDir rot, BakePass pass, int frame) => $"{dir}/{id}-{rot}-{pass}-{frame}.png";
+    private static string CachePath(string dir, string id, SimDir rot, BakePass pass, int frame) => $"{dir}/{id}-{rot}-{pass}-{frame}.res";
 
     /// <summary>Every model's first frame with its decal and shadow, on a patch of ground, in one image.</summary>
     private static void ContactSheet(Dictionary<(string, SimDir), Images> images, string dir)
@@ -307,16 +324,18 @@ public partial class SpriteBaker : Node
             Vector2I At(BakePass pass) => (Vector2I)(origin + (Area(m, pass).Position * PxPerTile));
             if (set.Decal is { } decal)
             {
-                Image big = (Image)decal.Duplicate();
+                Image big = Plain(decal);
                 big.Resize(decal.GetWidth() * PxPerTile / DecalPx, decal.GetHeight() * PxPerTile / DecalPx, Image.Interpolation.Bilinear);
                 Tint(big, new Color(0.13f, 0.1f, 0.06f), 1f);
                 sheet.BlendRect(big, new Rect2I(Vector2I.Zero, big.GetSize()), At(BakePass.Footprint));
             }
 
-            Image sh = (Image)set.Shadows[0].Duplicate();
+            Image sh = Plain(set.Shadows[0]);
             Tint(sh, new Color(0.1f, 0.08f, 0.04f), 0.55f);
             sheet.BlendRect(sh, new Rect2I(Vector2I.Zero, sh.GetSize()), At(BakePass.Shadow));
-            sheet.BlendRect(set.Frames[0], new Rect2I(Vector2I.Zero, set.Frames[0].GetSize()), At(BakePass.Color));
+            Image frame = Plain(set.Frames[0]);
+            frame.Convert(Image.Format.Rgba8);
+            sheet.BlendRect(frame, new Rect2I(Vector2I.Zero, frame.GetSize()), At(BakePass.Color));
         }
 
         sheet.SavePng(System.IO.Path.Combine(dir, "_sheet.png"));
@@ -345,12 +364,55 @@ public partial class SpriteBaker : Node
         return new Vector2(q.X, q.Z - Rise(q.Y));
     }
 
-    private static ImageTexture Texture(Image img)
+    /// <summary>Textures for a run of frames, sharing one texture between frames whose images are identical.</summary>
+    private static Texture2D[] Textures(Image[] frames)
+    {
+        Texture2D[] result = new Texture2D[frames.Length];
+        List<(byte[] Data, Texture2D Tex)> seen = [];
+        for (int i = 0; i < frames.Length; i++)
+        {
+            byte[] data = frames[i].GetData();
+            Texture2D? same = seen.FirstOrDefault(s => s.Data.AsSpan().SequenceEqual(data)).Tex;
+            if (same is null)
+            {
+                same = Texture(frames[i]);
+                seen.Add((data, same));
+            }
+
+            result[i] = same;
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Readies a baked image for the GPU: mipmaps, and colour and light images block-compressed (a quarter of
+    /// the memory) where the GPU supports it. Done before caching, so loading from the cache is quick.
+    /// </summary>
+    private static void Pack(Image img)
     {
         img.GenerateMipmaps();
-
-        return ImageTexture.CreateFromImage(img);
+        if ((img.GetFormat() != Image.Format.La8) && RenderingServer.HasOsFeature("s3tc"))
+        {
+            img.Compress(Image.CompressMode.S3Tc);
+        }
     }
+
+    /// <summary>An uncompressed, mipmap-free copy, for saving and compositing.</summary>
+    private static Image Plain(Image img)
+    {
+        Image copy = (Image)img.Duplicate();
+        if (copy.IsCompressed())
+        {
+            copy.Decompress();
+        }
+
+        copy.ClearMipmaps();
+
+        return copy;
+    }
+
+    private static ImageTexture Texture(Image img) => ImageTexture.CreateFromImage(img);
 
     /// <summary>The ground area each pass's image covers, in tiles relative to the footprint's top-left (screen axes).</summary>
     private static Rect2 Area(ModelDef m, BakePass pass)
@@ -360,6 +422,7 @@ public partial class SpriteBaker : Node
         {
             BakePass.Shadow => (-Margin, -Margin, m.W + Margin + (m.Height * ShadowLean.X), m.H + Margin + (m.Height * ShadowLean.Y), PxPerTile),
             BakePass.Footprint => (-DecalMargin, -DecalMargin, m.W + DecalMargin, m.H + DecalMargin, DecalPx),
+            BakePass.Light => (-m.Reach, -m.Reach - Rise(m.Height), m.W + m.Reach, m.H + m.Reach, LightPx),
             _ => (-Margin, -Margin - Rise(m.Height), m.W + Margin, m.H + Margin, PxPerTile),
         };
         Vector2 size = new Vector2(Mathf.Ceil((u1 - u0) * px), Mathf.Ceil((v1 - v0) * px)) / px;
@@ -367,7 +430,7 @@ public partial class SpriteBaker : Node
         return new Rect2(u0, v0, size);
     }
 
-    private static int PxOf(BakePass pass) => pass == BakePass.Footprint ? DecalPx : PxPerTile;
+    private static int PxOf(BakePass pass) => pass switch { BakePass.Footprint => DecalPx, BakePass.Light => LightPx, _ => PxPerTile };
 
     /// <summary>Builds the scene for one render: camera, lights, environment and the model.</summary>
     private SubViewport Stage(ModelDef m, SimDir rot, BakePass pass, int frame)
@@ -379,7 +442,7 @@ public partial class SpriteBaker : Node
         SubViewport view = new SubViewport
         {
             Size = px,
-            TransparentBg = true,
+            TransparentBg = pass != BakePass.Light,
             OwnWorld3D = true,
             Msaa3D = Viewport.Msaa.Msaa8X,
             RenderTargetUpdateMode = SubViewport.UpdateMode.Once,
@@ -400,7 +463,7 @@ public partial class SpriteBaker : Node
             Environment = Environment(pass),
         };
         view.AddChild(cam);
-        if (mask == false)
+        if (pass == BakePass.Color)
         {
             Lights(view, k, pass);
         }
@@ -424,7 +487,31 @@ public partial class SpriteBaker : Node
         Basis turn = new Basis(Vector3.Up, yaw);
         Node3D model = new Node3D { Transform = new Transform3D(turn, centre - (turn * centre)) };
         parent.AddChild(model);
-        m.Build(new Kit(model, pass, m.Frames > 1 ? frame / (float)m.Frames : 0), Accent(m));
+        Kit kit = new Kit(model, pass, m.Frames > 1 ? frame / (float)m.Frames : 0);
+        m.Build(kit, Accent(m));
+        if (pass == BakePass.Light)
+        {
+            // The machine's own lamps and fires, lighting it and a patch of ground (stretched like the model).
+            stretch.AddChild(new MeshInstance3D
+            {
+                Mesh = new PlaneMesh { Size = new Vector2(m.W + 12, m.H + 12) },
+                Position = centre,
+                MaterialOverride = Palette.Paint(new Color(0.5f, 0.44f, 0.36f), 0f, 1f),
+            });
+            foreach (Kit.PointLight l in kit.Lights)
+            {
+                Vector3 p = model.Transform * l.At;
+                view.AddChild(new OmniLight3D
+                {
+                    Position = new Vector3(p.X, p.Y, p.Z * k),
+                    LightColor = l.Color,
+                    LightEnergy = l.Energy,
+                    OmniRange = l.Range,
+                    OmniAttenuation = 1.4f,
+                    ShadowEnabled = l.Shadows,
+                });
+            }
+        }
 
         return view;
     }
@@ -435,7 +522,7 @@ public partial class SpriteBaker : Node
     /// </summary>
     private static void Lights(SubViewport view, float k, BakePass pass)
     {
-        bool glow = pass == BakePass.Glow;
+        bool glow = pass == BakePass.Light;
         Vector3 sunWorld = new Vector3(Sun.X, Sun.Y, Sun.Z * k).Normalized();
         DirectionalLight3D sun = new DirectionalLight3D
         {
@@ -452,8 +539,8 @@ public partial class SpriteBaker : Node
         view.AddChild(sun);
         DirectionalLight3D rim = new DirectionalLight3D
         {
-            LightEnergy = 0.4f,
-            LightColor = new Color(0.62f, 0.76f, 1f),
+            LightEnergy = 0.25f,
+            LightColor = new Color(0.7f, 0.8f, 1f),
             ShadowEnabled = false,
         };
         rim.Transform = new Transform3D(Basis.LookingAt(new Vector3(-0.75f, -0.45f, -0.5f).Normalized(), Vector3.Up), Vector3.Zero);
@@ -475,12 +562,29 @@ public partial class SpriteBaker : Node
         {
             SkyMaterial = new ProceduralSkyMaterial
             {
-                SkyTopColor = new Color(0.3f, 0.38f, 0.52f),
+                SkyTopColor = new Color(0.4f, 0.41f, 0.44f),
                 SkyHorizonColor = new Color(0.5f, 0.5f, 0.5f),
                 GroundHorizonColor = new Color(0.48f, 0.4f, 0.3f),
                 GroundBottomColor = new Color(0.36f, 0.29f, 0.2f),
             },
         };
+        if (pass == BakePass.Light)
+        {
+            env = new Godot.Environment
+            {
+                BackgroundMode = Godot.Environment.BGMode.Color,
+                BackgroundColor = Colors.Black,
+                AmbientLightSource = Godot.Environment.AmbientSource.Color,
+                AmbientLightColor = Colors.Black,
+                AmbientLightEnergy = 0,
+                ReflectedLightSource = Godot.Environment.ReflectionSource.Disabled,
+                TonemapMode = Godot.Environment.ToneMapper.Linear,
+            };
+            _envs[pass] = env;
+
+            return env;
+        }
+
         env = new Godot.Environment
         {
             BackgroundMode = Godot.Environment.BGMode.ClearColor,
@@ -551,8 +655,9 @@ public partial class SpriteBaker : Node
             a[i] = d[(i * 4) + 3] / 255f;
         }
 
-        float[] near = Blur(a, w, h, 2, 2);
-        float[] far = Blur(a, w, h, 6, 3);
+        // How close each pixel is to the footprint, blurred out to about a third of a tile, then cut at a
+        // noisy threshold so the patch has a ragged, trodden edge instead of a soft halo.
+        float[] spread = Blur(a, w, h, 5, 2);
         uint seed = (uint)((w * 31) + h);
         byte[] o = new byte[w * h * 2];
         for (int y = 0; y < h; y++)
@@ -560,11 +665,12 @@ public partial class SpriteBaker : Node
             for (int x = 0; x < w; x++)
             {
                 int i = (y * w) + x;
-                float n = (0.55f * Noise2(x / 3f, y / 3f, seed)) + (0.45f * Noise2(x / 1.2f, y / 1.2f, seed + 7));
-                float v = (Mathf.Clamp(near[i] * 1.6f, 0, 1) * 0.55f) + (Mathf.Clamp(far[i] * 1.8f, 0, 1) * 0.45f);
-                v *= Mathf.Clamp(0.35f + (n * 1.1f), 0, 1);
+                float n = (0.6f * Noise2(x / 5f, y / 5f, seed)) + (0.4f * Noise2(x / 1.6f, y / 1.6f, seed + 7));
+                float edge = 0.08f + (n * 0.32f);
+                float v = Mathf.SmoothStep(edge - 0.04f, edge + 0.04f, spread[i]);
+                float grain = 0.75f + (0.25f * Noise2(x / 0.8f, y / 0.8f, seed + 13));
                 o[i * 2] = 255;
-                o[(i * 2) + 1] = (byte)(Mathf.Clamp(v, 0, 1) * 0.6f * 255);
+                o[(i * 2) + 1] = (byte)(Mathf.Clamp(v * grain, 0, 1) * 0.8f * 255);
             }
         }
 
@@ -619,25 +725,11 @@ public partial class SpriteBaker : Node
         return Mathf.Lerp(Mathf.Lerp(C(x0, y0), C(x0 + 1, y0), tx), Mathf.Lerp(C(x0, y0 + 1), C(x0 + 1, y0 + 1), tx), ty);
     }
 
-    /// <summary>Black → transparent; colours keep their hue at full strength with alpha from their brightness.</summary>
-    private static Image ToGlow(Image img)
+    /// <summary>The light render as plain colour; black adds nothing when drawn additively.</summary>
+    private static Image ToLight(Image img)
     {
-        img.Convert(Image.Format.Rgba8);
-        byte[] d = img.GetData();
-        for (int i = 0; i < d.Length; i += 4)
-        {
-            int m = System.Math.Max(d[i], System.Math.Max(d[i + 1], d[i + 2]));
-            int a = m * d[i + 3] / 255;
-            if (m > 0)
-            {
-                d[i] = (byte)(d[i] * 255 / m);
-                d[i + 1] = (byte)(d[i + 1] * 255 / m);
-                d[i + 2] = (byte)(d[i + 2] * 255 / m);
-            }
+        img.Convert(Image.Format.Rgb8);
 
-            d[i + 3] = (byte)a;
-        }
-
-        return Image.CreateFromData(img.GetWidth(), img.GetHeight(), false, Image.Format.Rgba8, d);
+        return img;
     }
 }

@@ -163,7 +163,7 @@ public partial class WorldView
         Vector2 head = At(body, face.X * 0.25f, -6.4f + (face.Y * 0.15f));
         Vector2 headSize = new Vector2(3.2f - (sideways * 0.6f), 2.6f) * k;
 
-        DrawEllipse(feet, k * 2.3f, k * 0.85f, new Color(0, 0, 0, 0.3f));
+        DrawEllipse(feet, k * 1.8f, k * 0.6f, new Color(0, 0, 0, 0.18f));
 
         void Pass(bool outline)
         {
@@ -337,7 +337,7 @@ public partial class WorldView
         Vector2 hand = strike is { } st ? shoulder + ((st - shoulder).Normalized() * k * 2.0f) : shoulder + (forward * 0.6f);
         float tread = moving ? (Time * 2.5f) + (u.Id * 0.3f) : 0;
 
-        DrawEllipse(ground, k * 2.2f, k * 1.0f, new Color(0, 0, 0, 0.3f));
+        DrawEllipse(ground, k * 1.8f, k * 0.8f, new Color(0, 0, 0, 0.18f));
 
         void Pass(bool outline)
         {
@@ -527,6 +527,58 @@ public partial class WorldView
         DrawColoredPolygon(points, col);
     }
 
+    /// <summary>Units' and trains' shadows, as white shapes in the shared shadow layer, cast with the sun.</summary>
+    private void DrawMovingShadows()
+    {
+        Vector2 lean = Art.SpriteBaker.ShadowLean * T;
+        foreach (Unit u in P.Units)
+        {
+            Vector2 feet = S(GameRoot.SubToTile(u.Pos)) + new Vector2(0, T * 0.18f);
+            float height = u.Robot is null ? 0.55f : 0.35f;
+            for (int i = 0; i <= 4; i++)
+            {
+                float f = i / 4f;
+                DrawEllipse(feet + (lean * height * f), T * (0.17f - (f * 0.05f)), T * 0.09f, Colors.White);
+            }
+        }
+
+        foreach (Train t in P.Trains)
+        {
+            for (int i = 0; i < t.Vehicles.Count; i++)
+            {
+                Vector2 c = S(GameRoot.SubToTile(P.VehicleSub(t, i)));
+                Vector2 half = new Vector2(T * 0.42f, T * 0.42f);
+                for (int s = 0; s <= 3; s++)
+                {
+                    DrawRect(new Rect2(c - half + (lean * 0.45f * s / 3f), half * 2), Colors.White);
+                }
+            }
+        }
+
+        // Wires: the same sagging line, each point's shadow cast from its height above the ground.
+        foreach (PowerNetwork net in P.Networks.Values)
+        {
+            foreach ((Building from, Building to) in WireTree(net))
+            {
+                Vector2 a = S(from.Origin), b = a + (Root.WrapDelta(new Vector2(from.Origin.X, from.Origin.Y), new Vector2(to.Origin.X, to.Origin.Y)) * T);
+                float h0 = Baked(from) is { Anchor: { } aa } ? -aa.Y + 0.5f : 0.4f;
+                float h1 = Baked(to) is { Anchor: { } ab } ? -ab.Y + 0.5f : 0.4f;
+                Vector2[] line = new Vector2[9];
+                for (int k = 0; k < line.Length; k++)
+                {
+                    float f = k / (float)(line.Length - 1);
+                    float h = Mathf.Lerp(h0, h1, f) / Art.SpriteBaker.Rise(1) * (1 - (0.5f * 4 * f * (1 - f) * 0.25f));
+                    line[k] = a.Lerp(b, f) + new Vector2(T * 0.5f, T * 0.5f) + (lean * h);
+                }
+
+                if (OnScreen(new Rect2(line[0], Vector2.Zero).Expand(line[^1])))
+                {
+                    DrawPolyline(line, Colors.White, Mathf.Max(1, T * 0.035f), true);
+                }
+            }
+        }
+    }
+
     private void DrawTrain(Train t)
     {
         for (int i = t.Vehicles.Count - 1; i >= 0; i--)
@@ -539,7 +591,6 @@ public partial class WorldView
             bool horiz = Mathf.Abs(fwd.X) > 0.5f;
             Vector2 size = horiz ? new Vector2(T * 0.94f, T * 0.66f) : new Vector2(T * 0.66f, T * 0.94f);
             Rect2 r = new Rect2(c - (size / 2), size);
-            DropShadow(r, 0.4f);
             switch (v.Def.Kind)
             {
                 case VehicleKind.Cart:

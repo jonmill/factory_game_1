@@ -17,10 +17,10 @@ public static class Palette
     private static readonly Dictionary<string, StandardMaterial3D> _cache = [];
 
     /// <summary>Weathered iron with rust and grime.</summary>
-    public static StandardMaterial3D Iron => Get("iron", () => Textured(Weathered(new Color(0.42f, 0.38f, 0.34f), new Color(0.58f, 0.3f, 0.13f), 11), 0.55f, 0.6f, 1.5f));
+    public static StandardMaterial3D Iron => Get("iron", () => Textured(Weathered(new Color(0.47f, 0.42f, 0.36f), new Color(0.6f, 0.32f, 0.14f), 11), 0.55f, 0.6f, 1.5f));
 
     /// <summary>Dark, heavily used iron for frames and fittings.</summary>
-    public static StandardMaterial3D DarkIron => Get("dark-iron", () => Textured(Weathered(new Color(0.22f, 0.2f, 0.19f), new Color(0.36f, 0.2f, 0.1f), 12), 0.55f, 0.6f, 1.5f));
+    public static StandardMaterial3D DarkIron => Get("dark-iron", () => Textured(Weathered(new Color(0.27f, 0.24f, 0.21f), new Color(0.38f, 0.22f, 0.11f), 12), 0.55f, 0.6f, 1.5f));
 
     /// <summary>Rust-red iron.</summary>
     public static StandardMaterial3D Rust => Get("rust", () => Textured(Weathered(new Color(0.48f, 0.25f, 0.13f), new Color(0.3f, 0.15f, 0.08f), 13), 0.3f, 0.85f, 2f));
@@ -50,13 +50,13 @@ public static class Palette
     public static StandardMaterial3D Hazard => Get("hazard", () => Textured(Stripes(), 0.1f, 0.55f, 2f));
 
     /// <summary>Bone-grey ceramic hull panels with fine seams.</summary>
-    public static StandardMaterial3D Hull => Get("hull", () => Textured(Panels(new Color(0.6f, 0.57f, 0.51f), 19), 0.08f, 0.5f, 1f));
+    public static StandardMaterial3D Hull => Get("hull", () => Textured(Panels(new Color(0.52f, 0.49f, 0.43f), 19), 0.08f, 0.5f, 1f));
 
     /// <summary>Grey composite for the darker parts of high-tech machines.</summary>
-    public static StandardMaterial3D HullDark => Get("hull-dark", () => Textured(Panels(new Color(0.27f, 0.28f, 0.29f), 20), 0.45f, 0.45f, 1f));
+    public static StandardMaterial3D HullDark => Get("hull-dark", () => Textured(Panels(new Color(0.29f, 0.26f, 0.22f), 20), 0.45f, 0.45f, 1f));
 
     /// <summary>Dark, glossy glass.</summary>
-    public static StandardMaterial3D Glass => Get("glass", () => Plain(new Color(0.03f, 0.06f, 0.09f), 0.65f, 0.05f));
+    public static StandardMaterial3D Glass => Get("glass", () => Plain(new Color(0.05f, 0.055f, 0.06f), 0.65f, 0.08f));
 
     /// <summary>Tinted see-through glass for domes and windows.</summary>
     public static StandardMaterial3D ClearGlass => Get("clear-glass", () =>
@@ -92,11 +92,42 @@ public static class Palette
     public static StandardMaterial3D Paint(Color color, float metallic = 0.2f, float roughness = 0.5f) =>
         Get($"paint-{color.ToHtml()}-{metallic}-{roughness}", () => Plain(color, metallic, roughness));
 
-    /// <summary>The unshaded version of a glow material, for the glow pass.</summary>
-    /// <param name="glow">A material made by <see cref="Glow"/>.</param>
-    /// <returns>An unshaded material in the glow colour.</returns>
-    public static StandardMaterial3D GlowOnly(StandardMaterial3D glow) => Get($"only-{glow.Emission.ToHtml()}", () =>
-        new StandardMaterial3D { ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded, AlbedoColor = glow.Emission });
+    /// <summary>A glow material as it looks while its machine is idle: the same colour, barely glowing.</summary>
+    /// <param name="glow">A material made by <see cref="Glow"/> or <see cref="Fire"/>.</param>
+    /// <returns>The dimmed material.</returns>
+    public static StandardMaterial3D Dim(StandardMaterial3D glow) => Get($"dim-{glow.GetInstanceId()}", () =>
+    {
+        StandardMaterial3D m = (StandardMaterial3D)glow.Duplicate();
+        m.EmissionEnergyMultiplier = glow.EmissionEnergyMultiplier * 0.12f;
+        m.AlbedoColor = glow.AlbedoColor.Darkened(0.5f);
+
+        return m;
+    });
+
+    /// <summary>Burning fuel: a flickering ramp from deep red through orange to a near-white core.</summary>
+    /// <param name="energy">Emission strength.</param>
+    /// <returns>The material.</returns>
+    public static StandardMaterial3D Fire(float energy = 2.5f) => Get($"fire-{energy}", () =>
+    {
+        Image img = Fill((x, y) =>
+        {
+            float n = (Noise(x, y, 41) * 0.7f) + (Noise(x * 3 % Size, y * 3 % Size, 42) * 0.3f);
+            float t = Mathf.Clamp((n - 0.3f) * 1.9f, 0, 1);
+
+            return t < 0.5f ? new Color(0.55f, 0.08f, 0.02f).Lerp(new Color(1f, 0.45f, 0.08f), t * 2) : new Color(1f, 0.45f, 0.08f).Lerp(new Color(1f, 0.9f, 0.6f), (t - 0.5f) * 2);
+        });
+        img.GenerateMipmaps();
+        StandardMaterial3D m = Plain(new Color(0.3f, 0.1f, 0.03f), 0f, 0.6f);
+        m.EmissionEnabled = true;
+        m.Emission = new Color(1f, 0.5f, 0.15f);
+        m.EmissionTexture = ImageTexture.CreateFromImage(img);
+        m.EmissionOperator = BaseMaterial3D.EmissionOperatorEnum.Multiply;
+        m.EmissionEnergyMultiplier = energy;
+        m.Uv1Triplanar = true;
+        m.Uv1Scale = new Vector3(3, 3, 3);
+
+        return m;
+    });
 
     private static StandardMaterial3D Get(string key, System.Func<StandardMaterial3D> make)
     {
@@ -223,6 +254,6 @@ public static class Palette
         bool bus = ((x % 64) < 1) || ((y % 64) < 1);
         bool finger = (x % 16) == 8;
 
-        return bus ? new Color(0.45f, 0.5f, 0.6f) : finger ? new Color(0.14f, 0.22f, 0.42f) : new Color(0.1f, 0.17f, 0.36f).Lightened(Noise(x, y, 33) * 0.1f);
+        return bus ? new Color(0.42f, 0.42f, 0.42f) : finger ? new Color(0.13f, 0.15f, 0.2f) : new Color(0.13f, 0.16f, 0.22f).Lightened(Noise(x, y, 33) * 0.12f);
     });
 }
