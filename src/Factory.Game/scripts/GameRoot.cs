@@ -247,7 +247,7 @@ public partial class GameRoot : Node2D
         Color tint = WorldView.Hex(def.Color);
         float peak = Mathf.Max(tint.R, Mathf.Max(tint.G, tint.B));
         tint = new Color(tint.R / peak, tint.G / peak, tint.B / peak);
-        Color grade = Colors.White.Lerp(tint, 0.1f);
+        Color grade = Colors.White.Lerp(tint, 0.18f);
         float sun = Mathf.Clamp(def.Sunlight / 100f, 0.5f, 1.6f);
         float bright = Mathf.Lerp(0.9f, 1f, Mathf.Clamp((sun - 0.5f) / 0.5f, 0, 1));
         if (sun > 1)

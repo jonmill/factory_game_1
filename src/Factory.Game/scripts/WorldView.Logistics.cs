@@ -12,14 +12,13 @@ namespace Factory.Game;
 public partial class WorldView
 {
     private static readonly Color _beltBed = new(0.15f, 0.135f, 0.12f);
+    private static readonly float[] _railSides = [0.42f, -0.42f];
 
     private void DrawBelt(Building b, Rect2 r, Color accent)
     {
         bool across = b.Rot is SimDir.North or SimDir.South;
         Rect2 bed = across ? new Rect2(r.Position + new Vector2(T * 0.1f, 0), new Vector2(T * 0.8f, T)) : new Rect2(r.Position + new Vector2(0, T * 0.1f), new Vector2(T, T * 0.8f));
-        // The belt stands a hand's breadth off the ground: its shadow falls with the sun, then the bed.
-        Vector2 drop = Art.SpriteBaker.ShadowLean * T * 0.12f;
-        DrawRect(new Rect2(bed.Position + drop, bed.Size), new Color(WorldView.ShadowTint.R, WorldView.ShadowTint.G, WorldView.ShadowTint.B, 0.45f));
+        // (Its shadow is drawn in the shared shadow layer: see DrawFlatShadow.)
         DrawRect(bed, _beltBed);
         Vector2 dir = new Vector2(b.Rot.Vec().X, b.Rot.Vec().Y);
         Vector2 side = new Vector2(-dir.Y, dir.X);
@@ -44,14 +43,14 @@ public partial class WorldView
         }
 
         // Steel side rails with a stripe of the belt's colour and a lit edge.
-        foreach (float k in new[] { 0.42f, -0.42f })
+        Vector2 lit = -Art.SpriteBaker.ShadowLean.Normalized();
+        foreach (float k in _railSides)
         {
             Vector2 a0 = c + (side * T * k) - (dir * T * 0.5f), a1 = c + (side * T * k) + (dir * T * 0.5f);
             DrawLine(a0, a1, _darkIron, Mathf.Max(1.5f, T * 0.09f));
             DrawLine(a0, a1, accent.Lerp(new Color(0.35f, 0.31f, 0.26f), 0.45f).Darkened(0.2f), Mathf.Max(1, T * 0.045f));
 
             // The rail's top edge catches the sun on the side facing it.
-            Vector2 lit = -Art.SpriteBaker.ShadowLean.Normalized();
             float facing = Mathf.Clamp(side.Dot(lit) * Mathf.Sign(k), 0, 1);
             DrawLine(a0 + (side * T * 0.03f * Mathf.Sign(k)), a1 + (side * T * 0.03f * Mathf.Sign(k)), new Color(1f, 0.92f, 0.78f, 0.1f + (0.25f * facing)), 1);
         }

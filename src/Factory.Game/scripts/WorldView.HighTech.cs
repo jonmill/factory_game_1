@@ -406,9 +406,6 @@ public partial class WorldView
     private void DrawSorterArm(Building b, Rect2 r, Color accent)
     {
         Vector2 c = r.GetCenter();
-        Color shade = new Color(ShadowTint.R, ShadowTint.G, ShadowTint.B, 0.5f);
-        Vector2 lean = Art.SpriteBaker.ShadowLean * T;
-        DrawCircle(c + (lean * 0.12f), T * 0.25f, shade);
         DrawCircle(c, T * 0.25f, _darkIron);
         DrawCircle(c, T * 0.2f, _hullShade);
         DrawCircle(c - new Vector2(T * 0.03f, T * 0.035f), T * 0.15f, _hullLight);
@@ -423,8 +420,6 @@ public partial class WorldView
         // A long arm swings twice as far, from two tiles behind to two ahead.
         float reach = 0.42f + (0.9f * (b.Def.Reach - 1));
         Vector2 hand = c + (v * T * Mathf.Lerp(-reach, reach, swing));
-        // The arm is raised, so its shadow lies further along the sun than the base's.
-        DrawLine(c + (lean * 0.3f), hand + (lean * 0.3f), shade, T * 0.1f);
         DrawLine(c, hand, _hullShade, T * 0.11f);
         DrawLine(c - new Vector2(0, T * 0.02f), hand - new Vector2(0, T * 0.02f), _hullLight, T * 0.05f);
         DrawCircle(hand, T * 0.09f, _darkIron);

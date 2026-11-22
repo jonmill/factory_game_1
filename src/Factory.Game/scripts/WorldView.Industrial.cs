@@ -406,8 +406,8 @@ public partial class WorldView
     /// </summary>
     private void DrawPowerWires()
     {
-        Color copper = new Color(0.72f, 0.45f, 0.25f);
-        Color shine = new Color(0.95f, 0.7f, 0.45f);
+        Color copper = new Color(0.58f, 0.4f, 0.27f);
+        Color shine = new Color(0.9f, 0.7f, 0.5f);
         foreach (PowerNetwork net in P.Networks.Values)
         {
             foreach ((Building from, Building to) in WireTree(net))
@@ -429,7 +429,7 @@ public partial class WorldView
                 }
 
                 DrawPolyline(wire, copper.Darkened(0.25f), Mathf.Max(1.2f, T * 0.045f), true);
-                DrawPolyline(wire, A(shine, 0.55f), Mathf.Max(0.6f, T * 0.015f), true);
+                DrawPolyline(wire, A(shine, 0.35f), Mathf.Max(0.6f, T * 0.015f), true);
             }
         }
     }

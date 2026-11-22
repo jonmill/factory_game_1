@@ -96,6 +96,7 @@ public partial class WorldView : Node2D
                 foreach (Building b in P.Buildings)
                 {
                     DrawBakedShadow(b);
+                    DrawFlatShadow(b);
                 }
 
                 DrawMovingShadows();
@@ -150,6 +151,37 @@ public partial class WorldView : Node2D
     private Art.BakedSprite? Baked(Building b) => Root.Art.TryGet(b.Def.Id, b.Rot, out Art.BakedSprite sprite) ? sprite : null;
 
     /// <summary>The shadow mask, in white; the shadow layer tints and fades all of them together.</summary>
+    /// <summary>
+    /// Shadows for the flat-drawn belts and sorters, in the shared shadow group like everything else's, so a belt
+    /// line's shadows merge instead of stacking on each other and on the buildings' shadows.
+    /// </summary>
+    private void DrawFlatShadow(Building b)
+    {
+        Rect2 r = RectOf(b.Origin, b.W, b.H);
+        if (OnScreen(r) == false)
+        {
+            return;
+        }
+
+        Vector2 lean = Art.SpriteBaker.ShadowLean * T;
+        if (b.Def.Kind == BuildingKind.Belt)
+        {
+            bool across = b.Rot is Factory.Sim.Dir.North or Factory.Sim.Dir.South;
+            Rect2 bed = across ? new Rect2(r.Position + new Vector2(T * 0.1f, 0), new Vector2(T * 0.8f, T)) : new Rect2(r.Position + new Vector2(0, T * 0.1f), new Vector2(T, T * 0.8f));
+            DrawRect(new Rect2(bed.Position + (lean * 0.12f), bed.Size), Colors.White);
+        }
+        else if (b.Def.Kind == BuildingKind.Sorter)
+        {
+            Vector2 c = r.GetCenter();
+            float swing = b.Def.Period > 0 ? b.Progress / (b.Def.Period * 100f) : 0;
+            Vector2 v = new Vector2(b.Rot.Vec().X, b.Rot.Vec().Y);
+            float reach = 0.42f + (0.9f * (b.Def.Reach - 1));
+            Vector2 hand = c + (v * T * Mathf.Lerp(-reach, reach, swing));
+            DrawCircle(c + (lean * 0.12f), T * 0.25f, Colors.White);
+            DrawLine(c + (lean * 0.3f), hand + (lean * 0.3f), Colors.White, T * 0.1f);
+        }
+    }
+
     private void DrawBakedShadow(Building b)
     {
         if ((Baked(b) is { } sprite) && (sprite.Shadows.Length > 0) && OnScreen(RectOf(b.Origin, b.W, b.H)))
