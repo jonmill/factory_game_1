@@ -269,6 +269,6 @@ public static class Palette
         bool bus = ((x % 64) < 1) || ((y % 64) < 1);
         bool finger = (x % 16) == 8;
 
-        return bus ? new Color(0.42f, 0.42f, 0.42f) : finger ? new Color(0.13f, 0.15f, 0.2f) : new Color(0.13f, 0.16f, 0.22f).Lightened(Noise(x, y, 33) * 0.12f);
+        return bus ? new Color(0.62f, 0.58f, 0.5f) : finger ? new Color(0.24f, 0.24f, 0.26f) : new Color(0.2f, 0.21f, 0.25f).Lightened(Noise(x, y, 33) * 0.12f);
     });
 }

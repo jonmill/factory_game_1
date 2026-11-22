@@ -92,7 +92,9 @@ public static partial class Models
     private static void Refinery(Kit k, Color accent)
     {
         Foundation(k, 3, 3, Palette.Concrete, 0.05f, 0.1f);
-        k.Bevel(0.2f, 1.7f, 2.6f, 1.1f, 0.7f, 0.12f, Palette.Oxide, 0.1f);
+        k.Bevel(0.2f, 1.7f, 2.6f, 1.1f, 0.7f, 0.12f, Palette.Iron, 0.1f);
+        k.Slab(0.2f, 1.7f, 2.6f, 0.06f, 0.72f, Palette.Oxide, 0.1f);
+        k.Clutter(0.4f, 1.85f, 2.2f, 0.7f, 0.8f, 41, 6, Palette.DarkIron);
         k.Slab(0.2f, 2.7f, 2.6f, 0.08f, 0.1f, Palette.Hazard, 0.1f);
 
         // Two distillation columns with ladders and bands, a squat storage tank, and pipework between.
@@ -109,8 +111,9 @@ public static partial class Models
             k.Slab(x + 0.05f, z + r, 0.03f, 0.04f, h - 0.3f, Palette.Yellow, 0.1f);
         }
 
-        k.Cyl(new Vector3(2.35f, 0.1f, 1.2f), 0.48f, 0.75f, Palette.Yellow, -1, 28);
-        k.Ball(new Vector3(2.35f, 0.85f, 1.2f), 0.48f, Palette.Yellow, true);
+        k.Cyl(new Vector3(2.35f, 0.1f, 1.2f), 0.48f, 0.75f, Palette.Iron, -1, 28);
+        k.Ball(new Vector3(2.35f, 0.85f, 1.2f), 0.48f, Palette.Iron, true);
+        k.BoltCircle(new Vector3(2.35f, 1.33f, 1.2f), 0.12f, 8, Palette.Steel);
         k.Rod(new Vector3(0.8f, 1.6f, 1.0f), new Vector3(1.6f, 1.6f, 0.85f), 0.07f, Palette.Iron);
         k.Rod(new Vector3(1.6f, 0.9f, 0.85f), new Vector3(2.35f, 0.9f, 1.2f), 0.07f, Palette.Iron);
         k.Rod(new Vector3(0.8f, 0.5f, 1.0f), new Vector3(0.8f, 0.5f, 1.9f), 0.06f, Palette.Iron);
@@ -128,7 +131,8 @@ public static partial class Models
     private static void Generator(Kit k, Color accent)
     {
         Foundation(k, 2, 2, Palette.Concrete, 0.05f, 0.08f);
-        k.Bevel(0.2f, 0.4f, 1.6f, 1.3f, 0.75f, 0.12f, Palette.Yellow, 0.08f);
+        k.Bevel(0.2f, 0.4f, 1.6f, 1.3f, 0.75f, 0.12f, Palette.DarkIron, 0.08f);
+        k.Slab(0.2f, 1.62f, 1.6f, 0.06f, 0.6f, Palette.Yellow, 0.1f);
         k.Slab(0.2f, 1.62f, 1.6f, 0.08f, 0.1f, Palette.Hazard, 0.08f);
 
         // Radiator fins on the front, a cooling fan on top, and two exhaust stacks.

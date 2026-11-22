@@ -271,15 +271,50 @@ public static partial class Models
     /// </summary>
     private static void TechBody(Kit k, int w, int h, float bodyHeight, Color accent)
     {
-        // Splayed feet at the corners, each on a pad with a strut up under the hull.
+        // Three families of base, picked by the machine's colour and size, so a row of machines doesn't
+        // stand on one identical kit: splayed feet, skid rails, or squat hydraulic jacks.
+        int family = (int)((accent.ToRgba32() / 7) + (uint)(w * 5) + (uint)h) % 3;
         Vector3 mid = new Vector3(w / 2f, 0, h / 2f);
-        foreach ((float x, float z) in new[] { (0.16f, 0.16f), (w - 0.16f, 0.16f), (0.16f, h - 0.16f), (w - 0.16f, h - 0.16f) })
+        (float X, float Z)[] corners = [(0.16f, 0.16f), (w - 0.16f, 0.16f), (0.16f, h - 0.16f), (w - 0.16f, h - 0.16f)];
+        switch (family)
         {
-            Vector3 pad = new Vector3(x, 0, z);
-            Vector3 toMid = (mid - pad).Normalized();
-            k.Cyl(pad, 0.13f, 0.05f, Palette.HullDark, 0.1f, 10);
-            k.Rod(pad + new Vector3(0, 0.04f, 0), pad + (toMid * 0.32f) + new Vector3(0, 0.3f, 0), 0.04f, Palette.Steel, 8);
-            k.Rivets(pad + new Vector3(-0.07f, 0.05f, 0), pad + new Vector3(0.07f, 0.05f, 0), 2, 0.018f, Palette.Steel);
+            case 0:
+                foreach ((float x, float z) in corners)
+                {
+                    Vector3 pad = new Vector3(x, 0, z);
+                    Vector3 toMid = (mid - pad).Normalized();
+                    k.Cyl(pad, 0.13f, 0.05f, Palette.HullDark, 0.1f, 10);
+                    k.Rod(pad + new Vector3(0, 0.04f, 0), pad + (toMid * 0.32f) + new Vector3(0, 0.3f, 0), 0.04f, Palette.Steel, 8);
+                    k.Rivets(pad + new Vector3(-0.07f, 0.05f, 0), pad + new Vector3(0.07f, 0.05f, 0), 2, 0.018f, Palette.Steel);
+                }
+
+                break;
+            case 1:
+                // Two steel skid rails the length of the machine, with tie bars and towing eyes.
+                foreach (float x in new[] { 0.18f, w - 0.36f })
+                {
+                    k.Slab(x, 0.1f, 0.18f, h - 0.2f, 0.1f, Palette.DarkIron);
+                    k.Ring(new Vector3(x + 0.09f, 0.06f, 0.08f), 0.03f, 0.05f, Palette.Steel);
+                    k.Ring(new Vector3(x + 0.09f, 0.06f, h - 0.08f), 0.03f, 0.05f, Palette.Steel);
+                }
+
+                for (float z = 0.45f; z < h - 0.3f; z += 0.7f)
+                {
+                    k.Slab(0.3f, z, w - 0.6f, 0.08f, 0.06f, Palette.DarkIron, 0.04f);
+                }
+
+                break;
+            default:
+                // Squat jacks: a footplate, a cylinder and a polished ram at each corner.
+                foreach ((float x, float z) in corners)
+                {
+                    Vector3 pad = new Vector3(x + (x < 1 ? 0.06f : -0.06f), 0, z + (z < 1 ? 0.06f : -0.06f));
+                    k.Box(pad + new Vector3(0, 0.02f, 0), new Vector3(0.22f, 0.04f, 0.22f), Palette.DarkIron);
+                    k.Cyl(pad + new Vector3(0, 0.04f, 0), 0.06f, 0.1f, Palette.Yellow, -1, 10);
+                    k.Cyl(pad + new Vector3(0, 0.14f, 0), 0.035f, 0.12f, Palette.Steel, -1, 10);
+                }
+
+                break;
         }
 
         foreach (float x in new[] { 0.42f, w - 0.58f })
@@ -290,12 +325,52 @@ public static partial class Models
         k.Bevel(0.32f, 0.34f, w - 0.64f, h - 0.68f, 0.11f, 0.22f, Palette.HullDark, 0.12f);
         k.Bevel(0.28f, 0.3f, w - 0.56f, h - 0.6f, bodyHeight - 0.035f, 0.28f, Palette.Hull, 0.23f);
 
+        Dress(k, w, h, 0.195f + bodyHeight, accent);
+
         // Service hatch and status lamp on the camera side.
         k.Box(new Vector3(w - 0.8f, 0.2f + (bodyHeight * 0.45f), h - 0.29f), new Vector3(0.34f, Mathf.Min(0.3f, bodyHeight * 0.55f), 0.03f), Palette.Paint(Muted(accent), 0.3f, 0.5f));
         k.Ball(new Vector3(0.52f, 0.2f + bodyHeight, h - 0.52f), 0.045f, Palette.Glow(new Color(0.4f, 1f, 0.5f), ((int)(k.Phase * 16) % 5) < 3 ? 3f : 0.8f));
 
         // Work lights under the hull wash the ground round the feet in the machine's colour.
         k.Light(new Vector3(w / 2f, 0.1f, h - 0.35f), accent.Lerp(Colors.White, 0.4f), 1.1f, 0.5f);
+    }
+
+    /// <summary>
+    /// The fittings every high-tech body carries, so none reads as a bare block: a coolant pipe along the west
+    /// side and a cable loom on the east with a junction box, a vent and a rivet row on the camera face, a
+    /// ladder up the east side, and a strip of roof fittings along the back and right edges. The arrangement
+    /// is seeded by the machine's colour, so each machine's is its own.
+    /// </summary>
+    private static void Dress(Kit k, int w, int h, float top, Color accent)
+    {
+        int seed = (int)(accent.ToRgba32() % 9973) + (w * 31) + h;
+        float mid = 0.23f + ((top - 0.23f) * 0.5f);
+
+        // West: a pipe on stand-off brackets, dropping to the ground at the back.
+        float px = 0.22f;
+        k.Pipe(0.035f, Palette.Steel, new Vector3(px, 0.05f, 0.5f), new Vector3(px, mid, 0.5f), new Vector3(px, mid, h - 0.55f), new Vector3(px + 0.12f, mid, h - 0.55f));
+        for (float z = 0.8f; z < h - 0.6f; z += 0.5f)
+        {
+            k.Box(new Vector3(px + 0.04f, mid, z), new Vector3(0.08f, 0.03f, 0.04f), Palette.HullDark);
+        }
+
+        k.Valve(new Vector3(px, mid + 0.03f, (h / 2f) + 0.1f), Palette.Oxide);
+
+        // East: a cable loom running into a junction box, and a ladder to the roof.
+        float ex = w - 0.24f;
+        k.Slab(ex - 0.06f, h * 0.35f, 0.12f, 0.3f, 0.26f, Palette.HullDark, mid - 0.12f);
+        k.Box(new Vector3(ex + 0.005f, mid + 0.02f, (h * 0.35f) + 0.15f), new Vector3(0.02f, 0.12f, 0.18f), Palette.Paint(Muted(accent), 0.3f, 0.5f));
+        k.Cable(new Vector3(ex, mid - 0.1f, (h * 0.35f) + 0.05f), new Vector3(w - 0.12f, 0.02f, 0.3f), 0.08f, Palette.Rubber);
+        k.Cable(new Vector3(ex, mid - 0.1f, (h * 0.35f) + 0.25f), new Vector3(w - 0.1f, 0.02f, h - 0.2f), 0.1f, Palette.Rubber);
+        k.Ladder(new Vector3(ex + 0.02f, 0.05f, h - 0.7f), new Vector3(ex + 0.02f, top + 0.05f, h - 0.7f), Vector3.Right, Palette.Steel);
+
+        // Camera face: a vent and a rivet row under the roof line.
+        k.Vent(new Vector3(0.75f, mid, h - 0.29f), 0.4f, Mathf.Min(0.2f, (top - 0.25f) * 0.6f), Vector3.Back, Palette.Steel);
+        k.Rivets(new Vector3(0.45f, top - 0.04f, h - 0.295f), new Vector3(w - 0.45f, top - 0.04f, h - 0.295f), (int)(w * 7), 0.012f, Palette.Steel);
+
+        // Roof: fittings along the back edge and down the right-hand side.
+        k.Clutter(0.4f, 0.36f, w - 0.8f, 0.2f, top, seed, 3 + w, Palette.HullDark);
+        k.Clutter(w - 0.55f, 0.6f, 0.2f, h - 1.1f, top, seed + 1, 1 + h, Palette.HullDark);
     }
 
     /// <summary>A bed of burning fuel: a dark rim, a red-orange layer and a near-white core, hottest in the middle.</summary>

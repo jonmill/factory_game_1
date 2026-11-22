@@ -84,9 +84,9 @@ void fragment() {
              + texture(pattern, p.xz * pattern_scale).rgb * bw.y
              + texture(pattern, p.xy * pattern_scale).rgb * bw.z;
     vec3 col = base_color.rgb * pat;
-    float mottle = fbm(p * 3.0);
+    float mottle = fbm(p * 5.5);
     float grain = noise(p * 90.0);
-    col *= 0.84 + 0.3 * mottle;
+    col *= 0.88 + 0.22 * mottle;
     col *= 0.94 + 0.12 * grain;
     float rough = roughness;
     float metal = metallic;
@@ -113,7 +113,7 @@ void fragment() {
     rough = mix(rough, 0.9, rustMask);
     metal = mix(metal, 0.1, rustMask);
 
-    float dust = smoothstep(0.55, 0.95, n.y) * smoothstep(0.35, 0.75, fbm(p * 5.0 + vec3(11.0))) * grime * 0.55;
+    float dust = smoothstep(0.55, 0.95, n.y) * smoothstep(0.4, 0.8, fbm(p * 11.0 + vec3(11.0))) * grime * 0.45;
     float splash = low * smoothstep(0.3, 0.7, fbm(p * 7.0 + vec3(2.0))) * grime;
     col = mix(col, dust_color.rgb, clamp(dust + splash * 0.7, 0.0, 0.85));
     rough = mix(rough, 0.95, dust + splash);
@@ -122,7 +122,7 @@ void fragment() {
     float edge = 1.0 - COLOR.g;
     float chip = smoothstep(0.35, 0.6, noise(p * 40.0) * 0.6 + noise(p * 9.0) * 0.6);
     float worn = edge * chip * wear;
-    col = mix(col, wear_color.rgb, worn * 0.85);
+    col = mix(col, wear_color.rgb * 1.15, worn);
     metal = mix(metal, 0.85, worn);
     rough = mix(rough, 0.28, worn);
 
