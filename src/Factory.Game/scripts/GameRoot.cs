@@ -78,6 +78,7 @@ public partial class GameRoot : Node2D
     private WorldView _view = null!;
     private FogLayer _fog = null!;
     private Hud _hud = null!;
+    private Vector2 _camOffset;
 
     /// <summary>The game's sound: effects, clicks and ambience.</summary>
     public Audio.SoundPlayer Sound { get; private set; } = null!;
@@ -423,7 +424,7 @@ public partial class GameRoot : Node2D
         // Camera follows the leader across the wrap; looking at another planet, the keys pan it instead.
         if (Leader.Planet == Planet)
         {
-            Vector2 lt = SubToTile(Leader.Pos);
+            Vector2 lt = SubToTile(Leader.Pos) + _camOffset;
             Cam += WrapDelta(Cam, lt) * Mathf.Min(1f, (float)delta * 6f);
         }
         else
@@ -1256,7 +1257,7 @@ public partial class GameRoot : Node2D
                 ViewPlanet(index);
             }
 
-            // FACTORY_ZOOM=<f> and FACTORY_CAM=<x>,<y> (a tile) frame screenshots of a loaded game.
+            // FACTORY_ZOOM=<f> and FACTORY_CAM=<dx>,<dy> (tiles from the commander) frame screenshots of a loaded game.
             if (float.TryParse(System.Environment.GetEnvironmentVariable("FACTORY_ZOOM"), System.Globalization.CultureInfo.InvariantCulture, out float shotZoom))
             {
                 Zoom = shotZoom;
@@ -1265,7 +1266,7 @@ public partial class GameRoot : Node2D
             if ((System.Environment.GetEnvironmentVariable("FACTORY_CAM")?.Split(',') is [string cx, string cy]) && float.TryParse(cx, System.Globalization.CultureInfo.InvariantCulture, out float camX)
                 && float.TryParse(cy, System.Globalization.CultureInfo.InvariantCulture, out float camY))
             {
-                Cam = new Vector2(camX, camY);
+                _camOffset = new Vector2(camX, camY);
             }
 
             // FACTORY_WINDOW=save|load open the save and load windows.

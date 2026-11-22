@@ -89,19 +89,73 @@ public partial class WorldView
     /// <summary>Glow strength for accent trim: blooming while working, a calm unlit tone otherwise.</summary>
     private static Color Trim(Color accent, bool active, float boost = 1f) => active ? Hdr(accent, 1.35f * boost) : accent.Darkened(0.25f);
 
-    /// <summary>A clean white hull with a lit top edge, panel seams and accent trim.</summary>
+    /// <summary>
+    /// A clean white hull: a drop shadow, a darker base showing as the bevel, and a face lit from the top
+    /// left. Recessed panel seams, corner bolts, a vent grille and a status lamp break up the larger
+    /// faces; the accent trim along the foot blooms while the machine works.
+    /// </summary>
     private void Hull(Rect2 r, Color accent, bool active)
     {
         float cut = Mathf.Min(r.Size.X, r.Size.Y) * 0.18f;
+        float line = Mathf.Max(1, T * 0.03f);
         Vector2 off = new Vector2(T * 0.1f, T * 0.14f);
         DrawColoredPolygon(Chamfered(new Rect2(r.Position + off, r.Size), cut), new Color(0, 0, 0, 0.3f));
         DrawColoredPolygon(Chamfered(r, cut), _hullShade);
+
+        // The face: lighter at the top left, falling off toward the bottom right.
         Rect2 top = new Rect2(r.Position, new Vector2(r.Size.X, r.Size.Y * 0.92f)).Grow(-T * 0.02f);
-        DrawColoredPolygon(Chamfered(top, cut * 0.9f), _hullLight);
-        DrawLine(r.Position + new Vector2(cut, T * 0.03f), new Vector2(r.End.X - cut, r.Position.Y + (T * 0.03f)), Colors.White, Mathf.Max(1, T * 0.03f));
+        Vector2[] face = Chamfered(top, cut * 0.9f);
+        Color[] shade = new Color[face.Length];
+        for (int i = 0; i < face.Length; i++)
+        {
+            float k = (((face[i].X - top.Position.X) / top.Size.X) + ((face[i].Y - top.Position.Y) / top.Size.Y)) / 2;
+            shade[i] = _hullLight.Lightened(0.08f).Lerp(_hullLight.Darkened(0.07f), k);
+        }
+
+        DrawPolygon(face, shade);
+        DrawLine(r.Position + new Vector2(cut, T * 0.03f), new Vector2(r.End.X - cut, r.Position.Y + (T * 0.03f)), Colors.White, line);
+        DrawLine(r.Position + new Vector2(T * 0.03f, cut), new Vector2(r.Position.X + (T * 0.03f), r.End.Y - cut), new Color(1, 1, 1, 0.6f), line);
         Vector2[] outline = Chamfered(r, cut);
-        DrawPolyline([.. outline, outline[0]], _hullShade.Darkened(0.35f), Mathf.Max(1, T * 0.03f), true);
-        DrawLine(new Vector2(r.Position.X + (r.Size.X * 0.5f), r.Position.Y + cut), new Vector2(r.Position.X + (r.Size.X * 0.5f), r.End.Y - cut), _hullShade.Lightened(0.1f), 1);
+        DrawPolyline([.. outline, outline[0]], _hullShade.Darkened(0.35f), line, true);
+
+        // Recessed seams: a dark groove with a lit lip below or beside it.
+        Color groove = _hullShade.Darkened(0.05f), lip = new Color(1, 1, 1, 0.55f);
+        float seamY = r.Position.Y + (r.Size.Y * 0.3f);
+        DrawLine(new Vector2(r.Position.X + (T * 0.08f), seamY), new Vector2(r.End.X - (T * 0.08f), seamY), groove, 1);
+        DrawLine(new Vector2(r.Position.X + (T * 0.08f), seamY + 1), new Vector2(r.End.X - (T * 0.08f), seamY + 1), lip, 1);
+        foreach (float fx in new[] { 0.5f })
+        {
+            float x = r.Position.X + (r.Size.X * fx);
+            DrawLine(new Vector2(x, seamY), new Vector2(x, r.End.Y - cut), groove, 1);
+            DrawLine(new Vector2(x + 1, seamY), new Vector2(x + 1, r.End.Y - cut), lip, 1);
+        }
+
+        if (T >= 24)
+        {
+            // Bolts just inside each chamfer.
+            float inset = cut * 0.75f;
+            foreach (Vector2 bolt in new[] { r.Position + new Vector2(inset, inset), new Vector2(r.End.X - inset, r.Position.Y + inset), new Vector2(r.Position.X + inset, r.End.Y - inset - (T * 0.1f)), r.End - new Vector2(inset, inset + (T * 0.1f)) })
+            {
+                DrawCircle(bolt, T * 0.045f, _hullShade.Darkened(0.2f));
+                DrawCircle(bolt - new Vector2(T * 0.012f, T * 0.012f), T * 0.025f, _hullLight.Lightened(0.2f));
+            }
+
+            // A vent grille in the top-right panel of larger hulls, and a status lamp beside it.
+            if (r.Size.X > T * 1.8f)
+            {
+                Vector2 v = new Vector2(r.End.X - cut - (T * 0.5f), r.Position.Y + (T * 0.14f));
+                for (int i = 0; i < 4; i++)
+                {
+                    DrawLine(v + new Vector2(i * T * 0.1f, 0), v + new Vector2(i * T * 0.1f, T * 0.18f), _hullShade.Darkened(0.3f), Mathf.Max(1, T * 0.035f));
+                }
+
+                Vector2 lamp = new Vector2(r.Position.X + cut + (T * 0.12f), r.Position.Y + (T * 0.2f));
+                float blink = active ? 0.75f + (0.25f * Mathf.Sin(Time * 4f)) : 1f;
+                DrawCircle(lamp, T * 0.06f, _hullShade.Darkened(0.4f));
+                DrawCircle(lamp, T * 0.04f, active ? Hdr(new Color(0.4f, 1f, 0.5f), 1.3f * blink) : new Color(0.8f, 0.6f, 0.2f));
+            }
+        }
+
         Rect2 strip = new Rect2(new Vector2(r.Position.X + cut, r.End.Y - (T * 0.16f)), new Vector2(r.Size.X - (cut * 2), T * 0.05f));
         DrawRect(strip, Trim(accent, active));
     }

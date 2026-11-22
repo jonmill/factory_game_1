@@ -12,32 +12,51 @@ public partial class WorldView
 {
     private static readonly Color _cell = new(0.1f, 0.24f, 0.42f);
 
+    /// <summary>
+    /// A solar panel on a frame: a 4 × 4 grid of cells, each a little lighter at its top and split by fine
+    /// fingers, silver busbars between them, and a band of sky reflection drifting slowly across the glass.
+    /// </summary>
     private void DrawSolarPanel(Building b, Rect2 r, Color accent, bool working)
     {
         Rect2 frame = r.Grow(-T * 0.1f);
         DrawRect(new Rect2(frame.Position + new Vector2(T * 0.08f, T * 0.12f), frame.Size), new Color(0, 0, 0, 0.3f));
-        DrawRect(frame, _hullShade);
+        DrawRect(frame, _hullShade.Darkened(0.1f));
+        DrawLine(frame.Position, frame.Position + new Vector2(frame.Size.X, 0), _hullLight, Mathf.Max(1, T * 0.03f));
+        DrawLine(frame.Position, frame.Position + new Vector2(0, frame.Size.Y), _hullLight.Darkened(0.1f), Mathf.Max(1, T * 0.03f));
         Rect2 face = frame.Grow(-T * 0.08f);
-        DrawRect(face, _cell);
+        DrawRect(face, _cell.Darkened(0.4f));
 
-        // A 4 × 4 grid of cells with thin silver busbars; the sheen moves a little with the light.
         int n = 4;
         Vector2 cellSize = face.Size / n;
-        for (int i = 1; i < n; i++)
+        float gap = Mathf.Max(1, T * 0.03f);
+        for (int i = 0; i < n; i++)
         {
-            float x = face.Position.X + (cellSize.X * i);
-            float y = face.Position.Y + (cellSize.Y * i);
-            DrawLine(new Vector2(x, face.Position.Y), new Vector2(x, face.End.Y), _hullLight.Darkened(0.2f), Mathf.Max(1, T * 0.03f));
-            DrawLine(new Vector2(face.Position.X, y), new Vector2(face.End.X, y), _hullLight.Darkened(0.2f), Mathf.Max(1, T * 0.03f));
+            for (int j = 0; j < n; j++)
+            {
+                Rect2 cell = new Rect2(face.Position + new Vector2(cellSize.X * i, cellSize.Y * j), cellSize).Grow(-gap / 2);
+                Vector2 p0 = cell.Position, p1 = p0 + new Vector2(cell.Size.X, 0), p2 = cell.End, p3 = p0 + new Vector2(0, cell.Size.Y);
+                Color hi = _cell.Lightened(0.12f), lo = _cell.Darkened(0.12f);
+                DrawPolygon([p0, p1, p2, p3], [hi, hi.Lerp(lo, 0.5f), lo, hi.Lerp(lo, 0.5f)]);
+                if (T >= 40)
+                {
+                    DrawLine(p0 + new Vector2(cell.Size.X / 2, 0), p3 + new Vector2(cell.Size.X / 2, 0), A(_hullLight, 0.25f), 1);
+                }
+            }
         }
 
-        float sheen = working ? 0.22f + (Mathf.Sin((Time * 0.4f) + b.Id) * 0.06f) : 0.08f;
-        Vector2[] glint =
-        [
-            face.Position + new Vector2(face.Size.X * 0.15f, 0), face.Position + new Vector2(face.Size.X * 0.45f, 0),
-            face.Position + new Vector2(0, face.Size.Y * 0.45f), face.Position + new Vector2(0, face.Size.Y * 0.15f),
-        ];
-        DrawColoredPolygon(glint, new Color(1, 1, 1, sheen));
+        // The sky's reflection: a soft diagonal band that slides across over a minute or so.
+        float sweep = Mathf.PosMod((Time * 0.03f) + (b.Id * 0.137f), 1.6f) - 0.3f;
+        float alpha = working ? 0.16f : 0.07f;
+        Vector2 dA = face.Position + new Vector2(face.Size.X * sweep, 0);
+        float w = face.Size.X * 0.22f;
+        Vector2[] band = [dA, dA + new Vector2(w, 0), dA + new Vector2(w - (face.Size.X * 0.5f), face.Size.Y), dA + new Vector2(-face.Size.X * 0.5f, face.Size.Y)];
+        Godot.Collections.Array<Vector2[]> inside = Geometry2D.IntersectPolygons(band, new[] { face.Position, face.Position + new Vector2(face.Size.X, 0), face.End, face.Position + new Vector2(0, face.Size.Y) });
+        Vector2[] clipped = inside.Count > 0 ? inside[0] : [];
+        if (clipped.Length >= 3)
+        {
+            DrawColoredPolygon(clipped, new Color(0.85f, 0.95f, 1f, alpha));
+        }
+
         DrawRect(new Rect2(new Vector2(face.Position.X, face.End.Y - (T * 0.08f)), new Vector2(face.Size.X, T * 0.08f)), Trim(accent, working));
     }
 

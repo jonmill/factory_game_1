@@ -21,19 +21,37 @@ public partial class WorldView
         Vector2 dir = new Vector2(b.Rot.Vec().X, b.Rot.Vec().Y);
         Vector2 side = new Vector2(-dir.Y, dir.X);
         Vector2 c = r.GetCenter();
+        float phase = Mathf.PosMod(Time * b.Def.Speed * 60f / Fixed.One, 0.25f);
 
-        // Side rails in the belt's colour.
-        DrawLine(c + (side * T * 0.42f) - (dir * T * 0.5f), c + (side * T * 0.42f) + (dir * T * 0.5f), accent.Darkened(0.2f), Mathf.Max(1, T * 0.06f));
-        DrawLine(c - (side * T * 0.42f) - (dir * T * 0.5f), c - (side * T * 0.42f) + (dir * T * 0.5f), accent.Darkened(0.2f), Mathf.Max(1, T * 0.06f));
-
-        // Chevrons slide along with the belt.
-        float phase = Mathf.PosMod(Time * b.Def.Speed * 60f / Fixed.One, 0.5f);
-        for (int i = 0; i < 2; i++)
+        // Rubber slats across the belt, sliding with it; every other one catches a little light.
+        if (T >= 14)
         {
-            float along = -0.5f + phase + (i * 0.5f);
-            Vector2 tip = c + (dir * T * (along + 0.1f));
-            DrawPolyline([tip - (dir * T * 0.14f) + (side * T * 0.22f), tip, tip - (dir * T * 0.14f) - (side * T * 0.22f)], A(Colors.White, 0.12f), Mathf.Max(1, T * 0.05f));
+            for (int i = -2; i <= 2; i++)
+            {
+                float along = (i * 0.25f) + phase;
+                if (Mathf.Abs(along) > 0.5f)
+                {
+                    continue;
+                }
+
+                Vector2 at = c + (dir * T * along);
+                DrawLine(at + (side * T * 0.36f), at - (side * T * 0.36f), new Color(0, 0, 0, 0.28f), Mathf.Max(1, T * 0.04f));
+                DrawLine(at + (side * T * 0.36f) + (dir * T * 0.04f), at - (side * T * 0.36f) + (dir * T * 0.04f), A(Colors.White, 0.05f), 1);
+            }
         }
+
+        // Steel side rails with a stripe of the belt's colour and a lit edge.
+        foreach (float k in new[] { 0.42f, -0.42f })
+        {
+            Vector2 a0 = c + (side * T * k) - (dir * T * 0.5f), a1 = c + (side * T * k) + (dir * T * 0.5f);
+            DrawLine(a0, a1, _darkIron, Mathf.Max(1.5f, T * 0.09f));
+            DrawLine(a0, a1, accent.Darkened(0.15f), Mathf.Max(1, T * 0.045f));
+            DrawLine(a0 - (side * T * 0.03f * Mathf.Sign(k)), a1 - (side * T * 0.03f * Mathf.Sign(k)), A(Colors.White, 0.18f), 1);
+        }
+
+        // One faint chevron so the direction still reads at a glance.
+        Vector2 tip = c + (dir * T * ((phase * 2) - 0.15f));
+        DrawPolyline([tip - (dir * T * 0.12f) + (side * T * 0.18f), tip, tip - (dir * T * 0.12f) - (side * T * 0.18f)], A(Colors.White, 0.1f), Mathf.Max(1, T * 0.04f));
 
         // The items, from the back edge (0) to the front edge.
         foreach (BeltItem it in b.Lane)

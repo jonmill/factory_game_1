@@ -345,6 +345,73 @@ public static class Icons
             ci.DrawRect(new Rect2(m + new Vector2(-s * 0.07f, -s * 0.36f), new Vector2(s * 0.14f, s * 0.08f)), _iron.Lightened(0.3f));
             ci.DrawRect(cell, c.Darkened(0.5f), false, 1);
         }
+        else if (id == "crude-kerogen")
+        {
+            // Oily shale: dark slabs with a wet sheen.
+            Lump(ci, m + new Vector2(-s * 0.12f, s * 0.08f), s * 0.21f, c);
+            Lump(ci, m + new Vector2(s * 0.14f, s * 0.12f), s * 0.17f, c.Darkened(0.15f));
+            Lump(ci, m + new Vector2(s * 0.02f, -s * 0.12f), s * 0.18f, c.Lightened(0.05f));
+            ci.DrawArc(m + new Vector2(s * 0.02f, -s * 0.12f), s * 0.11f, Mathf.Pi * 1.1f, Mathf.Pi * 1.6f, 8, new Color(0.75f, 0.85f, 1f, 0.6f), Mathf.Max(1, s * 0.035f));
+            ci.DrawCircle(m + new Vector2(s * 0.18f, s * 0.3f), s * 0.05f, new Color(0.12f, 0.08f, 0.05f));
+        }
+        else if (id == "brimstone" || id == "hafnium-crystal")
+        {
+            // A cluster of sharp crystals; hafnium's glints.
+            Crystal(ci, m + new Vector2(-s * 0.15f, s * 0.32f), s * 0.15f, -0.45f, c.Darkened(0.1f));
+            Crystal(ci, m + new Vector2(s * 0.15f, s * 0.32f), s * 0.15f, 0.45f, c.Darkened(0.05f));
+            Crystal(ci, m + new Vector2(0, s * 0.36f), s * 0.24f, 0f, c);
+            if (id == "hafnium-crystal")
+            {
+                ci.DrawCircle(m + new Vector2(s * 0.02f, -s * 0.12f), s * 0.05f, WorldView.Hdr(c.Lightened(0.5f), 1.3f));
+            }
+        }
+        else if (id.EndsWith("-sand", System.StringComparison.Ordinal))
+        {
+            // A heaped mound of sand with a few scattered grains.
+            Vector2[] mound = [m + new Vector2(-s * 0.36f, s * 0.24f), m + new Vector2(-s * 0.2f, -s * 0.02f), m + new Vector2(0, -s * 0.14f), m + new Vector2(s * 0.2f, -s * 0.02f), m + new Vector2(s * 0.36f, s * 0.24f)];
+            ci.DrawColoredPolygon(mound, c.Darkened(0.15f));
+            ci.DrawColoredPolygon([mound[0], mound[1], mound[2], m + new Vector2(-s * 0.02f, s * 0.24f)], c);
+            ci.DrawPolyline(mound, c.Darkened(0.45f), Mathf.Max(1, s * 0.025f), true);
+            for (int i = 0; i < 6; i++)
+            {
+                Vector2 g = m + new Vector2(((i * 37 % 11) - 5) * s * 0.05f, ((i * 23 % 7) - 1) * s * 0.04f);
+                ci.DrawCircle(g, Mathf.Max(0.8f, s * 0.02f), c.Lightened(0.35f));
+            }
+        }
+        else if (id == "deuterium-ice")
+        {
+            // Two translucent ice blocks with bright edges.
+            foreach ((Vector2 o, float k) in new[] { (new Vector2(-s * 0.1f, s * 0.06f), 0.26f), (new Vector2(s * 0.12f, -s * 0.08f), 0.22f) })
+            {
+                Rect2 cube = new Rect2(m + o - new Vector2(s * k / 2, s * k / 2), new Vector2(s * k, s * k));
+                ci.DrawRect(cube, new Color(c.R, c.G, c.B, 0.75f));
+                ci.DrawRect(new Rect2(cube.Position, new Vector2(cube.Size.X, cube.Size.Y * 0.3f)), c.Lightened(0.4f));
+                ci.DrawRect(cube, c.Lightened(0.6f), false, Mathf.Max(1, s * 0.025f));
+                ci.DrawLine(cube.Position + new Vector2(cube.Size.X * 0.2f, cube.Size.Y * 0.55f), cube.Position + new Vector2(cube.Size.X * 0.45f, cube.Size.Y * 0.8f), new Color(1, 1, 1, 0.7f), Mathf.Max(1, s * 0.02f));
+            }
+        }
+        else if (id == "helium-3")
+        {
+            // A pressure bottle with a glowing charge in a window.
+            Rect2 bottle = new Rect2(m - new Vector2(s * 0.15f, s * 0.26f), new Vector2(s * 0.3f, s * 0.58f));
+            ci.DrawRect(bottle, new Color(0.55f, 0.6f, 0.68f));
+            ci.DrawCircle(new Vector2(m.X, bottle.Position.Y), s * 0.15f, new Color(0.55f, 0.6f, 0.68f));
+            ci.DrawRect(new Rect2(m - new Vector2(s * 0.05f, s * 0.42f), new Vector2(s * 0.1f, s * 0.08f)), new Color(0.3f, 0.32f, 0.36f));
+            ci.DrawCircle(m + new Vector2(0, s * 0.06f), s * 0.1f, WorldView.Hdr(c, 1.25f));
+            ci.DrawArc(m + new Vector2(0, s * 0.06f), s * 0.1f, 0, Mathf.Tau, 16, new Color(0.25f, 0.28f, 0.32f), Mathf.Max(1, s * 0.03f));
+            ci.DrawLine(bottle.Position + new Vector2(s * 0.05f, s * 0.02f), bottle.Position + new Vector2(s * 0.05f, bottle.Size.Y - (s * 0.05f)), new Color(1, 1, 1, 0.35f), Mathf.Max(1, s * 0.03f));
+        }
+        else if (id == "lanthanide-accelerant")
+        {
+            // A round flask of glowing liquid.
+            ci.DrawRect(new Rect2(m - new Vector2(s * 0.06f, s * 0.38f), new Vector2(s * 0.12f, s * 0.2f)), new Color(0.75f, 0.85f, 0.9f, 0.8f));
+            ci.DrawCircle(m + new Vector2(0, s * 0.1f), s * 0.26f, new Color(0.75f, 0.85f, 0.9f, 0.55f));
+            ci.DrawCircle(m + new Vector2(0, s * 0.14f), s * 0.21f, WorldView.Hdr(c, 1.15f));
+            ci.DrawCircle(m + new Vector2(0, s * 0.16f), s * 0.2f, c);
+            ci.DrawRect(new Rect2(m + new Vector2(-s * 0.2f, -s * 0.02f), new Vector2(s * 0.4f, s * 0.06f)), new Color(0.75f, 0.85f, 0.9f, 0.55f));
+            ci.DrawCircle(m + new Vector2(-s * 0.08f, s * 0.04f), s * 0.04f, new Color(1, 1, 1, 0.7f));
+            ci.DrawRect(new Rect2(m - new Vector2(s * 0.08f, s * 0.42f), new Vector2(s * 0.16f, s * 0.06f)), new Color(0.45f, 0.3f, 0.2f));
+        }
         else
         {
             ci.DrawRect(r.Grow(-s * 0.2f), c);

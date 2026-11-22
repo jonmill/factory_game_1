@@ -47,8 +47,47 @@ public partial class WorldView
         DropShadow(r);
         DrawRect(r, _darkIron);
         Rect2 body = r.Grow(-Mathf.Max(1.5f, T * 0.05f));
-        DrawRect(body, paint);
-        DrawRect(new Rect2(body.Position, new Vector2(body.Size.X, body.Size.Y * 0.18f)), paint.Lightened(0.15f));
+
+        // Paint lit from the top left, with a bevelled rim.
+        Color hi = paint.Lightened(0.12f), lo = paint.Darkened(0.12f);
+        DrawPolygon([body.Position, body.Position + new Vector2(body.Size.X, 0), body.End, body.Position + new Vector2(0, body.Size.Y)], [hi, paint, lo, paint]);
+        DrawRect(new Rect2(body.Position, new Vector2(body.Size.X, body.Size.Y * 0.14f)), A(paint.Lightened(0.3f), 0.5f));
+        DrawLine(body.Position + new Vector2(0, 1), body.Position + new Vector2(body.Size.X, 1), paint.Lightened(0.4f), Mathf.Max(1, T * 0.03f));
+        DrawLine(body.Position + new Vector2(1, 0), body.Position + new Vector2(1, body.Size.Y), paint.Lightened(0.25f), Mathf.Max(1, T * 0.03f));
+
+        // Bolted plates about a tile across: a seam, its lit lip and a row of rivets along it.
+        if (T >= 20)
+        {
+            int cols = System.Math.Max(1, Mathf.RoundToInt(body.Size.X / T));
+            int rows = System.Math.Max(1, Mathf.RoundToInt(body.Size.Y / T));
+            float rivet = Mathf.Max(0.8f, T * 0.025f);
+            for (int i = 1; i < cols; i++)
+            {
+                float x = body.Position.X + (body.Size.X * i / cols);
+                DrawLine(new Vector2(x, body.Position.Y), new Vector2(x, body.End.Y), paint.Darkened(0.35f), 1);
+                DrawLine(new Vector2(x + 1, body.Position.Y), new Vector2(x + 1, body.End.Y), A(paint.Lightened(0.3f), 0.6f), 1);
+                for (float y = body.Position.Y + (T * 0.2f); y < body.End.Y - (T * 0.1f); y += T * 0.3f)
+                {
+                    DrawCircle(new Vector2(x - (T * 0.07f), y), rivet, paint.Lightened(0.3f));
+                }
+            }
+
+            for (int j = 1; j < rows; j++)
+            {
+                float y = body.Position.Y + (body.Size.Y * j / rows);
+                DrawLine(new Vector2(body.Position.X, y), new Vector2(body.End.X, y), paint.Darkened(0.35f), 1);
+                DrawLine(new Vector2(body.Position.X, y + 1), new Vector2(body.End.X, y + 1), A(paint.Lightened(0.3f), 0.6f), 1);
+            }
+
+            // Chipped paint showing steel at a few edges.
+            for (int k = 0; k < 3; k++)
+            {
+                uint c = Hash(seed, k, 63);
+                Vector2 at = body.Position + new Vector2(body.Size.X * ((c & 63) / 63f), (c & 64) == 0 ? T * 0.04f : body.Size.Y * (((c >> 8) & 63) / 63f));
+                DrawCircle(at, T * (0.025f + (((c >> 14) & 3) * 0.012f)), _steel.Lightened(0.1f));
+            }
+        }
+
         if (stripes)
         {
             float band = T * 0.14f;
@@ -90,6 +129,11 @@ public partial class WorldView
         Vector2 colA = body.Position + new Vector2(body.Size.X * 0.24f, body.Size.Y * 0.42f);
         Vector2 colB = body.Position + new Vector2(body.Size.X * 0.48f, body.Size.Y * 0.36f);
         Vector2 tank = body.Position + new Vector2(body.Size.X * 0.76f, body.Size.Y * 0.56f);
+        foreach ((Vector2 c, float rad) in new[] { (colA, T * 0.34f), (colB, T * 0.42f), (tank, T * 0.5f) })
+        {
+            DrawCircle(c + new Vector2(T * 0.1f, T * 0.14f), rad, new Color(0, 0, 0, 0.3f));
+        }
+
         DrawLine(colA, colB, _steel.Darkened(0.2f), T * 0.12f);
         DrawLine(colB, tank, _steel.Darkened(0.2f), T * 0.12f);
         foreach ((Vector2 c, float rad) in new[] { (colA, T * 0.34f), (colB, T * 0.42f) })

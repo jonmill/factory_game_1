@@ -265,17 +265,34 @@ public partial class TerrainChunk : Node2D
                 float r = T * (0.38f + (((h >> 6) & 3) * 0.04f));
                 Color leaf = WorldView.Hex(res.Color).Lerp(new Color(0.25f, 0.32f, 0.12f), 0.55f);
 
-                Circle(c + new Vector2(r * 0.35f, r * 0.45f), r * 1.05f, new Color(0, 0, 0, 0.3f));
+                // Each tree's hue drifts a little so a forest isn't one flat colour.
+                leaf = leaf.Lerp(new Color(0.42f, 0.4f, 0.12f), ((h >> 14) & 7) / 7f * 0.25f).Darkened(((h >> 17) & 3) * 0.04f);
+                int lobes = 6 + (int)((h >> 19) & 1);
+                float turn = ((h >> 9) & 15) / 15f * Mathf.Tau;
+
+                // A soft shadow, the trunk's foot, then the canopy from its shaded underside up to its lit crown.
+                Circle(c + new Vector2(r * 0.4f, r * 0.5f), r * 1.1f, new Color(0, 0, 0, 0.18f));
+                Circle(c + new Vector2(r * 0.3f, r * 0.4f), r * 0.95f, new Color(0, 0, 0, 0.18f));
                 Circle(c + new Vector2(0, T * 0.08f), T * 0.06f, new Color(0.25f, 0.18f, 0.1f));
-                for (int k = 0; k < 4; k++)
+                for (int k = 0; k < lobes; k++)
                 {
-                    float a = (k * Mathf.Tau / 4) + ((h >> 9) & 7);
-                    Circle(c + (new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * r * 0.42f), r * 0.62f, leaf.Darkened(0.3f));
+                    float a = (k * Mathf.Tau / lobes) + turn;
+                    float reach = r * (0.5f + ((((h >> (k + 3)) & 1) == 0) ? 0f : 0.08f));
+                    Circle(c + (new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * reach), r * 0.5f, leaf.Darkened(0.32f));
                 }
 
-                Circle(c, r * 0.7f, leaf.Darkened(0.12f));
-                Circle(c + new Vector2(-r * 0.22f, -r * 0.25f), r * 0.42f, leaf);
-                Circle(c + new Vector2(-r * 0.3f, -r * 0.34f), r * 0.18f, leaf.Lightened(0.18f));
+                for (int k = 0; k < lobes; k++)
+                {
+                    float a = (k * Mathf.Tau / lobes) + turn + 0.4f;
+                    Vector2 lobe = c + (new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * r * 0.36f) - new Vector2(r * 0.05f, r * 0.08f);
+                    float lit = Mathf.Clamp(0.5f - (0.5f * ((Mathf.Cos(a) + Mathf.Sin(a)) * 0.7f)), 0, 1);
+                    Circle(lobe, r * 0.42f, leaf.Darkened(0.18f).Lerp(leaf, lit));
+                }
+
+                Circle(c - new Vector2(r * 0.12f, r * 0.15f), r * 0.48f, leaf);
+                Circle(c - new Vector2(r * 0.28f, r * 0.32f), r * 0.26f, leaf.Lightened(0.14f));
+                Circle(c - new Vector2(r * 0.36f, r * 0.42f), r * 0.11f, leaf.Lightened(0.3f));
+                Circle(c + new Vector2(r * 0.18f, -r * 0.3f), r * 0.08f, leaf.Lightened(0.22f));
             }
         }
     }
