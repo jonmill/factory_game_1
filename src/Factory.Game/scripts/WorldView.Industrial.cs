@@ -28,6 +28,13 @@ public partial class WorldView
         }
 
         bool working = b.Status == MachineStatus.Working;
+        if (Baked(b) is { } sprite)
+        {
+            DrawBaked(b, sprite, working);
+
+            return;
+        }
+
         if (b.Def.Look == VisualStyle.HighTech)
         {
             DrawHighTech(b, r, working);
@@ -405,7 +412,7 @@ public partial class WorldView
         {
             foreach ((Building from, Building to) in WireTree(net))
             {
-                Vector2 a = Center(from.Origin) - new Vector2(0, T * 0.24f);
+                Vector2 a = WireAnchor(from);
                 Vector2 b = a + (Root.WrapDelta(new Vector2(from.Origin.X, from.Origin.Y), new Vector2(to.Origin.X, to.Origin.Y)) * T);
                 if (OnScreen(new Rect2(a, Vector2.Zero).Expand(b)) == false)
                 {
@@ -428,6 +435,9 @@ public partial class WorldView
             }
         }
     }
+
+    /// <summary>Where a pole's wires attach: the baked model's insulators, or just above the flat pole's centre.</summary>
+    private Vector2 WireAnchor(Building pole) => Baked(pole) is { Anchor: { } a } ? S(pole.Origin) + (a * T) : Center(pole.Origin) - new Vector2(0, T * 0.24f);
 
     /// <summary>The network's wires: a minimum spanning tree over poles within wire reach of each other (Prim's).</summary>
     private List<(Building From, Building To)> WireTree(PowerNetwork net)

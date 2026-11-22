@@ -80,6 +80,9 @@ public partial class GameRoot : Node2D
     private Hud _hud = null!;
     private Vector2 _camOffset;
 
+    /// <summary>Bakes the 3D building models into sprites at start-up.</summary>
+    public Art.SpriteBaker Art { get; private set; } = null!;
+
     /// <summary>The game's sound: effects, clicks and ambience.</summary>
     public Audio.SoundPlayer Sound { get; private set; } = null!;
     private double _acc;
@@ -125,6 +128,8 @@ public partial class GameRoot : Node2D
         env.Environment.SetGlowLevel(3, 0f);
         AddChild(env);
 
+        Art = new Art.SpriteBaker { Root = this };
+        AddChild(Art);
         _terrain = new TerrainLayer { Root = this };
         AddChild(_terrain);
         _view = new WorldView { Root = this };
@@ -1306,11 +1311,11 @@ public partial class GameRoot : Node2D
         TakeScreenshotWhenDue();
     }
 
-    /// <summary>FACTORY_SCREENSHOT=/path.png: saves a frame after about 3 s and quits.</summary>
+    /// <summary>FACTORY_SCREENSHOT=/path.png: saves a frame after about 3 s, once the art is baked, and quits.</summary>
     private void TakeScreenshotWhenDue()
     {
         string? shot = System.Environment.GetEnvironmentVariable("FACTORY_SCREENSHOT");
-        if ((shot is not null) && (Clock > 3.0))
+        if ((shot is not null) && (Clock > 3.0) && Art.Baked)
         {
             GD.Print($"[shot] viewport={GetViewportRect().Size} zoom={Zoom} window={DisplayServer.WindowGetSize()} scale={DisplayServer.ScreenGetScale()}");
             // With HDR 2D the viewport holds linear colour; convert so the file matches what is on screen.

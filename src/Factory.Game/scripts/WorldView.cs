@@ -66,13 +66,19 @@ public partial class WorldView : Node2D
             DrawSite(s);
         }
 
-        // Belts lie flat under everything else.
+        // Baked buildings' shadows go down first, so they fall on the ground but never over another building.
+        foreach (Building b in P.Buildings)
+        {
+            DrawBakedShadow(b);
+        }
+
+        // Belts lie flat under everything else; the rest go back to front, so taller models overlap the row behind.
         foreach (Building b in P.Buildings.Where(b => b.Def.Kind == BuildingKind.Belt))
         {
             DrawBuilding(b);
         }
 
-        foreach (Building b in P.Buildings.Where(b => b.Def.Kind != BuildingKind.Belt))
+        foreach (Building b in P.Buildings.Where(b => b.Def.Kind != BuildingKind.Belt).OrderBy(b => b.Origin.Y + b.H))
         {
             DrawBuilding(b);
         }
@@ -99,6 +105,35 @@ public partial class WorldView : Node2D
         DrawMiningTarget();
         DrawSelection();
         DrawPreview();
+    }
+
+    /// <summary>The building's baked 3D sprite, if its model has been baked.</summary>
+    private Art.BakedSprite? Baked(Building b) => Root.Art.TryGet(b.Def.Id, b.Rot, out Art.BakedSprite sprite) ? sprite : null;
+
+    private void DrawBakedShadow(Building b)
+    {
+        if ((Baked(b) is { Shadow: { } shadow } sprite) && OnScreen(RectOf(b.Origin, b.W, b.H)))
+        {
+            DrawTextureRect(shadow, new Rect2(S(b.Origin) + (sprite.Offset * T), sprite.Size * T), false);
+        }
+    }
+
+    /// <summary>Draws a baked model: its frame (animated while working), the glow layer brightened while working, and smoke.</summary>
+    private void DrawBaked(Building b, Art.BakedSprite sprite, bool working)
+    {
+        Rect2 rect = new Rect2(S(b.Origin) + (sprite.Offset * T), sprite.Size * T);
+        int frame = (working && (sprite.Frames.Length > 1)) ? (int)((Time * sprite.Fps) + b.Id) % sprite.Frames.Length : 0;
+        DrawTextureRect(sprite.Frames[frame], rect, false);
+        if (working && (sprite.Glow.Length > 0))
+        {
+            float k = 1.45f + (0.12f * Mathf.Sin((Time * 5f) + b.Id));
+            DrawTextureRect(sprite.Glow[frame], rect, false, new Color(k, k, k, 0.9f));
+        }
+
+        if (working && (sprite.Smoke is { } smoke))
+        {
+            Puffs(S(b.Origin) + (smoke * T), new Color(0.42f, 0.4f, 0.38f), 0.7f, b.Id);
+        }
     }
 
     private (int X0, int Y0, int X1, int Y1) VisibleTiles(Vector2 size)
