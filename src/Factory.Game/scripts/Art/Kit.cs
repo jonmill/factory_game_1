@@ -272,7 +272,7 @@ public sealed class Kit
         for (int i = 0; i < count; i++)
         {
             float f = count == 1 ? 0.5f : i / (float)(count - 1);
-            Ball(from.Lerp(to, f), radius, mat);
+            Ball(from.Lerp(to, f), Mathf.Max(radius, 0.022f), mat);
         }
 
         return this;
@@ -344,7 +344,7 @@ public sealed class Kit
         for (int i = 0; i < count; i++)
         {
             float a = i * Mathf.Tau / count;
-            Cyl(center + new Vector3(Mathf.Cos(a) * radius, 0, Mathf.Sin(a) * radius), 0.016f, 0.014f, mat, -1, 6);
+            Cyl(center + new Vector3(Mathf.Cos(a) * radius, 0, Mathf.Sin(a) * radius), 0.024f, 0.018f, mat, -1, 6);
         }
 
         return this;

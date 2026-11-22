@@ -65,11 +65,17 @@ void vertex() {
 vec2 seams(vec2 uv, float size) {
     vec2 g = uv / size;
     vec2 e = (0.5 - abs(fract(g) - 0.5)) * size;     // distance to the nearest seam on each axis
-    float line = 1.0 - smoothstep(0.004, 0.011, min(e.x, e.y));
-    float pitch = size / 5.0;
+    float m = min(e.x, e.y);
+    // A dark joint a pixel wide, with a lighter lip beside it where the next panel's edge catches light.
+    float line = (1.0 - smoothstep(0.008, 0.014, m)) - 0.45 * (smoothstep(0.012, 0.016, m) - smoothstep(0.02, 0.026, m));
+    float pitch = size / 4.0;
     vec2 along = (abs(fract(uv / pitch) - 0.5)) * pitch;
-    float rx = 1.0 - smoothstep(0.006, 0.011, length(vec2(e.x - 0.022, along.y)));
-    float ry = 1.0 - smoothstep(0.006, 0.011, length(vec2(e.y - 0.022, along.x)));
+    float rx = 1.0 - smoothstep(0.011, 0.018, length(vec2(e.x - 0.04, along.y)));
+    float ry = 1.0 - smoothstep(0.011, 0.018, length(vec2(e.y - 0.04, along.x)));
+    // Only some panels are riveted along an edge, so the rows read as fastened joints, not a quilt.
+    vec2 cell = floor(g);
+    rx *= step(0.55, hash(vec3(cell, 7.0)));
+    ry *= step(0.55, hash(vec3(cell, 13.0)));
     return vec2(line, max(rx, ry));
 }
 
@@ -98,8 +104,9 @@ void fragment() {
         vec2 sz = seams(p.xy, panel);
         vec2 s = sx * bw.x + sy * bw.y + sz * bw.z;
         col *= 1.0 - 0.45 * s.x;
-        col = mix(col, col * 0.6, s.y);
-        col = mix(col, wear_color.rgb, s.y * 0.35 * smoothstep(0.3, 0.8, n.y + 0.5));
+        col = mix(col, wear_color.rgb * 1.2, s.y * 0.6);
+        metal = mix(metal, 0.8, s.y);
+        rough = mix(rough, 0.25, s.y);
     }
 
     // 3. Weathering by form and gravity.
@@ -120,11 +127,11 @@ void fragment() {
 
     // 4. Worn, bright edges on the chamfers, broken up so they read as chips and polish, not outlines.
     float edge = 1.0 - COLOR.g;
-    float chip = smoothstep(0.35, 0.6, noise(p * 40.0) * 0.6 + noise(p * 9.0) * 0.6);
+    float chip = smoothstep(0.3, 0.5, noise(p * 30.0) * 0.6 + noise(p * 9.0) * 0.6);
     float worn = edge * chip * wear;
-    col = mix(col, wear_color.rgb * 1.15, worn);
-    metal = mix(metal, 0.85, worn);
-    rough = mix(rough, 0.28, worn);
+    col = mix(col, min(wear_color.rgb * 1.3, vec3(0.97)), worn);
+    metal = mix(metal, 0.9, worn);
+    rough = mix(rough, 0.18, worn);
 
     ALBEDO = col;
     METALLIC = metal;

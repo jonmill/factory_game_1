@@ -172,7 +172,10 @@ public partial class TerrainChunk : Node2D
         }
     }
 
-    /// <summary>Leaf litter under trees and a faint wash of the ore's colour under ore, as soft blobs.</summary>
+    /// <summary>
+    /// Leaf litter under trees, and under ore a stain of broken rock: chips and gravel of the ore's colour
+    /// scattered on darkened ground, so a field reads as weathered-out rock rather than a coloured glow.
+    /// </summary>
     private void DrawBeds(int x1, int y1)
     {
         for (int y = Origin.Y; y < y1; y++)
@@ -186,17 +189,53 @@ public partial class TerrainChunk : Node2D
                     continue;
                 }
 
-                Vector2 c = Local(t) + new Vector2(T / 2, T / 2);
+                Vector2 p = Local(t);
+                Vector2 c = p + new Vector2(T / 2, T / 2);
                 uint h = Hash(t.X, t.Y, 5);
-                Color bed = res.IsTree
-                    ? new Color(0.14f, 0.16f, 0.08f, 0.22f)
-                    : A(WorldView.Hex(res.Color).Lerp(new Color(0.3f, 0.26f, 0.2f), 0.35f), 0.13f);
-                for (int k = 0; k < 2; k++)
+                if (res.IsTree)
                 {
-                    Vector2 jitter = new Vector2(((h >> (k * 4)) & 15) / 15f, ((h >> ((k * 4) + 8)) & 15) / 15f) - new Vector2(0.5f, 0.5f);
-                    Circle(c + (jitter * T * 0.3f), T * (0.55f + (0.08f * k)), bed);
+                    for (int k = 0; k < 2; k++)
+                    {
+                        Vector2 jitter = new Vector2(((h >> (k * 4)) & 15) / 15f, ((h >> ((k * 4) + 8)) & 15) / 15f) - new Vector2(0.5f, 0.5f);
+                        Circle(c + (jitter * T * 0.3f), T * (0.55f + (0.08f * k)), new Color(0.14f, 0.16f, 0.08f, 0.22f));
+                    }
+
+                    continue;
+                }
+
+                Color ore = WorldView.Hex(res.Color);
+                Color rock = ore.Lerp(new Color(0.32f, 0.27f, 0.21f), 0.6f);
+                Lump(c, T * 0.5f, h, new Color(0.1f, 0.08f, 0.06f, 0.16f));
+                for (int k = 0; k < 9; k++)
+                {
+                    uint hk = Hash((t.X * 17) + k, (t.Y * 5) - k, 6);
+                    Vector2 at = p + new Vector2(T * (0.05f + ((hk & 31) / 34f)), T * (0.05f + (((hk >> 5) & 31) / 34f)));
+                    float r = T * (0.02f + (((hk >> 10) & 3) * 0.012f));
+                    Color chip = (((hk >> 12) & 3) == 0) ? ore.Darkened(0.1f) : rock.Lightened((((hk >> 14) & 3) * 0.06f) - 0.06f);
+                    Vector2 a0 = at + new Vector2(-r, r * 0.4f), a1 = at + new Vector2(r * 0.2f, -r * 0.8f), a2 = at + new Vector2(r, r * 0.5f);
+                    Tri(a0 + (Lean * r * 0.8f), a1 + (Lean * r * 0.8f), a2 + (Lean * r * 0.8f), Shade(0.45f));
+                    Tri(a0, a1, a2, chip);
+                    Tri(a0, a1, at, chip.Lightened(0.2f));
                 }
             }
+        }
+    }
+
+    /// <summary>An irregular blob: a circle whose radius wobbles by a seeded amount round its edge.</summary>
+    private void Lump(Vector2 c, float r, uint seed, Color col)
+    {
+        const int n = 10;
+        Vector2[] pts = new Vector2[n];
+        for (int i = 0; i < n; i++)
+        {
+            float a = i * Mathf.Tau / n;
+            float wob = 0.75f + (((seed >> (i * 3)) & 7) / 7f * 0.4f);
+            pts[i] = c + (new Vector2(Mathf.Cos(a), Mathf.Sin(a) * 0.8f) * r * wob);
+        }
+
+        for (int i = 0; i < n; i++)
+        {
+            Tri(c, pts[i], pts[(i + 1) % n], col);
         }
     }
 
@@ -249,6 +288,7 @@ public partial class TerrainChunk : Node2D
         // Its shadow falls with the sun like every building's: the tip's shadow lies one height along the lean.
         Vector2 tipShadow = foot + (Lean * (s * 2.1f / Rise1));
         Poly([foot + new Vector2(-s * 0.55f, -s * 0.2f), foot + new Vector2(s * 0.6f, s * 0.15f), tipShadow], Shade(0.5f));
+        Circle(foot + new Vector2(0, -s * 0.12f), s * 0.62f, color.Lerp(new Color(0.2f, 0.17f, 0.13f), 0.7f));
         Poly([foot, left, shoulderL, tip], color.Lightened(0.15f));
         Poly([foot, tip, shoulderR, right], color.Darkened(0.35f));
         Line(foot, tip, color.Lightened(0.45f), Mathf.Max(1f, s * 0.12f));
@@ -282,8 +322,8 @@ public partial class TerrainChunk : Node2D
                 float turn = ((h >> 9) & 15) / 15f * Mathf.Tau;
 
                 // A soft shadow, the trunk's foot, then the canopy from its shaded underside up to its lit crown.
-                Circle(c + (Lean * T * 0.15f), r * 0.75f, Shade(0.3f));
-                Circle(c + (Lean * T * 0.55f), r * 1.05f, Shade(0.42f));
+                // One shadow shape, cast from the canopy's height along the shared sun, so it never stacks.
+                Lump(c + (Lean * T * 0.5f), r * 1.05f, h, Shade(0.5f));
                 Circle(c + new Vector2(0, T * 0.08f), T * 0.06f, new Color(0.25f, 0.18f, 0.1f));
                 for (int k = 0; k < lobes; k++)
                 {

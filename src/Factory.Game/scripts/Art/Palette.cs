@@ -42,7 +42,7 @@ public static class Palette
     public static Material Oxide => Get("oxide", () => Surface(new Color(0.5f, 0.19f, 0.12f), 0.15f, 0.55f, rust: 0.25f, grime: 0.55f, streaks: 0.5f, panel: 0.6f));
 
     /// <summary>Bright machined steel.</summary>
-    public static Material Steel => Get("steel", () => Surface(new Color(0.6f, 0.6f, 0.6f), 0.85f, 0.3f, rust: 0.1f, grime: 0.3f, streaks: 0.2f, wear: 0.5f));
+    public static Material Steel => Get("steel", () => Surface(new Color(0.64f, 0.63f, 0.6f), 0.85f, 0.2f, rust: 0.1f, grime: 0.3f, streaks: 0.2f, wear: 0.5f));
 
     /// <summary>Black rubber and plastic.</summary>
     public static Material Rubber => Get("rubber", () => Surface(new Color(0.08f, 0.075f, 0.07f), 0f, 0.8f, rust: 0f, grime: 0.4f, streaks: 0.1f, wear: 0f));

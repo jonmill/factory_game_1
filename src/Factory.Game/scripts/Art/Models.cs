@@ -346,31 +346,48 @@ public static partial class Models
         int seed = (int)(accent.ToRgba32() % 9973) + (w * 31) + h;
         float mid = 0.23f + ((top - 0.23f) * 0.5f);
 
-        // West: a pipe on stand-off brackets, dropping to the ground at the back.
-        float px = 0.22f;
-        k.Pipe(0.035f, Palette.Steel, new Vector3(px, 0.05f, 0.5f), new Vector3(px, mid, 0.5f), new Vector3(px, mid, h - 0.55f), new Vector3(px + 0.12f, mid, h - 0.55f));
-        for (float z = 0.8f; z < h - 0.6f; z += 0.5f)
+        // Which side carries the pipe and which the loom and ladder, and where the vent sits, vary by machine.
+        bool flip = (seed & 1) == 1;
+        float X(float x) => flip ? w - x : x;
+        Vector3 east = flip ? Vector3.Left : Vector3.Right;
+
+        // One side: a pipe on stand-off brackets, dropping to the ground at the back.
+        float px = X(0.22f);
+        float run = 0.5f + ((seed >> 2) % 3 * 0.2f);
+        k.Pipe(0.035f, Palette.Steel, new Vector3(px, 0.05f, run), new Vector3(px, mid, run), new Vector3(px, mid, h - 0.55f), new Vector3(px - (east.X * 0.12f), mid, h - 0.55f));
+        for (float z = run + 0.3f; z < h - 0.6f; z += 0.5f)
         {
-            k.Box(new Vector3(px + 0.04f, mid, z), new Vector3(0.08f, 0.03f, 0.04f), Palette.HullDark);
+            k.Box(new Vector3(px - (east.X * 0.04f), mid, z), new Vector3(0.08f, 0.03f, 0.04f), Palette.HullDark);
         }
 
         k.Valve(new Vector3(px, mid + 0.03f, (h / 2f) + 0.1f), Palette.Oxide);
 
-        // East: a cable loom running into a junction box, and a ladder to the roof.
-        float ex = w - 0.24f;
-        k.Slab(ex - 0.06f, h * 0.35f, 0.12f, 0.3f, 0.26f, Palette.HullDark, mid - 0.12f);
-        k.Box(new Vector3(ex + 0.005f, mid + 0.02f, (h * 0.35f) + 0.15f), new Vector3(0.02f, 0.12f, 0.18f), Palette.Paint(Muted(accent), 0.3f, 0.5f));
-        k.Cable(new Vector3(ex, mid - 0.1f, (h * 0.35f) + 0.05f), new Vector3(w - 0.12f, 0.02f, 0.3f), 0.08f, Palette.Rubber);
-        k.Cable(new Vector3(ex, mid - 0.1f, (h * 0.35f) + 0.25f), new Vector3(w - 0.1f, 0.02f, h - 0.2f), 0.1f, Palette.Rubber);
-        k.Ladder(new Vector3(ex + 0.02f, 0.05f, h - 0.7f), new Vector3(ex + 0.02f, top + 0.05f, h - 0.7f), Vector3.Right, Palette.Steel);
+        // The other side: a cable loom running into a junction box, and a ladder to the roof.
+        float ex = X(w - 0.24f);
+        float box = h * (0.3f + ((seed >> 4) % 3 * 0.1f));
+        k.Slab(ex - 0.06f, box, 0.12f, 0.3f, 0.26f, Palette.HullDark, mid - 0.12f);
+        k.Box(new Vector3(ex + (east.X * 0.005f), mid + 0.02f, box + 0.15f), new Vector3(0.02f, 0.12f, 0.18f), Palette.Paint(Muted(accent), 0.3f, 0.5f));
+        k.Cable(new Vector3(ex, mid - 0.1f, box + 0.05f), new Vector3(X(w - 0.12f), 0.02f, 0.3f), 0.08f, Palette.Rubber);
+        k.Cable(new Vector3(ex, mid - 0.1f, box + 0.25f), new Vector3(X(w - 0.1f), 0.02f, h - 0.2f), 0.1f, Palette.Rubber);
+        float ladder = ((seed >> 6) & 1) == 0 ? h - 0.7f : 0.7f;
+        k.Ladder(new Vector3(ex + (east.X * 0.02f), 0.05f, ladder), new Vector3(ex + (east.X * 0.02f), top + 0.05f, ladder), east, Palette.Steel);
 
         // Camera face: a vent and a rivet row under the roof line.
-        k.Vent(new Vector3(0.75f, mid, h - 0.29f), 0.4f, Mathf.Min(0.2f, (top - 0.25f) * 0.6f), Vector3.Back, Palette.Steel);
-        k.Rivets(new Vector3(0.45f, top - 0.04f, h - 0.295f), new Vector3(w - 0.45f, top - 0.04f, h - 0.295f), (int)(w * 7), 0.012f, Palette.Steel);
+        float vent = ((seed >> 7) % 3) switch { 0 => 0.75f, 1 => w / 2f, _ => w - 1.3f };
+        k.Vent(new Vector3(Mathf.Clamp(vent, 0.6f, w - 0.6f), mid, h - 0.29f), 0.4f, Mathf.Min(0.2f, (top - 0.25f) * 0.6f), Vector3.Back, Palette.Steel);
+        k.Rivets(new Vector3(0.45f, top - 0.04f, h - 0.295f), new Vector3(w - 0.45f, top - 0.04f, h - 0.295f), (int)(w * 6), 0.022f, Palette.Steel);
 
-        // Roof: fittings along the back edge and down the right-hand side.
+        // Roof: a darker deck inset from the edge with a walkway grating along the front, and fittings in
+        // the corners and along the back, so no roof is one flat plane.
+        k.Slab(0.5f, 0.5f, w - 1f, h - 1.05f, 0.018f, Palette.HullDark, top);
+        for (float x = 0.55f; x < w - 0.55f; x += 0.09f)
+        {
+            k.Box(new Vector3(x, top + 0.03f, h - 0.47f), new Vector3(0.025f, 0.02f, 0.14f), Palette.Steel);
+        }
+
         k.Clutter(0.4f, 0.36f, w - 0.8f, 0.2f, top, seed, 3 + w, Palette.HullDark);
-        k.Clutter(w - 0.55f, 0.6f, 0.2f, h - 1.1f, top, seed + 1, 1 + h, Palette.HullDark);
+        k.Clutter(X(w - 0.55f) - (flip ? 0.2f : 0), 0.6f, 0.2f, h - 1.1f, top, seed + 1, 1 + h, Palette.HullDark);
+        k.Clutter(X(0.45f) - (flip ? 0.3f : 0), h * 0.4f, 0.3f, 0.3f, top + 0.018f, seed + 2, 2, Palette.Hull);
     }
 
     /// <summary>A bed of burning fuel: a dark rim, a red-orange layer and a near-white core, hottest in the middle.</summary>

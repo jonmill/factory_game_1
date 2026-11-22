@@ -77,6 +77,9 @@ public partial class GameRoot : Node2D
     private TerrainLayer _terrain = null!;
     private WorldView _view = null!;
     private WorldView[] _layers = [];
+
+    /// <summary>Tints the whole world (not the HUD) with the viewed planet's light: see <see cref="Grade"/>.</summary>
+    private readonly CanvasModulate _grade = new CanvasModulate();
     private int _bakedFrames;
     private FogLayer _fog = null!;
     private Hud _hud = null!;
@@ -149,6 +152,7 @@ public partial class GameRoot : Node2D
         WorldView lights = new WorldView { Root = this, Layer = WorldLayer.Lights, Material = new CanvasItemMaterial { BlendMode = CanvasItemMaterial.BlendModeEnum.Add } };
         AddChild(lights);
         _layers = [decals, ground, shadows, _view, lights];
+        AddChild(_grade);
         _fog = new FogLayer { Root = this };
         AddChild(_fog);
         AddChild(Vignette());
@@ -224,12 +228,35 @@ public partial class GameRoot : Node2D
             : World.Get<Building>(Planet.LanderId) is { } lander ? lander.CenterSub
             : Fixed.TileCenter(new Int2(Planet.Width / 2, Planet.Height / 2));
         Cam = new Vector2(focus.X / (float)Fixed.One, focus.Y / (float)Fixed.One);
+        _grade.Color = Grade(Planet.Def);
         SelectedId = 0;
         SetTool(ToolKind.Select);
     }
 
     /// <inheritdoc />
     public override void _ExitTree() => PlatformServices?.Dispose();
+
+    /// <summary>
+    /// A planet's colour grade: a faint wash of its own colour, a little dimmer under a weak sun and a little
+    /// warmer under a strong one, so the same machines read as standing in each world's light.
+    /// </summary>
+    /// <param name="def">The planet.</param>
+    /// <returns>A multiply colour near white.</returns>
+    public static Color Grade(PlanetDef def)
+    {
+        Color tint = WorldView.Hex(def.Color);
+        float peak = Mathf.Max(tint.R, Mathf.Max(tint.G, tint.B));
+        tint = new Color(tint.R / peak, tint.G / peak, tint.B / peak);
+        Color grade = Colors.White.Lerp(tint, 0.1f);
+        float sun = Mathf.Clamp(def.Sunlight / 100f, 0.5f, 1.6f);
+        float bright = Mathf.Lerp(0.9f, 1f, Mathf.Clamp((sun - 0.5f) / 0.5f, 0, 1));
+        if (sun > 1)
+        {
+            grade = grade.Lerp(new Color(1f, 0.93f, 0.85f), Mathf.Clamp(sun - 1, 0, 0.6f) * 0.4f);
+        }
+
+        return new Color(grade.R * bright, grade.G * bright, grade.B * bright);
+    }
 
     // ------------------------------------------------------------------ helpers
 

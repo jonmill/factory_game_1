@@ -184,7 +184,7 @@ public partial class SpriteBaker : Node
             {
                 Image raw = job.View.GetTexture().GetImage();
                 job.View.QueueFree();
-                Image img = job.Pass switch { BakePass.Shadow => ToMask(raw), BakePass.Footprint => ToDecal(raw), BakePass.Light => ToLight(raw), _ => Unpremultiply(raw) };
+                Image img = job.Pass switch { BakePass.Shadow => ToMask(raw), BakePass.Footprint => ToDecal(raw), BakePass.Light => ToLight(raw), _ => Sharpen(Unpremultiply(Downsample(raw, Supersample)), 0.65f) };
                 Pack(img);
                 ResourceSaver.Save(img, CachePath(cache, job.Model.Id, job.Rot, job.Pass, job.Frame), ResourceSaver.SaverFlags.Compress);
                 Store(images, job.Model, job.Rot, job.Pass, job.Frame, img);
@@ -432,12 +432,23 @@ public partial class SpriteBaker : Node
 
     private static int PxOf(BakePass pass) => pass switch { BakePass.Footprint => DecalPx, BakePass.Light => LightPx, _ => PxPerTile };
 
+    /// <summary>
+    /// The colour pass renders at this multiple of its final size and is filtered down, so details a pixel
+    /// wide (seams, rivets, worn edges) survive as crisp pixels instead of averaging into the base colour.
+    /// </summary>
+    private const int Supersample = 2;
+
     /// <summary>Builds the scene for one render: camera, lights, environment and the model.</summary>
     private SubViewport Stage(ModelDef m, SimDir rot, BakePass pass, int frame)
     {
         Rect2 area = Area(m, pass);
         int ppt = PxOf(pass);
         Vector2I px = new Vector2I(Mathf.RoundToInt(area.Size.X * ppt), Mathf.RoundToInt(area.Size.Y * ppt));
+        if (pass == BakePass.Color)
+        {
+            px *= Supersample;
+        }
+
         bool mask = pass is BakePass.Shadow or BakePass.Footprint;
         SubViewport view = new SubViewport
         {
@@ -526,7 +537,7 @@ public partial class SpriteBaker : Node
         Vector3 sunWorld = new Vector3(Sun.X, Sun.Y, Sun.Z * k).Normalized();
         DirectionalLight3D sun = new DirectionalLight3D
         {
-            LightEnergy = 1.35f,
+            LightEnergy = 1.5f,
             LightColor = new Color(1f, 0.9f, 0.74f),
             ShadowEnabled = glow == false,
             ShadowBlur = 0.6f,
@@ -539,8 +550,8 @@ public partial class SpriteBaker : Node
         view.AddChild(sun);
         DirectionalLight3D rim = new DirectionalLight3D
         {
-            LightEnergy = 0.25f,
-            LightColor = new Color(0.7f, 0.8f, 1f),
+            LightEnergy = 0.4f,
+            LightColor = new Color(0.68f, 0.78f, 1f),
             ShadowEnabled = false,
         };
         rim.Transform = new Transform3D(Basis.LookingAt(new Vector3(-0.75f, -0.45f, -0.5f).Normalized(), Vector3.Up), Vector3.Zero);
@@ -607,6 +618,84 @@ public partial class SpriteBaker : Node
     }
 
     /// <summary>Viewports blend edges against transparent black; divide that back out so edges aren't dark fringed.</summary>
+    /// <summary>Shrinks a premultiplied render by a whole factor, averaging each block of pixels.</summary>
+    private static Image Downsample(Image img, int f)
+    {
+        img.Convert(Image.Format.Rgba8);
+        int w = img.GetWidth() / f, h = img.GetHeight() / f, sw = img.GetWidth();
+        byte[] d = img.GetData();
+        byte[] o = new byte[w * h * 4];
+        int n = f * f;
+        for (int y = 0; y < h; y++)
+        {
+            for (int x = 0; x < w; x++)
+            {
+                for (int c = 0; c < 4; c++)
+                {
+                    int sum = 0;
+                    for (int dy = 0; dy < f; dy++)
+                    {
+                        for (int dx = 0; dx < f; dx++)
+                        {
+                            sum += d[(((((y * f) + dy) * sw) + (x * f) + dx) * 4) + c];
+                        }
+                    }
+
+                    o[(((y * w) + x) * 4) + c] = (byte)((sum + (n / 2)) / n);
+                }
+            }
+        }
+
+        return Image.CreateFromData(w, h, false, Image.Format.Rgba8, o);
+    }
+
+    /// <summary>
+    /// An unsharp mask on the colour (alpha untouched): each pixel pushed away from its blurred neighbourhood,
+    /// so edges and small highlights keep their snap after downsampling.
+    /// </summary>
+    private static Image Sharpen(Image img, float amount)
+    {
+        int w = img.GetWidth(), h = img.GetHeight();
+        byte[] d = img.GetData();
+        byte[] o = (byte[])d.Clone();
+        for (int y = 1; y < h - 1; y++)
+        {
+            for (int x = 1; x < w - 1; x++)
+            {
+                int i = ((y * w) + x) * 4;
+                if (d[i + 3] < 200)
+                {
+                    continue;
+                }
+
+                for (int c = 0; c < 3; c++)
+                {
+                    int blur = 0, weight = 0;
+                    for (int dy = -1; dy <= 1; dy++)
+                    {
+                        for (int dx = -1; dx <= 1; dx++)
+                        {
+                            int j = ((((y + dy) * w) + x + dx) * 4);
+                            if (d[j + 3] < 200)
+                            {
+                                continue;
+                            }
+
+                            int k = (dx == 0 ? 2 : 1) * (dy == 0 ? 2 : 1);
+                            blur += d[j + c] * k;
+                            weight += k;
+                        }
+                    }
+
+                    float v = d[i + c] + (amount * (d[i + c] - (blur / (float)weight)));
+                    o[i + c] = (byte)Mathf.Clamp(Mathf.RoundToInt(v), 0, 255);
+                }
+            }
+        }
+
+        return Image.CreateFromData(w, h, false, Image.Format.Rgba8, o);
+    }
+
     private static Image Unpremultiply(Image img)
     {
         img.Convert(Image.Format.Rgba8);
