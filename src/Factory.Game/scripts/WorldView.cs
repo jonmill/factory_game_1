@@ -116,6 +116,12 @@ public partial class WorldView : Node2D
             DrawBuilding(b);
         }
 
+        foreach ((Vector2 at, Art.Emit kind, int seed) in _emitting)
+        {
+            Emit(at, kind, seed);
+        }
+
+        _emitting.Clear();
         DrawPowerWires();
         DrawShipments();
         DrawRoutes();
@@ -187,64 +193,67 @@ public partial class WorldView : Node2D
         {
             foreach ((Vector2 at, Art.Emit kind) in sprite.Emitters)
             {
-                Emit(S(b.Origin) + (at * T), kind, b.Id);
+                _emitting.Add((S(b.Origin) + (at * T), kind, b.Id));
             }
         }
     }
 
-    /// <summary>Smoke, steam, sparks, dust or vapour from a working machine; each emitter runs on its own phase.</summary>
+    /// <summary>Emitters gathered while drawing buildings, drawn after all of them so no building covers its smoke.</summary>
+    private readonly List<(Vector2 At, Art.Emit Kind, int Seed)> _emitting = [];
+
+    /// <summary>A soft round puff, white in the middle fading to nothing, for particles.</summary>
+    private static Texture2D Puff => field ??= new GradientTexture2D
+    {
+        Width = 64,
+        Height = 64,
+        Fill = GradientTexture2D.FillEnum.Radial,
+        FillFrom = new Vector2(0.5f, 0.5f),
+        FillTo = new Vector2(0.5f, 0f),
+        Gradient = new Gradient { Offsets = [0f, 0.45f, 1f], Colors = [new Color(1, 1, 1, 1), new Color(1, 1, 1, 0.55f), new Color(1, 1, 1, 0)] },
+    };
+
+    private void SoftDot(Vector2 at, float radius, Color color) => DrawTextureRect(Puff, new Rect2(at - new Vector2(radius, radius), new Vector2(radius * 2, radius * 2)), false, color);
+
+    /// <summary>
+    /// Smoke, steam, sparks, dust or vapour from a working machine. Each particle has its own life, size and
+    /// drift from a hash of its index, so a row of chimneys never puffs in step.
+    /// </summary>
     private void Emit(Vector2 at, Art.Emit kind, int seed)
     {
-        switch (kind)
+        (int count, float rate) = kind switch { Art.Emit.Smoke => (7, 0.32f), Art.Emit.Steam => (6, 0.75f), Art.Emit.Sparks => (9, 1.6f), Art.Emit.Dust => (5, 0.6f), _ => (6, 0.28f) };
+        for (int i = 0; i < count; i++)
         {
-            case Art.Emit.Smoke:
-                Puffs(at, new Color(0.36f, 0.33f, 0.3f), 0.55f + (seed % 5 * 0.04f), seed);
-                break;
-            case Art.Emit.Steam:
-                for (int i = 0; i < 5; i++)
-                {
-                    float ph = Mathf.PosMod((Time * 0.9f) + (i / 5f) + (seed * 0.31f), 1f);
-                    Vector2 drift = new Vector2((T * 0.2f * ph) + (Mathf.Sin((ph * 7f) + seed + i) * T * 0.06f), -T * 0.8f * ph);
-                    DrawCircle(at + drift, T * (0.06f + (ph * 0.22f)), new Color(0.92f, 0.93f, 0.95f, 0.5f * (1 - ph) * Mathf.Min(1, ph * 6)));
-                }
-
-                break;
-            case Art.Emit.Sparks:
-                for (int i = 0; i < 7; i++)
-                {
-                    uint h = Hash(seed, i, (uint)(Time * 3));
-                    float ph = Mathf.PosMod(Time * 3, 1f);
-                    float ang = (-Mathf.Pi / 2) + ((((h & 255) / 255f) - 0.5f) * 2.4f);
-                    float speed = T * (0.3f + (((h >> 8) & 255) / 255f * 0.5f));
+            uint h = Hash(seed, i, (uint)kind);
+            float r1 = (h & 255) / 255f, r2 = ((h >> 8) & 255) / 255f, r3 = ((h >> 16) & 255) / 255f;
+            float life = 0.7f + (r1 * 0.6f);
+            float ph = Mathf.PosMod((Time * rate / life) + (i / (float)count) + (seed * 0.137f), 1f);
+            float wobble = Mathf.Sin((ph * 6f) + (r2 * 9f)) * T * 0.07f;
+            switch (kind)
+            {
+                case Art.Emit.Smoke:
+                    SoftDot(at + new Vector2((T * (0.25f + (r2 * 0.3f)) * ph) + wobble, -T * (0.9f + (r3 * 0.5f)) * ph), T * (0.12f + (ph * (0.35f + (r3 * 0.2f)))), new Color(0.3f, 0.28f, 0.26f, 0.55f * (1 - ph) * Mathf.Min(1, ph * 8)));
+                    break;
+                case Art.Emit.Steam:
+                    SoftDot(at + new Vector2((T * 0.2f * ph) + wobble, -T * (0.6f + (r3 * 0.4f)) * ph), T * (0.08f + (ph * 0.3f)), new Color(0.95f, 0.95f, 0.97f, 0.6f * (1 - ph) * Mathf.Min(1, ph * 6)));
+                    break;
+                case Art.Emit.Sparks:
+                    float ang = (-Mathf.Pi / 2) + ((r2 - 0.5f) * 2.6f);
+                    float speed = T * (0.25f + (r3 * 0.55f));
                     Vector2 p = at + (new Vector2(Mathf.Cos(ang), Mathf.Sin(ang)) * speed * ph) + new Vector2(0, T * 0.9f * ph * ph);
-                    DrawCircle(p, Mathf.Max(1, T * 0.025f), Hdr(new Color(1f, 0.75f, 0.35f, 1 - ph), 2.2f));
-                }
-
-                break;
-            case Art.Emit.Dust:
-                for (int i = 0; i < 4; i++)
-                {
-                    float ph = Mathf.PosMod((Time * 0.7f) + (i / 4f) + (seed * 0.19f), 1f);
-                    float side = (i % 2 == 0) ? 1 : -1;
-                    Vector2 drift = new Vector2(side * T * 0.45f * ph, -T * 0.12f * ph);
-                    DrawCircle(at + drift, T * (0.08f + (ph * 0.2f)), new Color(0.5f, 0.42f, 0.32f, 0.32f * (1 - ph)));
-                }
-
-                break;
-            default:
-                for (int i = 0; i < 4; i++)
-                {
-                    float ph = Mathf.PosMod((Time * 0.4f) + (i / 4f) + (seed * 0.23f), 1f);
-                    Vector2 drift = new Vector2((T * 0.5f * ph) + (Mathf.Sin((ph * 5f) + seed) * T * 0.1f), -T * 1.4f * ph);
-                    DrawCircle(at + drift, T * (0.12f + (ph * 0.4f)), new Color(0.75f, 0.9f, 0.95f, 0.22f * (1 - ph) * Mathf.Min(1, ph * 5)));
-                }
-
-                break;
+                    DrawCircle(p, Mathf.Max(1, T * 0.022f * (1 - (ph * 0.5f))), Hdr(new Color(1f, 0.72f, 0.32f, 1 - ph), 2.4f));
+                    break;
+                case Art.Emit.Dust:
+                    float side = r2 < 0.5f ? 1 : -1;
+                    SoftDot(at + new Vector2(side * T * (0.3f + (r3 * 0.3f)) * ph, -T * 0.15f * ph), T * (0.1f + (ph * 0.25f)), new Color(0.5f, 0.42f, 0.32f, 0.4f * (1 - ph)));
+                    break;
+                default:
+                    SoftDot(at + new Vector2((T * 0.5f * ph) + wobble, -T * (1.2f + (r3 * 0.6f)) * ph), T * (0.14f + (ph * 0.5f)), new Color(0.75f, 0.9f, 0.95f, 0.3f * (1 - ph) * Mathf.Min(1, ph * 5)));
+                    break;
+            }
         }
     }
 
     private readonly Dictionary<int, float> _lit = [];
-    private float _lastLightTime;
 
     /// <summary>
     /// The light a working machine gives off, on the additive light layer. It fades up over a third of a
@@ -257,7 +266,7 @@ public partial class WorldView : Node2D
             return;
         }
 
-        float dt = Mathf.Clamp(Time - _lastLightTime, 0, 0.1f);
+        float dt = Mathf.Clamp((float)GetProcessDeltaTime(), 0, 0.1f);
         bool working = b.Status == MachineStatus.Working;
         float lit = _lit.GetValueOrDefault(b.Id);
         lit = Mathf.MoveToward(lit, working ? 1 : 0, dt * 3f);
@@ -276,15 +285,6 @@ public partial class WorldView : Node2D
         int frame = sprite.FrameAt(Time, b.Id, working);
         Texture2D tex = sprite.Lights[System.Math.Min(frame, sprite.Lights.Length - 1)];
         DrawTextureRect(tex, new Rect2(S(b.Origin) + (sprite.LightOffset * T), sprite.LightSize * T), false, new Color(k, k, k, 1));
-    }
-
-    /// <summary>Notes the clock after the light layer has drawn, for the fades' time step.</summary>
-    public override void _Process(double delta)
-    {
-        if (Layer == WorldLayer.Lights)
-        {
-            _lastLightTime = Time;
-        }
     }
 
     private (int X0, int Y0, int X1, int Y1) VisibleTiles(Vector2 size)

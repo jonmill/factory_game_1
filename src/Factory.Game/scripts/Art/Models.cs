@@ -59,13 +59,13 @@ public static partial class Models
     [
         new("chest", 1, 1, 0.8f, Crate),
         new("power-pole", 1, 1, 2.0f, Pole, Anchor: new Vector3(0.5f, 1.86f, 0.5f)),
-        new("burner-smelter", 2, 2, 2.0f, BurnerSmelter, Glows: true, Smoke: new Vector3(1.48f, 1.96f, 0.5f), Flicker: true, Reach: 1.6f),
+        new("burner-smelter", 2, 2, 2.0f, BurnerSmelter, Frames: 16, Fps: 12, Glows: true, Smoke: new Vector3(1.48f, 1.96f, 0.5f), Flicker: true, Reach: 1.6f),
         new("burner-drill", 2, 2, 1.8f, BurnerDrill, Frames: 16, Fps: 12, Turns: true, Glows: true, Smoke: new Vector3(1.4f, 1.25f, 1.45f), Flicker: true, Puffs: [(new Vector3(1f, 0.1f, -0.05f), Emit.Dust)]),
         new("steam-engine", 2, 2, 1.9f, SteamEngine, Frames: 16, Fps: 12, Glows: true, Smoke: new Vector3(0.45f, 1.9f, 0.8f), Flicker: true, Puffs: [(new Vector3(0.62f, 0.62f, 1.66f), Emit.Steam)]),
         new("lab", 2, 2, 1.6f, Lab, Frames: 16, Fps: 10, Glows: true),
         new("assembler", 3, 3, 1.5f, Fabricator, Frames: 16, Fps: 10, Glows: true),
         new("solar-panel", 2, 2, 0.9f, SolarPanel),
-        new("lander", 3, 3, 2.2f, Lander, Frames: 16, Fps: 4, Glows: true),
+        new("lander", 3, 3, 2.2f, Lander, Frames: 16, Fps: 8, Glows: true),
     ];
 
     private static Basis Yaw(float a) => new(Vector3.Up, a);
@@ -140,8 +140,13 @@ public static partial class Models
 
         k.Bevel(0.15f, 0.19f, 1.7f, 1.58f, 0.08f, 0.28f, Palette.DarkIron, 1.3f);
         k.Cyl(new Vector3(0.82f, 1.38f, 0.92f), 0.44f, 0.02f, Palette.Paint(new Color(0.08f, 0.05f, 0.04f), 0, 1), -1, 24);
-        k.Cyl(new Vector3(0.82f, 1.39f, 0.92f), 0.32f, 0.02f, Palette.Fire(2.6f), -1, 24);
-        k.Cyl(new Vector3(0.82f, 1.4f, 0.92f), 0.14f, 0.02f, Palette.Glow(new Color(1f, 0.85f, 0.55f), 3.5f), -1, 16);
+        Embers(k, new Vector3(0.82f, 1.39f, 0.92f), 0.33f);
+        for (int i = 0; i < 5; i++)
+        {
+            float a = (i * 1.3f) + 0.4f;
+            Flame(k, new Vector3(0.82f + (Mathf.Cos(a) * 0.16f), 1.4f, 0.92f + (Mathf.Sin(a) * 0.12f)), 0.06f, 0.14f + (0.1f * Mathf.Sin((k.Spin * (i % 2 == 0 ? 2 : 3)) + (i * 1.7f))));
+        }
+
         k.Light(new Vector3(0.82f, 1.75f, 0.92f), _fire, 1.6f, 1.6f);
         k.Light(new Vector3(1f, 0.45f, 2.15f), _fire, 1.6f, 1.8f);
         k.Ring(new Vector3(0.82f, 1.41f, 0.92f), 0.4f, 0.48f, Palette.DarkIron);
@@ -181,7 +186,7 @@ public static partial class Models
 
         // The drill string and its turning gear.
         k.Cyl(bore, 0.05f, 1.4f, Palette.Steel, -1, 10);
-        Kit gear = k.Group(bore + new Vector3(0, 0.3f, 0), Yaw(k.Spin * 0.4f));
+        Kit gear = k.Group(bore + new Vector3(0, 0.3f, 0), Yaw(k.Spin * 0.5f));
         gear.Cyl(Vector3.Zero, 0.3f, 0.1f, Palette.Steel, -1, 20);
         for (int i = 0; i < 10; i++)
         {
@@ -287,7 +292,25 @@ public static partial class Models
 
         // Service hatch and status lamp on the camera side.
         k.Box(new Vector3(w - 0.8f, 0.2f + (bodyHeight * 0.45f), h - 0.29f), new Vector3(0.34f, Mathf.Min(0.3f, bodyHeight * 0.55f), 0.03f), Palette.Paint(Muted(accent), 0.3f, 0.5f));
-        k.Ball(new Vector3(0.52f, 0.2f + bodyHeight, h - 0.52f), 0.045f, Palette.Glow(new Color(0.4f, 1f, 0.5f), k.Phase < 0.5f ? 3f : 1.2f));
+        k.Ball(new Vector3(0.52f, 0.2f + bodyHeight, h - 0.52f), 0.045f, Palette.Glow(new Color(0.4f, 1f, 0.5f), ((int)(k.Phase * 16) % 5) < 3 ? 3f : 0.8f));
+
+        // Work lights under the hull wash the ground round the feet in the machine's colour.
+        k.Light(new Vector3(w / 2f, 0.1f, h - 0.35f), accent.Lerp(Colors.White, 0.4f), 1.1f, 0.5f);
+    }
+
+    /// <summary>A bed of burning fuel: a dark rim, a red-orange layer and a near-white core, hottest in the middle.</summary>
+    private static void Embers(Kit k, Vector3 at, float radius)
+    {
+        k.Cyl(at, radius, 0.02f, Palette.Fire(2.2f), -1, 24);
+        k.Cyl(at + new Vector3(0, 0.005f, 0), radius * 0.62f, 0.02f, Palette.Glow(new Color(1f, 0.55f, 0.15f), 3f), -1, 20);
+        k.Cyl(at + new Vector3(0, 0.01f, 0), radius * 0.3f, 0.02f, Palette.Glow(new Color(1f, 0.88f, 0.6f), 4f), -1, 16);
+    }
+
+    /// <summary>A tongue of flame: an orange cone with a yellow-white inner cone, <paramref name="height"/> tall.</summary>
+    private static void Flame(Kit k, Vector3 at, float radius, float height)
+    {
+        k.Cyl(at, radius, height, Palette.Glow(new Color(1f, 0.45f, 0.1f), 2.6f), 0f, 10);
+        k.Cyl(at, radius * 0.5f, height * 0.6f, Palette.Glow(new Color(1f, 0.85f, 0.5f), 3.6f), 0f, 8);
     }
 
     /// <summary>A building's colour as paint: darker and less saturated, so it reads as material, not as a label.</summary>

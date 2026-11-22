@@ -80,7 +80,7 @@ public partial class SpriteBaker : Node
 
     private const int Batch = 32;
     private const float Margin = 0.2f;
-    private const float DecalMargin = 0.7f;
+    private const float DecalMargin = 0.8f;
     private const int DecalPx = 40;
     private const int LightPx = 40;
 
@@ -657,7 +657,7 @@ public partial class SpriteBaker : Node
 
         // How close each pixel is to the footprint, blurred out to about a third of a tile, then cut at a
         // noisy threshold so the patch has a ragged, trodden edge instead of a soft halo.
-        float[] spread = Blur(a, w, h, 5, 2);
+        float[] spread = Blur(a, w, h, 9, 2);
         uint seed = (uint)((w * 31) + h);
         byte[] o = new byte[w * h * 2];
         for (int y = 0; y < h; y++)
@@ -666,7 +666,7 @@ public partial class SpriteBaker : Node
             {
                 int i = (y * w) + x;
                 float n = (0.6f * Noise2(x / 5f, y / 5f, seed)) + (0.4f * Noise2(x / 1.6f, y / 1.6f, seed + 7));
-                float edge = 0.08f + (n * 0.32f);
+                float edge = 0.1f + (n * 0.38f);
                 float v = Mathf.SmoothStep(edge - 0.04f, edge + 0.04f, spread[i]);
                 float grain = 0.75f + (0.25f * Noise2(x / 0.8f, y / 0.8f, seed + 13));
                 o[i * 2] = 255;

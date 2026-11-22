@@ -14,52 +14,56 @@ namespace Factory.Game.Art;
 /// </summary>
 public static class Palette
 {
-    private static readonly Dictionary<string, StandardMaterial3D> _cache = [];
+    private static readonly Dictionary<string, Material> _cache = [];
+    private static readonly Shader _weathered = GD.Load<Shader>("res://scripts/Art/Weathered.gdshader");
 
-    /// <summary>Weathered iron with rust and grime.</summary>
-    public static StandardMaterial3D Iron => Get("iron", () => Textured(Weathered(new Color(0.47f, 0.42f, 0.36f), new Color(0.6f, 0.32f, 0.14f), 11), 0.55f, 0.6f, 1.5f));
+    /// <summary>Weathered iron: brown-grey, rusting low down, streaked and worn bright at the edges.</summary>
+    public static Material Iron => Get("iron", () => Surface(new Color(0.42f, 0.38f, 0.33f), 0.55f, 0.6f, rust: 0.55f, grime: 0.6f, streaks: 0.6f, panel: 0.5f));
 
     /// <summary>Dark, heavily used iron for frames and fittings.</summary>
-    public static StandardMaterial3D DarkIron => Get("dark-iron", () => Textured(Weathered(new Color(0.27f, 0.24f, 0.21f), new Color(0.38f, 0.22f, 0.11f), 12), 0.55f, 0.6f, 1.5f));
+    public static Material DarkIron => Get("dark-iron", () => Surface(new Color(0.24f, 0.22f, 0.2f), 0.55f, 0.55f, rust: 0.4f, grime: 0.5f, streaks: 0.4f));
 
     /// <summary>Rust-red iron.</summary>
-    public static StandardMaterial3D Rust => Get("rust", () => Textured(Weathered(new Color(0.48f, 0.25f, 0.13f), new Color(0.3f, 0.15f, 0.08f), 13), 0.3f, 0.85f, 2f));
+    public static Material Rust => Get("rust", () => Surface(new Color(0.46f, 0.25f, 0.13f), 0.3f, 0.85f, rust: 0.8f, grime: 0.5f, streaks: 0.7f, wear: 0.3f));
 
     /// <summary>Fire brick in courses.</summary>
-    public static StandardMaterial3D Brick => Get("brick", () => Textured(Bricks(new Color(0.66f, 0.42f, 0.3f), new Color(0.32f, 0.28f, 0.25f), 14), 0f, 0.95f, 2f));
+    public static Material Brick => Get("brick", () => Surface(Colors.White, 0f, 0.95f, rust: 0f, grime: 0.7f, streaks: 0.5f, wear: 0.2f, pattern: Bricks(new Color(0.62f, 0.4f, 0.28f), new Color(0.3f, 0.27f, 0.24f), 14), scale: 2f));
 
     /// <summary>Timber planks.</summary>
-    public static StandardMaterial3D Timber => Get("timber", () => Textured(Planks(new Color(0.55f, 0.39f, 0.22f), 15), 0f, 0.85f, 2f));
+    public static Material Timber => Get("timber", () => Surface(Colors.White, 0f, 0.85f, rust: 0f, grime: 0.5f, streaks: 0.4f, wear: 0.35f, pattern: Planks(new Color(0.52f, 0.37f, 0.22f), 15), scale: 2f));
 
-    /// <summary>Copper, for coils and wire.</summary>
-    public static StandardMaterial3D Copper => Get("copper", () => Plain(new Color(0.8f, 0.48f, 0.28f), 0.9f, 0.35f));
+    /// <summary>Copper, for coils, pipes and wire; tarnished green-brown where it's old.</summary>
+    public static Material Copper => Get("copper", () => Surface(new Color(0.72f, 0.42f, 0.24f), 0.85f, 0.35f, rust: 0.25f, grime: 0.3f, streaks: 0.2f, rustColor: new Color(0.3f, 0.42f, 0.32f)));
 
-    /// <summary>Safety-yellow painted steel.</summary>
-    public static StandardMaterial3D Yellow => Get("yellow", () => Textured(Weathered(new Color(0.85f, 0.66f, 0.18f), new Color(0.45f, 0.36f, 0.2f), 16, 0.25f), 0.2f, 0.5f, 1.5f));
+    /// <summary>Safety-yellow painted steel, chipped to bare metal at the edges.</summary>
+    public static Material Yellow => Get("yellow", () => Surface(new Color(0.78f, 0.6f, 0.17f), 0.15f, 0.5f, rust: 0.2f, grime: 0.55f, streaks: 0.5f, panel: 0.6f));
 
     /// <summary>Oxide-red painted steel.</summary>
-    public static StandardMaterial3D Oxide => Get("oxide", () => Textured(Weathered(new Color(0.56f, 0.2f, 0.13f), new Color(0.3f, 0.14f, 0.1f), 17, 0.25f), 0.2f, 0.55f, 1.5f));
+    public static Material Oxide => Get("oxide", () => Surface(new Color(0.5f, 0.19f, 0.12f), 0.15f, 0.55f, rust: 0.25f, grime: 0.55f, streaks: 0.5f, panel: 0.6f));
 
     /// <summary>Bright machined steel.</summary>
-    public static StandardMaterial3D Steel => Get("steel", () => Textured(Weathered(new Color(0.62f, 0.64f, 0.66f), new Color(0.4f, 0.4f, 0.4f), 18, 0.2f), 0.85f, 0.3f, 2f));
+    public static Material Steel => Get("steel", () => Surface(new Color(0.6f, 0.6f, 0.6f), 0.85f, 0.3f, rust: 0.1f, grime: 0.3f, streaks: 0.2f, wear: 0.5f));
 
     /// <summary>Black rubber and plastic.</summary>
-    public static StandardMaterial3D Rubber => Get("rubber", () => Plain(new Color(0.08f, 0.08f, 0.08f), 0f, 0.8f));
+    public static Material Rubber => Get("rubber", () => Surface(new Color(0.08f, 0.075f, 0.07f), 0f, 0.8f, rust: 0f, grime: 0.4f, streaks: 0.1f, wear: 0f));
 
     /// <summary>Yellow and black hazard stripes.</summary>
-    public static StandardMaterial3D Hazard => Get("hazard", () => Textured(Stripes(), 0.1f, 0.55f, 2f));
+    public static Material Hazard => Get("hazard", () => Surface(Colors.White, 0.1f, 0.55f, rust: 0.1f, grime: 0.6f, streaks: 0.4f, wear: 0.6f, pattern: Stripes(), scale: 2f));
 
-    /// <summary>Bone-grey ceramic hull panels with fine seams.</summary>
-    public static StandardMaterial3D Hull => Get("hull", () => Textured(Panels(new Color(0.52f, 0.49f, 0.43f), 19), 0.08f, 0.5f, 1f));
+    /// <summary>Bone-grey ceramic hull panels with fine seams and rivets.</summary>
+    public static Material Hull => Get("hull", () => Surface(new Color(0.52f, 0.49f, 0.43f), 0.08f, 0.5f, rust: 0.05f, grime: 0.55f, streaks: 0.45f, wear: 0.6f, panel: 0.5f, wearColor: new Color(0.82f, 0.8f, 0.76f)));
 
-    /// <summary>Grey composite for the darker parts of high-tech machines.</summary>
-    public static StandardMaterial3D HullDark => Get("hull-dark", () => Textured(Panels(new Color(0.29f, 0.26f, 0.22f), 20), 0.45f, 0.45f, 1f));
+    /// <summary>Warm dark composite for the darker parts of high-tech machines.</summary>
+    public static Material HullDark => Get("hull-dark", () => Surface(new Color(0.27f, 0.245f, 0.21f), 0.45f, 0.45f, rust: 0.05f, grime: 0.45f, streaks: 0.35f, wear: 0.7f, panel: 0.35f, wearColor: new Color(0.66f, 0.64f, 0.6f)));
+
+    /// <summary>Poured concrete, stained low down.</summary>
+    public static Material Concrete => Get("concrete", () => Surface(new Color(0.42f, 0.4f, 0.36f), 0f, 0.95f, rust: 0.1f, grime: 0.7f, streaks: 0.55f, wear: 0.25f, panel: 1f, wearColor: new Color(0.55f, 0.53f, 0.5f)));
 
     /// <summary>Dark, glossy glass.</summary>
-    public static StandardMaterial3D Glass => Get("glass", () => Plain(new Color(0.05f, 0.055f, 0.06f), 0.65f, 0.08f));
+    public static Material Glass => Get("glass", () => Plain(new Color(0.05f, 0.055f, 0.06f), 0.65f, 0.08f));
 
     /// <summary>Tinted see-through glass for domes and windows.</summary>
-    public static StandardMaterial3D ClearGlass => Get("clear-glass", () =>
+    public static Material ClearGlass => Get("clear-glass", () =>
     {
         StandardMaterial3D m = Plain(new Color(0.2f, 0.4f, 0.5f, 0.45f), 0.5f, 0.04f);
         m.Transparency = BaseMaterial3D.TransparencyEnum.Alpha;
@@ -68,7 +72,7 @@ public static class Palette
     });
 
     /// <summary>Photovoltaic cells: deep blue with a silver grid.</summary>
-    public static StandardMaterial3D Cells => Get("cells", () => Textured(CellGrid(), 0.4f, 0.12f, 2f));
+    public static Material Cells => Get("cells", () => Surface(Colors.White, 0.4f, 0.15f, rust: 0f, grime: 0.35f, streaks: 0.2f, wear: 0.2f, pattern: CellGrid(), scale: 2f));
 
     /// <summary>A material that glows with <paramref name="color"/>: lamps, trim, fire.</summary>
     /// <param name="color">The glow colour.</param>
@@ -89,8 +93,8 @@ public static class Palette
     /// <param name="metallic">Metalness.</param>
     /// <param name="roughness">Roughness.</param>
     /// <returns>The material.</returns>
-    public static StandardMaterial3D Paint(Color color, float metallic = 0.2f, float roughness = 0.5f) =>
-        Get($"paint-{color.ToHtml()}-{metallic}-{roughness}", () => Plain(color, metallic, roughness));
+    public static Material Paint(Color color, float metallic = 0.2f, float roughness = 0.5f) =>
+        Get($"paint-{color.ToHtml()}-{metallic}-{roughness}", () => Surface(color, metallic, roughness, rust: 0.05f, grime: 0.35f, streaks: 0.25f, wear: 0.35f));
 
     /// <summary>A glow material as it looks while its machine is idle: the same colour, barely glowing.</summary>
     /// <param name="glow">A material made by <see cref="Glow"/> or <see cref="Fire"/>.</param>
@@ -129,12 +133,45 @@ public static class Palette
         return m;
     });
 
-    private static StandardMaterial3D Get(string key, System.Func<StandardMaterial3D> make)
+    private static T Get<T>(string key, System.Func<T> make)
+        where T : Material
     {
-        if (_cache.TryGetValue(key, out StandardMaterial3D? m) == false)
+        if (_cache.TryGetValue(key, out Material? m) == false)
         {
             m = make();
             _cache[key] = m;
+        }
+
+        return (T)m;
+    }
+
+    /// <summary>A surface in the shared weathered material (see Weathered.gdshader).</summary>
+    private static ShaderMaterial Surface(Color baseColor, float metallic, float roughness, float rust = 0.3f, float grime = 0.5f, float streaks = 0.5f, float wear = 0.7f, float panel = 0f, Image? pattern = null, float scale = 1f, Color? wearColor = null, Color? rustColor = null)
+    {
+        ShaderMaterial m = new ShaderMaterial { Shader = _weathered };
+        m.SetShaderParameter("base_color", baseColor);
+        m.SetShaderParameter("metallic", metallic);
+        m.SetShaderParameter("roughness", roughness);
+        m.SetShaderParameter("rust", rust);
+        m.SetShaderParameter("grime", grime);
+        m.SetShaderParameter("streaks", streaks);
+        m.SetShaderParameter("wear", wear);
+        m.SetShaderParameter("panel", panel);
+        m.SetShaderParameter("pattern_scale", scale);
+        if (pattern is not null)
+        {
+            pattern.GenerateMipmaps();
+            m.SetShaderParameter("pattern", ImageTexture.CreateFromImage(pattern));
+        }
+
+        if (wearColor is { } wc)
+        {
+            m.SetShaderParameter("wear_color", wc);
+        }
+
+        if (rustColor is { } rc)
+        {
+            m.SetShaderParameter("rust_color", rc);
         }
 
         return m;
@@ -147,18 +184,6 @@ public static class Palette
         Roughness = roughness,
         MetallicSpecular = 0.5f,
     };
-
-    private static StandardMaterial3D Textured(Image img, float metallic, float roughness, float scale)
-    {
-        img.GenerateMipmaps();
-        StandardMaterial3D m = Plain(Colors.White, metallic, roughness);
-        m.AlbedoTexture = ImageTexture.CreateFromImage(img);
-        m.Uv1Triplanar = true;
-        m.Uv1Scale = new Vector3(scale, scale, scale);
-        m.TextureFilter = BaseMaterial3D.TextureFilterEnum.LinearWithMipmapsAnisotropic;
-
-        return m;
-    }
 
     private const int Size = 128;
 
@@ -198,16 +223,6 @@ public static class Palette
 
         return img;
     }
-
-    /// <summary>A base colour broken up by soft grime and patches of a second colour (rust, dirt).</summary>
-    private static Image Weathered(Color baseColor, Color patch, int seed, float patchAmount = 0.6f) => Fill((x, y) =>
-    {
-        float grime = Noise(x, y, seed);
-        float spots = Mathf.Clamp((Noise(x, y, seed + 50) - 0.55f) * 4f, 0, 1) * patchAmount;
-        float streak = Noise(x / 4, y, seed + 9) * 0.15f;
-
-        return baseColor.Lerp(patch, spots).Darkened(((1 - grime) * 0.3f) + streak);
-    });
 
     private static Image Bricks(Color brick, Color mortar, int seed) => Fill((x, y) =>
     {

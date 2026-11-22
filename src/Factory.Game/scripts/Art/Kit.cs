@@ -116,7 +116,7 @@ public sealed class Kit
                 // Lit only by the machine's own lights; glowing parts at full strength, each also spilling a
                 // little light of its colour onto what's around it.
                 mi.MaterialOverride = mat;
-                if (glow)
+                if (glow && (mesh.GetAabb().Size.Length() > 0.16f))
                 {
                     StandardMaterial3D g = (StandardMaterial3D)mat;
                     Aabb box = mesh.GetAabb();
@@ -142,7 +142,8 @@ public sealed class Kit
     /// <returns>This kit.</returns>
     public Kit Box(Vector3 center, Vector3 size, Material mat, Basis? rotation = null)
     {
-        Add(new BoxMesh { Size = size }, mat, new Transform3D(rotation ?? Basis.Identity, center));
+        float least = Mathf.Min(size.X, Mathf.Min(size.Y, size.Z));
+        Add(Meshes.Box(size, Mathf.Min(0.025f, least * 0.2f)), mat, new Transform3D(rotation ?? Basis.Identity, center));
 
         return this;
     }
@@ -194,8 +195,13 @@ public sealed class Kit
     /// <returns>This kit.</returns>
     public Kit Cyl(Vector3 baseCenter, float radius, float height, Material mat, float topRadius = -1, int sides = 28)
     {
-        CylinderMesh m = new CylinderMesh { BottomRadius = radius, TopRadius = topRadius < 0 ? radius : topRadius, Height = height, RadialSegments = sides, Rings = 1 };
-        Add(m, mat, new Transform3D(Basis.Identity, baseCenter + new Vector3(0, height / 2, 0)));
+        if (height <= 0.0001f)
+        {
+            return this;
+        }
+
+        float top = topRadius < 0 ? radius : topRadius;
+        Add(Meshes.Cylinder(radius, top, height, sides, Mathf.Min(0.02f, Mathf.Min(radius, height) * 0.2f)), mat, new Transform3D(Basis.Identity, baseCenter));
 
         return this;
     }
@@ -220,8 +226,7 @@ public sealed class Kit
         Vector3 side = Mathf.Abs(up.Dot(Vector3.Right)) < 0.9f ? up.Cross(Vector3.Right).Normalized() : up.Cross(Vector3.Forward).Normalized();
         Vector3 third = side.Cross(up);
         Basis basis = new Basis(third, up, side);
-        CylinderMesh m = new CylinderMesh { BottomRadius = radius, TopRadius = radius, Height = len, RadialSegments = sides, Rings = 1 };
-        Add(m, mat, new Transform3D(basis, (a + b) / 2));
+        Add(Meshes.Cylinder(radius, radius, len, sides, Mathf.Min(0.012f, radius * 0.25f)), mat, new Transform3D(basis, a));
 
         return this;
     }
@@ -268,6 +273,203 @@ public sealed class Kit
         {
             float f = count == 1 ? 0.5f : i / (float)(count - 1);
             Ball(from.Lerp(to, f), radius, mat);
+        }
+
+        return this;
+    }
+
+    /// <summary>A pipe run through <paramref name="points"/>, with a bolted flange at each end and an elbow at each bend.</summary>
+    /// <param name="radius">Pipe radius.</param>
+    /// <param name="mat">Material.</param>
+    /// <param name="points">The run, in order.</param>
+    /// <returns>This kit.</returns>
+    public Kit Pipe(float radius, Material mat, params Vector3[] points)
+    {
+        for (int i = 0; i < points.Length - 1; i++)
+        {
+            Rod(points[i], points[i + 1], radius, mat, 12);
+        }
+
+        for (int i = 1; i < points.Length - 1; i++)
+        {
+            Ball(points[i], radius * 1.08f, mat);
+        }
+
+        Flange(points[0], points[1] - points[0], radius, mat);
+        Flange(points[^1], points[^2] - points[^1], radius, mat);
+
+        return this;
+    }
+
+    /// <summary>A bolted flange collar on a pipe end, facing along <paramref name="dir"/>.</summary>
+    private void Flange(Vector3 at, Vector3 dir, float radius, Material mat)
+    {
+        Vector3 d = dir.Normalized();
+        Rod(at, at + (d * radius * 0.5f), radius * 1.45f, mat, 12);
+    }
+
+    /// <summary>A louvred vent on a face: slats across a dark recess. <paramref name="facing"/> is the face's outward direction (horizontal).</summary>
+    /// <param name="center">Centre of the vent on the face.</param>
+    /// <param name="width">Width along the face.</param>
+    /// <param name="height">Height.</param>
+    /// <param name="facing">Outward direction of the face.</param>
+    /// <param name="frame">Frame and slat material.</param>
+    /// <returns>This kit.</returns>
+    public Kit Vent(Vector3 center, float width, float height, Vector3 facing, Material frame)
+    {
+        Vector3 f = facing.Normalized();
+        Basis turn = Basis.LookingAt(-f, Vector3.Up);
+        Box(center, new Vector3(width, height, 0.02f), Palette.Paint(new Color(0.05f, 0.045f, 0.04f), 0, 1), turn);
+        int slats = Mathf.Max(2, (int)(height / 0.05f));
+        for (int i = 0; i < slats; i++)
+        {
+            float y = (-height / 2) + ((i + 0.5f) * height / slats);
+            Box(center + (turn * new Vector3(0, y, -0.012f)), new Vector3(width * 0.94f, 0.012f, 0.02f), frame, turn * new Basis(Vector3.Right, 0.5f));
+        }
+
+        Box(center + (turn * new Vector3(0, height / 2, -0.01f)), new Vector3(width + 0.03f, 0.02f, 0.025f), frame, turn);
+        Box(center + (turn * new Vector3(0, -height / 2, -0.01f)), new Vector3(width + 0.03f, 0.02f, 0.025f), frame, turn);
+
+        return this;
+    }
+
+    /// <summary>A ring of bolt heads lying flat, as round a hatch or a tank lid.</summary>
+    /// <param name="center">Centre.</param>
+    /// <param name="radius">Ring radius.</param>
+    /// <param name="count">Number of bolts.</param>
+    /// <param name="mat">Material.</param>
+    /// <returns>This kit.</returns>
+    public Kit BoltCircle(Vector3 center, float radius, int count, Material mat)
+    {
+        for (int i = 0; i < count; i++)
+        {
+            float a = i * Mathf.Tau / count;
+            Cyl(center + new Vector3(Mathf.Cos(a) * radius, 0, Mathf.Sin(a) * radius), 0.016f, 0.014f, mat, -1, 6);
+        }
+
+        return this;
+    }
+
+    /// <summary>A ladder from a foot to a top, standing off a wall facing <paramref name="facing"/>.</summary>
+    /// <param name="foot">Bottom centre.</param>
+    /// <param name="top">Top centre.</param>
+    /// <param name="facing">Outward direction of the wall.</param>
+    /// <param name="mat">Material.</param>
+    /// <returns>This kit.</returns>
+    public Kit Ladder(Vector3 foot, Vector3 top, Vector3 facing, Material mat)
+    {
+        Vector3 side = Vector3.Up.Cross(facing.Normalized()) * 0.06f;
+        Rod(foot - side, top - side, 0.01f, mat, 5);
+        Rod(foot + side, top + side, 0.01f, mat, 5);
+        float len = foot.DistanceTo(top);
+        for (float f = 0.08f; f < len; f += 0.09f)
+        {
+            Vector3 at = foot.Lerp(top, f / len);
+            Rod(at - side, at + side, 0.007f, mat, 4);
+        }
+
+        return this;
+    }
+
+    /// <summary>A hanging cable from <paramref name="a"/> to <paramref name="b"/>, sagging by <paramref name="sag"/>.</summary>
+    /// <param name="a">One end.</param>
+    /// <param name="b">The other end.</param>
+    /// <param name="sag">How far the middle hangs below the straight line.</param>
+    /// <param name="mat">Material.</param>
+    /// <returns>This kit.</returns>
+    public Kit Cable(Vector3 a, Vector3 b, float sag, Material mat)
+    {
+        Vector3 prev = a;
+        for (int i = 1; i <= 6; i++)
+        {
+            float f = i / 6f;
+            Vector3 p = a.Lerp(b, f) - new Vector3(0, sag * 4 * f * (1 - f), 0);
+            Rod(prev, p, 0.014f, mat, 6);
+            prev = p;
+        }
+
+        return this;
+    }
+
+    /// <summary>A handwheel valve on a short stem, standing up from <paramref name="at"/>.</summary>
+    /// <param name="at">Base of the stem.</param>
+    /// <param name="mat">Wheel material.</param>
+    /// <returns>This kit.</returns>
+    public Kit Valve(Vector3 at, Material mat)
+    {
+        Cyl(at, 0.025f, 0.08f, Palette.DarkIron, -1, 8);
+        Ring(at + new Vector3(0, 0.09f, 0), 0.04f, 0.055f, mat);
+        Rod(at + new Vector3(-0.045f, 0.09f, 0), at + new Vector3(0.045f, 0.09f, 0), 0.007f, mat, 4);
+
+        return this;
+    }
+
+    /// <summary>A small dial gauge on a stalk, its face toward the camera.</summary>
+    /// <param name="at">Base of the stalk.</param>
+    /// <returns>This kit.</returns>
+    public Kit Gauge(Vector3 at)
+    {
+        Rod(at, at + new Vector3(0, 0.1f, 0), 0.008f, Palette.DarkIron, 5);
+        Basis face = new Basis(Vector3.Right, (Mathf.Pi / 2) - 0.5f);
+        Add(Meshes.Cylinder(0.04f, 0.04f, 0.02f, 14, 0.006f), Palette.DarkIron, new Transform3D(face, at + new Vector3(0, 0.13f, 0)));
+        Add(Meshes.Cylinder(0.032f, 0.032f, 0.005f, 14, 0), Palette.Paint(new Color(0.85f, 0.82f, 0.72f), 0, 0.4f), new Transform3D(face, at + new Vector3(0, 0.13f, 0) + (face * new Vector3(0, 0.02f, 0))));
+
+        return this;
+    }
+
+    /// <summary>
+    /// Scatters small fittings over a flat roof area, seeded so a model always gets the same ones: bolt
+    /// rows, inspection hatches, junction boxes, small vents, pipe stubs and valves. Fills the empty tops
+    /// that would otherwise read as blank slabs.
+    /// </summary>
+    /// <param name="x">West edge of the area.</param>
+    /// <param name="z">North edge.</param>
+    /// <param name="w">Width.</param>
+    /// <param name="d">Depth.</param>
+    /// <param name="y">Roof height.</param>
+    /// <param name="seed">Seed for the arrangement.</param>
+    /// <param name="count">Roughly how many fittings.</param>
+    /// <param name="mat">Main material for boxes and hatches.</param>
+    /// <returns>This kit.</returns>
+    public Kit Clutter(float x, float z, float w, float d, float y, int seed, int count, Material mat)
+    {
+        uint h = (uint)(seed * 2654435761u);
+        float Next()
+        {
+            h ^= h << 13;
+            h ^= h >> 17;
+            h ^= h << 5;
+
+            return (h & 0xffff) / 65535f;
+        }
+
+        for (int i = 0; i < count; i++)
+        {
+            float px = x + (Next() * w), pz = z + (Next() * d);
+            switch ((int)(Next() * 6))
+            {
+                case 0:
+                    float bw = 0.12f + (Next() * 0.14f), bd = 0.1f + (Next() * 0.12f);
+                    Slab(px - (bw / 2), pz - (bd / 2), bw, bd, 0.06f + (Next() * 0.08f), mat, y);
+                    break;
+                case 1:
+                    Cyl(new Vector3(px, y, pz), 0.09f, 0.025f, Palette.HullDark, -1, 16);
+                    BoltCircle(new Vector3(px, y + 0.025f, pz), 0.07f, 6, Palette.Steel);
+                    break;
+                case 2:
+                    Vent(new Vector3(px, y + 0.05f, pz), 0.16f, 0.09f, Next() > 0.5f ? Vector3.Back : Vector3.Right, Palette.Steel);
+                    Slab(px - 0.09f, pz - 0.05f, 0.18f, 0.1f, 0.1f, mat, y);
+                    break;
+                case 3:
+                    Pipe(0.022f, Palette.Steel, new Vector3(px, y, pz), new Vector3(px, y + 0.12f, pz), new Vector3(px + 0.12f, y + 0.12f, pz));
+                    break;
+                case 4:
+                    Valve(new Vector3(px, y, pz), Palette.Oxide);
+                    break;
+                default:
+                    Rivets(new Vector3(px, y, pz), new Vector3(px + 0.25f, y, pz), 5, 0.014f, Palette.Steel);
+                    break;
+            }
         }
 
         return this;
